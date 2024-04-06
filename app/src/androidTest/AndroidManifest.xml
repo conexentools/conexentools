@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:versionCode="1"
+    android:versionName="1.0">
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
+
+    <instrumentation
+        android:targetPackage="com.conexentools_client"
+        android:name="androidx.test.runner.AndroidJUnitRunner"/>
+
+    <application tools:replace="label" android:label="Conexen Tools - Client [IT]" />
+
+    <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="cu.etecsa.cubacel.tr.tm" />
+        <package android:name="com.conexentools" />
+    </queries>
+</manifest>
