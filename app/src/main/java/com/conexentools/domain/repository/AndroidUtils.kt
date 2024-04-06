@@ -2,9 +2,7 @@ package com.conexentools.domain.repository
 
 import android.net.Uri
 import android.widget.Toast
-import com.conexentools.data.model.RemainingTimeTextRepresentation
 import contacts.core.entities.Contact
-import java.time.Instant
 
 interface AndroidUtils {
   fun setClipboard(text: String, label: String = "")
@@ -17,6 +15,7 @@ interface AndroidUtils {
   fun canDrawOverlays(): Boolean
   fun sendWaMessage(number: String, message: String?)
   fun executeCommand(command: String, su: Boolean)
+  fun composeEmail(recipientAddress: String, subject: String = "")
 
   companion object {
     fun create(): AndroidUtils {
@@ -54,6 +53,10 @@ interface AndroidUtils {
         }
 
         override fun executeCommand(command: String, su: Boolean) {
+          TODO("Not yet implemented")
+        }
+
+        override fun composeEmail(recipientAddress: String, subject: String) {
           TODO("Not yet implemented")
         }
 

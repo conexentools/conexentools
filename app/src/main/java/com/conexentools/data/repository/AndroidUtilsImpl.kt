@@ -16,8 +16,6 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.net.toUri
-import com.conexentools.data.model.RemainingTimeTextRepresentation
-import com.conexentools.data.model.toInstant
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.core.util.log
 import com.conexentools.core.util.logError
@@ -29,8 +27,6 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.URLEncoder
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
 
 
@@ -189,5 +185,19 @@ class AndroidUtilsImpl @Inject constructor(
       e.printStackTrace()
     }
   }
+
+  override fun composeEmail(recipientAddress: String, subject: String) {
+    val intent = Intent(Intent.ACTION_SENDTO)
+    intent.data = Uri.parse("mailto:$recipientAddress")
+    intent.putExtra(Intent.EXTRA_SUBJECT, subject)
+    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    if (intent.resolveActivity(context.packageManager) != null) {
+      context.startActivity(intent)
+    } else {
+      toast("Al parecer no tiene instalado ningun cliente de correo electrónico", vibrate = true)
+    }
+  }
+
 }
 

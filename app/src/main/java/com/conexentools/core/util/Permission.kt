@@ -1,7 +1,11 @@
-package com.conexentools.data.model
+package com.conexentools.core.util
 
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -36,7 +40,7 @@ class Permission(
       componentActivityInstance: ComponentActivity,
       requestPermissionsImmediately: Boolean = true
     ): (() -> Unit)? {
-      val notGrantedPermissions = permissions.filterNot { it.isGranted() }
+      val notGrantedPermissions = permissions.filterNot { (it.maxSdkVersion != null && Build.VERSION.SDK_INT > it.maxSdkVersion) || it.isGranted() }
       if (notGrantedPermissions.isEmpty())
         return null
       val activityLauncher =
@@ -52,15 +56,17 @@ class Permission(
       } else
         launcher
     }
+
+//    fun requestManageExternalStoragePermission(context: Context) {
+//      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager())
+//        context.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+//    }
   }
 
-  fun isGranted(): Boolean {
-    return (maxSdkVersion != null && Build.VERSION.SDK_INT > maxSdkVersion) ||
-        ContextCompat.checkSelfPermission(
-          componentActivityInstance,
-          permission
-        ) == PackageManager.PERMISSION_GRANTED
-  }
+  fun isGranted() = ContextCompat.checkSelfPermission(
+    componentActivityInstance,
+    permission
+  ) == PackageManager.PERMISSION_GRANTED
 
   fun requestPermission() {
     if (isGranted())

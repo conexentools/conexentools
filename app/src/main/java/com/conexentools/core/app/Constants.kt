@@ -6,7 +6,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
 object Constants {
-  const val GITHUB_REPO_URL = "https://github.com/conexentools/conexentools"
+  const val DEVELOPMENT_DATE = "2024"
+  const val CONEXEN_GITHUB_REPO_URL = "https://github.com/conexentools/conexentools"
+  const val CONEXEN_GOOGLE_MAIL = "conexentools@gmail.com"
   const val FAB_ANIMATION_DURATION = 400
   const val MAX_QUICK_MESSAGE_LENGTH = 1024
   const val APP_SETTINGS = "conexentools_settings"

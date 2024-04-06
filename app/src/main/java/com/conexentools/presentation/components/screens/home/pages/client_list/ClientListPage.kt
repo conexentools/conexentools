@@ -52,10 +52,6 @@ fun ClientsListPage(
 ) {
 
   val listState = rememberLazyListState()
-//    LazyColumnScrollbar(listState) {
-//
-//  }
-//  LazyColumnScrollbar()
 
   LazyColumn(
     state = listState,

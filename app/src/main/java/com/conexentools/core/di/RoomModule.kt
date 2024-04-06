@@ -1,16 +1,18 @@
 package com.conexentools.core.di
 
 import android.content.Context
+import android.os.Build
 import android.os.Environment
-import androidx.compose.ui.res.stringResource
 import androidx.paging.ExperimentalPagingApi
 import androidx.room.Room
 import com.conexentools.R
 import com.conexentools.core.app.Constants
+import com.conexentools.core.util.isPermissionGranted
 import com.conexentools.core.util.log
 import com.conexentools.data.local.model.ClientDao
 import com.conexentools.data.local.model.ClientDatabase
 import com.conexentools.data.repository.ClientRepositoryImpl
+import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.domain.repository.ClientRepository
 import dagger.Module
 import dagger.Provides
@@ -27,28 +29,46 @@ object RoomModule {
   @Provides
   @Singleton
   fun provideClientDatabase(
-    @ApplicationContext context: Context
+    @ApplicationContext context: Context,
+    au: AndroidUtils
   ): ClientDatabase {
 
-    var appName = context.resources.getString(R.string.app_name)
+    val appName = context.resources.getString(R.string.app_name)
     val isExternalStorageWritable: Boolean =
       Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
+
     val databasePath = if (isExternalStorageWritable) {
-      log("Saving database in external storage")
-      val downloadsDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-      val databasePath = File(downloadsDirectory, appName)
-//      val externalStorageDir = Environment.getExternalStorageDirectory()
-//      val externalStorageDir = context.getExternalFilesDir("database")!!
-//      log("externalStorageDir: '$downloadsDirectory'")
-      if (!databasePath.exists()) {
-        databasePath.mkdirs()
+      // Trying to locate database on external storage shared folder
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager() ||
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.R && au.isPermissionGranted(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+      ) {
+        val externalStorage = Environment.getExternalStorageDirectory()
+        log("Locating database in external storage shared folder")
+//      val downloadsDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val databasePath = File(externalStorage, "$appName/database")
+        if (!databasePath.exists()) {
+          databasePath.mkdirs()
+        }
+        databasePath.toString() + "/" + Constants.DATABASE_NAME
+      } else {
+        // Falling back to app private external storage /storage/emulated/0/Android/data/com.conexentools/database
+        val externalFilesDir = context.getExternalFilesDir("")
+        if (externalFilesDir != null) {
+          log("Locating database on app private external storage")
+          File(externalFilesDir.parent, "database").toString()
+          // Falling back to app private internal storage ~/data/data/com.conexentools/database
+        } else {
+          log("App External files directory couldn't be retrieved. Locating database on app private internal storage")
+          Constants.DATABASE_NAME
+        }
       }
-      databasePath.toString() + "/" + Constants.DATABASE_NAME
     } else {
-      log("Saving database on internal storage")
+      // Falling back to app private internal storage ~/data/data/com.conexentools/database
+      log("database located on app private internal storage")
       Constants.DATABASE_NAME
     }
-    log("Database Path: $databasePath")
+
+    log("Database Path: '$databasePath'")
 
     return Room.databaseBuilder(
       context = context,

@@ -16,7 +16,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.conexentools.core.util.PreviewComposable
-import com.conexentools.data.model.RemainingTimeTextRepresentation
+import com.conexentools.core.util.RemainingTimeTextRepresentation
 
 @Composable
 fun RadialProgressTimeIndicator(

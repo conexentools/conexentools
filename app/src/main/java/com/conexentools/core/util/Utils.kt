@@ -1,6 +1,9 @@
 package com.conexentools.core.util
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.util.Log
 import android.view.KeyEvent
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -16,24 +19,12 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.res.painterResource
-import com.conexentools.data.model.RemainingTimeTextRepresentation
-import com.conexentools.data.model.toInstant
+import androidx.core.content.ContextCompat
+import com.conexentools.BuildConfig
 import com.conexentools.domain.repository.AndroidUtils
 import contacts.core.entities.Contact
 import java.time.Duration
 import java.time.Instant
-
-
-fun Modifier.moveFocusOnTabPressed(direction: FocusDirection, focusManager: FocusManager): Modifier {
-  return then(onPreviewKeyEvent {
-    if (it.key == Key.Tab && it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
-      focusManager.moveFocus(direction)
-      true
-    } else {
-      false
-    }
-  })
-}
 
 fun getImageByResourceID(
   resourceID: Int = -1,
@@ -94,3 +85,6 @@ fun getRemainingTimeUntilDate(date: Instant?): RemainingTimeTextRepresentation? 
     numberUnit.second
   )
 }
+
+fun log(message: String) = Log.i(BuildConfig.LOG_TAG, message)
+fun logError(message: String) = Log.e(BuildConfig.LOG_TAG, message)

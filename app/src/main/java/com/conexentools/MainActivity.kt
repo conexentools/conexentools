@@ -7,7 +7,10 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -28,7 +31,7 @@ import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.conexentools.data.model.Permission
+import com.conexentools.core.util.Permission
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.HomeScreenViewModel
 import com.conexentools.presentation.components.common.enums.AppTheme
@@ -37,6 +40,7 @@ import com.conexentools.presentation.navigation.SetUpNavGraph
 import com.conexentools.presentation.theme.ConexenToolsTheme
 import com.conexentools.presentation.theme.DarkTheme
 import com.conexentools.presentation.theme.LocalTheme
+import contacts.core.entities.Contact
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.Locale
 import javax.inject.Inject
@@ -53,56 +57,8 @@ class MainActivity : ComponentActivity() {
 
     lateinit var navController: NavHostController
 
-//    val hvm: HomeScreenViewModel = ViewModelProvider(this)[HomeScreenViewModel::class.java]
-//    val hvm: HomeScreenViewModel =  hiltViewModel()
-//    val contactPickerActivityLauncher: ActivityResultLauncher<Intent> =
-//      registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-//        val contactUri: Uri = it.data!!.data!!
-//        val contact = AndroidUtils.fetchContactByUri(contactUri)
-//        if (contact == null) {
-//          hvm.waContact.value = "error"
-//          hvm.waContactImageUri.value = null
-//        } else {
-//          val number =
-//            if (contact.phoneList().isNotEmpty()) contact.phoneList().first().number else null
-//          hvm.waContact.value = number ?: contact.displayNamePrimary ?: "sin nombre :("
-//          hvm.waContactImageUri.value = contact.photoThumbnailUri
-//        }
-//      }
 
-    // private val specialPermissionsAppMenuActivityLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
-    val popUpWindowPermissionActivityLauncher =
-      registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        if ("xiaomi" == Build.MANUFACTURER.lowercase(Locale.ROOT)) { //TODO && Andori dsdk is < 11
-          val intent = Intent("miui.intent.action.APP_PERM_EDITOR")
-          intent.setClassName(
-            "com.miui.securitycenter",
-            "com.miui.permcenter.permissions.PermissionsEditorActivity"
-          )
-          intent.putExtra("extra_pkgname", packageName)
-          startActivity(intent)
-//      specialPermissionsAppMenuActivityLauncher.launch(intent)
-        }
-      }
-
-    val permissionsRequester = Permission.requestPermissions(
-      Permission(Manifest.permission.READ_CONTACTS, this, au = au),
-      Permission(Manifest.permission.CALL_PHONE, this, au = au),
-      Permission(
-        Manifest.permission.READ_SMS, this,
-        permissionDeniedMessage = "Debe conceder el permiso a leer mensajes para poder iniciar el proceso de automatización",
-        au = au
-      ),
-      Permission(Manifest.permission.SYSTEM_ALERT_WINDOW, this, au = au),
-      Permission(
-        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        this,
-        maxSdkVersion = Build.VERSION_CODES.P,
-        au = au
-      ),
-      componentActivityInstance = this,
-      requestPermissionsImmediately = false
-    )
+//    Permission.requestManageExternalStoragePermission(this)
 
     setContent {
 
@@ -155,40 +111,117 @@ class MainActivity : ComponentActivity() {
 //
 //        }
 
-          CheckPermissions(popUpWindowPermissionActivityLauncher, permissionsRequester)
+//          CheckPermissions(popUpWindowPermissionActivityLauncher)
         }
-      }
-    }
-  }
-
-  @Composable
-  private fun CheckPermissions(
-    popUpWindowPermissionActivityLauncher: ActivityResultLauncher<Intent>,
-    permissionsRequester: (() -> Unit)?
-  ) {
-    permissionsRequester?.let { it() }
-
-//    var showDisplayPopUpInBackgroundPermissionAlertDialog by remember { mutableStateOf(true) }
-
-    if (!Settings.canDrawOverlays(this)) {
-      var showDisplayPopUpPermissionAlertDialog by remember { mutableStateOf(true) }
-      if (showDisplayPopUpPermissionAlertDialog) {
-        AlertDialog(
-          onDismissRequest = { },
-          text = { Text(text = "A continuación acepte el permiso 'Mostrar sobre otras aplicaciones' o relacionado y posteriormente el permiso 'Mostrar sobre otras aplicaciones mientras se ejecuta en segundo plano' o relacionado.") },
-          confirmButton = {
-            TextButton(onClick = {
-              showDisplayPopUpPermissionAlertDialog = false
-              val intent =
-                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri())
-              popUpWindowPermissionActivityLauncher.launch(intent)
-            }) {
-              Text("OK")
-            }
-          },
-        )
       }
     }
   }
 }
 
+//  @Composable
+//  private fun CheckPermissions(
+//    popUpWindowPermissionActivityLauncher: ActivityResultLauncher<Intent>,
+//    permissionsRequester: (() -> Unit)?
+//  ) {
+////    permissionsRequester?.let { it() }
+//    val permissionRequesterLauncher = rememberLauncherForActivityResult(
+//      contract = ActivityResultContracts.PickContact()
+//    ) {
+//      val contact: Contact? = it?.let(au::fetchContactByUri)
+//      onResult(contact)
+//    }
+//
+////    val permissionsRequester = Permission.requestPermissions(
+////      Permission(Manifest.permission.READ_CONTACTS, this, au = au),
+////      Permission(Manifest.permission.CALL_PHONE, this, au = au),
+////      Permission(
+////        Manifest.permission.READ_SMS, this,
+////        permissionDeniedMessage = "Debe conceder el permiso a leer mensajes para poder iniciar el proceso de automatización",
+////        au = au
+////      ),
+////      Permission(Manifest.permission.SYSTEM_ALERT_WINDOW, this, au = au),
+////      Permission(
+////        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+////        this,
+////        maxSdkVersion = Build.VERSION_CODES.Q,
+////        au = au
+////      ),
+////      componentActivityInstance = this,
+////      requestPermissionsImmediately = false
+////    )
+//
+////    var showDisplayPopUpInBackgroundPermissionAlertDialog by remember { mutableStateOf(true) }
+//
+//    if (!Settings.canDrawOverlays(this)) {
+//
+//      val xiaomiPopUpWindowPermissionActivityLauncher =
+//        GetStartActivityForResultLauncher {
+//          GetStartActivityForResultLauncher
+//        }
+////        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+//////          log("xiaomiPopUpWindowPermissionActivityLauncher result: $it")
+////          if ("xiaomi" == Build.MANUFACTURER.lowercase(Locale.ROOT)) { //TODO && Android SDK < 11
+////            val intent = Intent("miui.intent.action.APP_PERM_EDITOR")
+////            intent.setClassName(
+////              "com.miui.securitycenter",
+////              "com.miui.permcenter.permissions.PermissionsEditorActivity"
+////            )
+////            intent.putExtra("extra_pkgname", packageName)
+////            startActivity(intent)
+//////      specialPermissionsAppMenuActivityLauncher.launch(intent)
+////          }
+////        }
+//
+//      var showDisplayPopUpPermissionAlertDialog by remember { mutableStateOf(true) }
+//      if (showDisplayPopUpPermissionAlertDialog) {
+//        AlertDialog(
+//          onDismissRequest = { },
+//          text = { Text(text = "A continuación acepte el permiso 'Mostrar sobre otras aplicaciones' o relacionado y posteriormente el permiso 'Mostrar sobre otras aplicaciones mientras se ejecuta en segundo plano' o relacionado.") },
+//          confirmButton = {
+//            TextButton(onClick = {
+//              showDisplayPopUpPermissionAlertDialog = false
+//              val intent =
+//                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri())
+//
+//              val permissionRequester = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+//
+//                // Launching xiaomi app special permissions form
+//                if ("xiaomi" == Build.MANUFACTURER.lowercase(Locale.ROOT)) { //TODO && Android SDK < 11
+//                  val intent = Intent("miui.intent.action.APP_PERM_EDITOR")
+//                  intent.setClassName(
+//                    "com.miui.securitycenter",
+//                    "com.miui.permcenter.permissions.PermissionsEditorActivity"
+//                  )
+//                  intent.putExtra("extra_pkgname", packageName)
+//
+//                  registerForActivityResult(ActivityResultContracts.StartActivityForResult()){
+//
+//                    // Requesting all file access permission
+//                  }
+//                  startActivity(intent)
+////      specialPermissionsAppMenuActivityLauncher.launch(intent)
+//                }
+//              }
+//              xiaomiPopUpWindowPermissionActivityLauncher.launch(intent)
+//              rememberLauncherForActivityResult(
+//                ActivityResultContracts.StartActivityForResult(),
+//                {})
+//              popUpWindowPermissionActivityLauncher.launch()
+//
+//            }) {
+//              Text("OK")
+//            }
+//          },
+//        )
+//      }
+//    }
+//  }
+//}
+
+//@Composable
+//fun GetStartActivityForResultLauncher(onResult: (ActivityResult) -> Unit): ManagedActivityResultLauncher<Intent, ActivityResult> {
+//  return rememberLauncherForActivityResult(
+//    contract = ActivityResultContracts.StartActivityForResult(),
+//    onResult = onResult
+//  )
+//}

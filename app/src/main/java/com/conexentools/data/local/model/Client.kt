@@ -3,7 +3,7 @@ package com.conexentools.data.local.model
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.conexentools.core.util.getRemainingTimeUntilDate
-import com.conexentools.data.model.RemainingTimeTextRepresentation
+import com.conexentools.core.util.RemainingTimeTextRepresentation
 import com.conexentools.domain.repository.AndroidUtils
 import java.time.Instant
 import java.time.temporal.ChronoUnit

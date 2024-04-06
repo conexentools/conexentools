@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -52,7 +53,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
-import androidx.wear.compose.foundation.rememberActiveFocusRequester
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
 import com.conexentools.core.util.textFilter
@@ -113,10 +113,6 @@ fun HomeScreen(
   onClientRechargeCounterReset: (Client) -> Unit,
 ) {
 
-
-//  @Inject
-//  val homeViewModel: HomeViewModel = viewModel()
-
   when (homeScreenState.state) {
     is HomeScreenLoadingState.ScreenLoading -> {
       Row(
@@ -129,17 +125,6 @@ fun HomeScreen(
     }
 
     is HomeScreenLoadingState.Success -> {
-
-//      val interactionSource = remember {
-//        MutableInteractionSource()
-//      }
-//
-//      val isDragged = interactionSource.collectIsDraggedAsState().value
-
-//      if (isDragged){
-//        navController.navigate(route = Screen.ClientsList.route)
-//        Log.i("<<<CONEXEN>>>", "Navigating to ClientsListScreen")
-//      }
 
       DrawHome(
         navController = navController,
@@ -243,17 +228,10 @@ private fun DrawHome(
   val maxPinLength = remember { mutableIntStateOf(if (bank.value == "Metropolitano") 4 else 5) }
   var searchBarText by remember { mutableStateOf("") }
 
-//    val aa by mainViewModel.LoadData(FETCH_DATA_FROM_WA, true).collectAsState(coroutineScope.coroutineContext)
-//    mainViewModel.clientsNumbers.add(mainViewModel.LoadData(FIRST_CLIENT_NUMBER_KEY, "123").collectAsState(coroutineScope.coroutineContext).value as String)
-//    mainViewModel.clientsRecharges.add(mainViewModel.LoadData(FIRST_CLIENT_RECHARGE_KEY, "888").collectAsState(coroutineScope.coroutineContext).value as String)
-
   // ADB Command Dialog
   if (showAdbRunCommandDialog.value) {
     AlertDialog(
       onDismissRequest = {
-        // Dismiss the dialog when the user clicks outside the dialog or on the back
-        // button. If you want to disable that functionality, simply use an empty
-        // onCloseRequest.
         showAdbRunCommandDialog.value = false
       },
       title = {
@@ -309,7 +287,6 @@ private fun DrawHome(
 
   Scaffold(
     topBar = {
-//             TopAppBar(title = { Text("WWW") })
       HomeTopBar(
         page = page,
         onSearchBarTextChange = { searchBarText = it },
@@ -362,8 +339,9 @@ private fun DrawHome(
 
       var showManagerPasswordDialog by remember { mutableStateOf(false) }
 
+
       if (showManagerPasswordDialog) {
-        val focusRequester = remember { FocusRequester() }
+
         Dialog(
           onDismissRequest = {
             showManagerPasswordDialog = false
@@ -371,6 +349,9 @@ private fun DrawHome(
               pagerState.scrollToPage(HomeScreenPage.INSTRUMENTED_TEST.ordinal)
             }
           }) {
+
+          val textFieldFocusRequester = remember { FocusRequester() }
+
           Column(
             horizontalAlignment = Alignment.CenterHorizontally
           ) {
@@ -403,7 +384,7 @@ private fun DrawHome(
                   }
                 }
               },
-              modifier = Modifier.focusRequester(focusRequester),
+              modifier = Modifier.focusRequester(textFieldFocusRequester),
               visualTransformation = {
                 textFilter(
                   text = it,
@@ -413,16 +394,19 @@ private fun DrawHome(
               }
             )
           }
-        }
 
-        LaunchedEffect(true){
-          focusRequester.requestFocus()
+          var dialogWindowFocusChangeListenerRegistered by remember { mutableStateOf(false) }
+          if (!dialogWindowFocusChangeListenerRegistered) {
+            LocalView.current.viewTreeObserver.addOnWindowFocusChangeListener { hasFocus ->
+              if (hasFocus) textFieldFocusRequester.requestFocus()
+            }
+            dialogWindowFocusChangeListenerRegistered = true
+          }
         }
       }
 
       LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.distinctUntilChanged().collect {
-//          if (isManager.value || it == HomeScreenPage.INSTRUMENTED_TEST.ordinal)
           page.value = HomeScreenPage.fromOrdinal(it)
           if (page.value == HomeScreenPage.CLIENT_LIST && !isManager.value) {
             coroutineScope.launch {
@@ -457,8 +441,6 @@ private fun DrawHome(
           if (isManager.value) {
             ClientsListPage(
               clientPagingItems = clientPagingItems,
-//              navController = navController,
-//              onSearchBarValueChange = onSearchBarValueChange,
               searchBarText = searchBarText,
               onClientEdit = onClientEdit,
               onClientRecharge = onClientRecharge,

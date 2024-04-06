@@ -180,6 +180,8 @@ dependencies {
   // Coil
   implementation("io.coil-kt:coil-compose:2.6.0")
 
+  implementation("com.github.MshariAlsayari:Request-Permission-Compose:<last-version>")
+
   // Message App Bar
 //  implementation("com.github.stevdza-san:MessageBarCompose:1.0.8")
 

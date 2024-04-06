@@ -4,7 +4,10 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -19,6 +22,7 @@ import com.conexentools.core.util.pickContact
 import com.conexentools.data.local.model.Client
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.HomeScreenViewModel
+import com.conexentools.presentation.RequestAppPermissions
 import com.conexentools.presentation.components.screens.about.AboutScreen
 import com.conexentools.presentation.components.screens.add_edit_client.AddEditClientScreen
 import com.conexentools.presentation.components.screens.home.HomeScreen
@@ -35,6 +39,13 @@ fun SetUpNavGraph(
 ) {
 
   hvm.ObserveLifecycleEvents(lifecycle = LocalLifecycleOwner.current.lifecycle)
+  var permissionsRequested by remember { mutableStateOf(false) }
+  if (!permissionsRequested){
+    RequestAppPermissions(au = au) {
+      permissionsRequested = true
+      hvm.initialClientsLoad()
+    }
+  }
 
   NavHost(
     navController = navController,
@@ -62,6 +73,9 @@ fun SetUpNavGraph(
         homeScreenState = homeScreenState,
         navController = navController,
         savePreferencesAction = hvm::saveUserPreferences,
+//        onInitialCompositionOfClientsPage = {
+//          hvm.initialClientsLoad()
+//        },
         page = hvm.initialHomeScreenPage,
         au = au,
 
