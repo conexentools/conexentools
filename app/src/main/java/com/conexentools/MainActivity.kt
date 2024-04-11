@@ -1,37 +1,20 @@
 package com.conexentools
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
+import android.provider.ContactsContract
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.ActivityResult
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.conexentools.core.util.Permission
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.HomeScreenViewModel
 import com.conexentools.presentation.components.common.enums.AppTheme
@@ -40,13 +23,22 @@ import com.conexentools.presentation.navigation.SetUpNavGraph
 import com.conexentools.presentation.theme.ConexenToolsTheme
 import com.conexentools.presentation.theme.DarkTheme
 import com.conexentools.presentation.theme.LocalTheme
-import contacts.core.entities.Contact
+import com.vmadalin.easypermissions.EasyPermissions
 import dagger.hilt.android.AndroidEntryPoint
-import java.util.Locale
 import javax.inject.Inject
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+
+
+  override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
+  }
+
+
 
   @Inject
   lateinit var au: AndroidUtils
@@ -56,9 +48,6 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
 
     lateinit var navController: NavHostController
-
-
-//    Permission.requestManageExternalStoragePermission(this)
 
     setContent {
 
@@ -74,9 +63,6 @@ class MainActivity : ComponentActivity() {
         ConexenToolsTheme(
           darkTheme = darkTheme.isDark
         ) {
-          //val hvm: HomeScreenViewModel = viewModel(LocalContext.current as ComponentActivity),
-
-//        mainViewModel = viewModel(factory = MainViewModelFactory(context = this))
           Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
@@ -116,6 +102,10 @@ class MainActivity : ComponentActivity() {
       }
     }
   }
+}
+
+fun requestPermissions(){
+
 }
 
 //  @Composable

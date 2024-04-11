@@ -1,5 +1,6 @@
 package com.conexentools.domain.repository
 
+import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import contacts.core.entities.Contact
@@ -16,6 +17,9 @@ interface AndroidUtils {
   fun sendWaMessage(number: String, message: String?)
   fun executeCommand(command: String, su: Boolean)
   fun composeEmail(recipientAddress: String, subject: String = "")
+  fun openSettings(settingsMenu: String, onlyReturnIntent: Boolean = false): Intent
+  fun hasExternalStorageWriteReadAccess(): Boolean
+  fun shouldShowRequestPermissionRationale(permission: String): Boolean
 
   companion object {
     fun create(): AndroidUtils {
@@ -60,11 +64,22 @@ interface AndroidUtils {
           TODO("Not yet implemented")
         }
 
+        override fun openSettings(settingsMenu: String, onlyReturnIntent: Boolean): Intent {
+          TODO("Not yet implemented")
+        }
+
+        override fun hasExternalStorageWriteReadAccess(): Boolean {
+          TODO("Not yet implemented")
+        }
+
+        override fun shouldShowRequestPermissionRationale(permission: String): Boolean {
+          TODO("Not yet implemented")
+        }
+
         override fun sendWaMessage(number: String, message: String?) {
           TODO("Not yet implemented")
         }
       }
     }
   }
-
 }

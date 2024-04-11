@@ -28,6 +28,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -42,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
@@ -60,6 +62,8 @@ import com.conexentools.core.util.truncate
 import com.conexentools.data.local.model.Client
 import com.conexentools.data.repository.AndroidUtilsImpl
 import com.conexentools.domain.repository.AndroidUtils
+import com.conexentools.presentation.components.screens.home.components.HomeScreenFAB
+import com.conexentools.presentation.components.screens.home.components.HomeTopBar
 import com.conexentools.presentation.components.screens.home.enums.HomeScreenPage
 import com.conexentools.presentation.components.screens.home.pages.client_list.ClientsListPage
 import com.conexentools.presentation.components.screens.home.pages.client_list.clientsForTesting
@@ -81,7 +85,6 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
   homeScreenState: HomeScreenState,
   navController: NavController,
-  savePreferencesAction: () -> Unit,
   page: MutableState<HomeScreenPage>,
   au: AndroidUtils,
 
@@ -110,6 +113,7 @@ fun HomeScreen(
   onClientDelete: (Client) -> Unit,
   onClientSendMessage: (String, String?) -> Unit,
   onAddClient: () -> Unit,
+  onBatchAddClient: () -> Unit,
   onClientRechargeCounterReset: (Client) -> Unit,
 ) {
 
@@ -130,7 +134,6 @@ fun HomeScreen(
         navController = navController,
         page = page,
         au = au,
-        savePreferencesAction = savePreferencesAction,
 
         onPickContactButton = onPickContactButton,
         adbInstrumentationRunCommandGetter = adbInstrumentationRunCommandGetter,
@@ -155,6 +158,7 @@ fun HomeScreen(
         onClientDelete = onClientDelete,
         onClientSendMessage = onClientSendMessage,
         onAddClient = onAddClient,
+        onBatchAddClient = onBatchAddClient,
         onClientRechargeCounterReset = onClientRechargeCounterReset
       )
     }
@@ -190,7 +194,6 @@ fun HomeScreen(
 @Composable
 private fun DrawHome(
   navController: NavController,
-  savePreferencesAction: () -> Unit,
   page: MutableState<HomeScreenPage>,
   au: AndroidUtils,
 
@@ -221,6 +224,7 @@ private fun DrawHome(
   onClientSendMessage: (String, String?) -> Unit,
   onClientDelete: (Client) -> Unit,
   onAddClient: () -> Unit,
+  onBatchAddClient: () -> Unit,
   onClientRechargeCounterReset: (Client) -> Unit,
 ) {
 
@@ -284,6 +288,7 @@ private fun DrawHome(
 
   val coroutineScope = rememberCoroutineScope()
   val snackbarHostState = remember { SnackbarHostState() }
+  val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
   Scaffold(
     topBar = {
@@ -297,6 +302,8 @@ private fun DrawHome(
         },
         onSettings = { navController.navigate(Screen.Settings) },
         onAbout = { navController.navigate(Screen.About) },
+        onHelp = { navController.navigate(Screen.Help) },
+        au = au
       )
     },
     snackbarHost = {
@@ -315,7 +322,7 @@ private fun DrawHome(
       HomeScreenFAB(
         runInstrumentationTest = runInstrumentationTest,
         updateRechargeAvailability = updateRechargeAvailability,
-        savePreferencesAction = savePreferencesAction,
+//        savePreferencesAction = savePreferencesAction,
         firstClientNumber = firstClientNumber,
         secondClientNumber = secondClientNumber,
         firstClientRecharge = firstClientRecharge,
@@ -327,9 +334,11 @@ private fun DrawHome(
         showAdbRunCommandDialog = showAdbRunCommandDialog,
         maxPinLength = maxPinLength,
         onAddClient = onAddClient,
+        onBatchAddClient = onBatchAddClient,
         au = au
       )
-    }
+    },
+    modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
   ) { paddingValues ->
 
     HorizontalPager(
@@ -416,8 +425,8 @@ private fun DrawHome(
         }
       }
 
-      when (currentPageIndex) {
-        HomeScreenPage.INSTRUMENTED_TEST.ordinal -> {
+      when (HomeScreenPage.fromOrdinal(currentPageIndex)) {
+        HomeScreenPage.INSTRUMENTED_TEST -> {
           InstrumentedTestPage(
             paddingValues = paddingValues,
             onPickContact = onPickContactButton,
@@ -437,7 +446,7 @@ private fun DrawHome(
           )
         }
 
-        HomeScreenPage.CLIENT_LIST.ordinal -> {
+        HomeScreenPage.CLIENT_LIST -> {
           if (isManager.value) {
             ClientsListPage(
               clientPagingItems = clientPagingItems,
@@ -491,7 +500,6 @@ fun HomeScreenPreview() {
       adbInstrumentationRunCommandGetter = { "" },
       runInstrumentationTest = {},
       updateRechargeAvailability = {},
-      savePreferencesAction = {},
       firstClientNumber = remember { mutableStateOf("55797140") },
       secondClientNumber = remember { mutableStateOf("58469745") },
 //      secondClientNumber = remember { mutableStateOf(null) },
@@ -514,7 +522,8 @@ fun HomeScreenPreview() {
       onClientDelete = {},
       onClientSendMessage = { _, _ -> },
       onClientRechargeCounterReset = {},
-      onAddClient = {}
+      onAddClient = {},
+      onBatchAddClient = {},
     )
   }
 }

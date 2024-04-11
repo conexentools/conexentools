@@ -1,5 +1,7 @@
 package com.conexentools.data.repository
 
+import android.Manifest
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -8,17 +10,20 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.ContactsContract
 import android.provider.Settings
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.net.toUri
-import com.conexentools.domain.repository.AndroidUtils
+import com.conexentools.BuildConfig
 import com.conexentools.core.util.log
 import com.conexentools.core.util.logError
+import com.conexentools.domain.repository.AndroidUtils
 import contacts.core.Contacts
 import contacts.core.entities.Contact
 import contacts.core.equalTo
@@ -171,10 +176,10 @@ class AndroidUtilsImpl @Inject constructor(
     val packageManager: PackageManager = context.packageManager
     try {
       var uri = "https://wa.me/$number"
-      if (!message.isNullOrEmpty()){
+      if (!message.isNullOrEmpty()) {
         uri += "?text=" + URLEncoder.encode(message, "UTF-8")
       }
-      val intent = Intent(Intent.ACTION_VIEW, )
+      val intent = Intent(Intent.ACTION_VIEW)
       intent.setPackage("com.whatsapp")
       intent.setData(uri.toUri())
       intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -184,6 +189,13 @@ class AndroidUtilsImpl @Inject constructor(
     } catch (e: java.lang.Exception) {
       e.printStackTrace()
     }
+  }
+
+  override fun hasExternalStorageWriteReadAccess(): Boolean {
+    return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager() ||
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.R &&
+        isPermissionGranted(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) &&
+        isPermissionGranted(android.Manifest.permission.READ_EXTERNAL_STORAGE)
   }
 
   override fun composeEmail(recipientAddress: String, subject: String) {
@@ -199,5 +211,21 @@ class AndroidUtilsImpl @Inject constructor(
     }
   }
 
+  override fun openSettings(settingsMenu: String, onlyReturnIntent: Boolean): Intent {
+    val intent = Intent(
+      settingsMenu,
+      "package:${BuildConfig.APPLICATION_ID}".toUri()
+    )
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    if (onlyReturnIntent)
+      return intent
+
+    context.startActivity(intent)
+    return intent
+  }
+
+  override fun shouldShowRequestPermissionRationale(permission: String): Boolean {
+    return ActivityCompat.shouldShowRequestPermissionRationale(context as Activity, permission)
+  }
 }
 

@@ -11,13 +11,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.conexentools.core.util.ObserveLifecycleEvents
+import com.conexentools.core.util.composable
 import com.conexentools.core.util.log
+import com.conexentools.core.util.navigate
 import com.conexentools.core.util.pickContact
 import com.conexentools.data.local.model.Client
 import com.conexentools.domain.repository.AndroidUtils
@@ -25,6 +25,8 @@ import com.conexentools.presentation.HomeScreenViewModel
 import com.conexentools.presentation.RequestAppPermissions
 import com.conexentools.presentation.components.screens.about.AboutScreen
 import com.conexentools.presentation.components.screens.add_edit_client.AddEditClientScreen
+import com.conexentools.presentation.components.screens.contact_picker.ContactPickerScreen
+import com.conexentools.presentation.components.screens.help.HelpScreen
 import com.conexentools.presentation.components.screens.home.HomeScreen
 import com.conexentools.presentation.components.screens.settings.SettingsScreen
 import contacts.core.util.phoneList
@@ -40,11 +42,15 @@ fun SetUpNavGraph(
 
   hvm.ObserveLifecycleEvents(lifecycle = LocalLifecycleOwner.current.lifecycle)
   var permissionsRequested by remember { mutableStateOf(false) }
-  if (!permissionsRequested){
-    RequestAppPermissions(au = au) {
-      permissionsRequested = true
-      hvm.initialClientsLoad()
-    }
+  if (!permissionsRequested) {
+    RequestAppPermissions(
+      au = au,
+      appLaunchCount = hvm.appLaunchCount.intValue,
+      onPermissionsRequestComplete = {
+        permissionsRequested = true
+        hvm.initialClientsLoad()
+      }
+    )
   }
 
   NavHost(
@@ -53,9 +59,11 @@ fun SetUpNavGraph(
   ) {
 
     var onEditionClient: Client? = null
-    fun navigateBack() { navController.popBackStack() }
+    fun navigateBack() {
+      navController.popBackStack()
+    }
 
-    composable(route = Screen.Home.route) {
+    composable(Screen.Home) {
       val pickContactLauncher = pickContact(au = au) { contact ->
         if (contact != null) {
           val number =
@@ -72,7 +80,6 @@ fun SetUpNavGraph(
       HomeScreen(
         homeScreenState = homeScreenState,
         navController = navController,
-        savePreferencesAction = hvm::saveUserPreferences,
 //        onInitialCompositionOfClientsPage = {
 //          hvm.initialClientsLoad()
 //        },
@@ -120,6 +127,10 @@ fun SetUpNavGraph(
           onEditionClient = null
           navController.navigate(Screen.AddEditClient)
         },
+        onBatchAddClient = {
+          onEditionClient = null
+          navController.navigate(Screen.AddEditClient)
+        },
         onClientRechargeCounterReset = {
           log("Client recharge counter restored")
           hvm.updateClient(it)
@@ -128,7 +139,7 @@ fun SetUpNavGraph(
     }
 
     // Add/Edit Client Screen
-    composable(route = Screen.AddEditClient.route) {
+    composable(Screen.AddEditClient) {
 
       val coroutineScope = rememberCoroutineScope()
 
@@ -170,7 +181,7 @@ fun SetUpNavGraph(
     }
 
     // Settings Screen
-    composable(route = Screen.Settings.route) {
+    composable(Screen.Settings) {
       SettingsScreen(
         appTheme = hvm.appTheme,
         alwaysWaMessageByIntent = hvm.alwaysWaMessageByIntent,
@@ -179,15 +190,30 @@ fun SetUpNavGraph(
     }
 
     // About Screen
-    composable(route = Screen.About.route) {
+    composable(Screen.About) {
       AboutScreen(
         onNavigateBack = ::navigateBack,
         au = au
       )
     }
+
+    // Help Screen
+    composable(Screen.Help) {
+      HelpScreen(
+        onNavigateBack = ::navigateBack,
+      )
+    }
+
+    // Contact Picker Screen
+    composable(Screen.ContactPicker) {
+      ContactPickerScreen(
+        onNavigateBack = ::navigateBack,
+        onSelectionDone = {
+
+        },
+      )
+    }
   }
 }
 
-fun NavController.navigate(screen: Screen) {
-  navigate(screen.route)
-}
+

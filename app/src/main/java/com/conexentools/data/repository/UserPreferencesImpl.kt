@@ -22,7 +22,7 @@ class UserPreferencesImpl @Inject constructor(
 
   override suspend fun <T> save(key: Preferences.Key<T>, data: T?) {
     dataStore.edit { settings ->
-      log("Saving $key = $data")
+//      log("Saving $key = $data")
       if (data != null)
         settings[key] = data
       else if (settings.contains(key))
@@ -51,6 +51,7 @@ class UserPreferencesImpl @Inject constructor(
   override suspend fun saveInitialHomeScreenPage(value: Int?) = save(PK.INITIAL_HOME_SCREEN_PAGE, value)
   override suspend fun saveAppTheme(value: Int?) = save(PK.APP_THEME, value)
   override suspend fun saveAlwaysWaMessageByIntent(value: Boolean?) = save(PK.ALWAYS_WA_MESSAGE_BY_INTENT, value)
+  override suspend fun saveAppLaunchCount(value: Int?) = save(PK.APP_LAUNCH_COUNT, value)
 
   override val bank: Flow<String?>
     get() = load(PK.BANK)
@@ -76,6 +77,8 @@ class UserPreferencesImpl @Inject constructor(
     get() = load(PK.APP_THEME)
   override val alwaysWaMessageByIntent: Flow<Boolean?>
     get() = load(PK.ALWAYS_WA_MESSAGE_BY_INTENT)
+  override val appLaunchCount: Flow<Int?>
+    get() = load(PK.APP_LAUNCH_COUNT)
 }
 
 //val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = Constants.APP_SETTINGS)

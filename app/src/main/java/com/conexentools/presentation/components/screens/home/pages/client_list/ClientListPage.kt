@@ -36,6 +36,7 @@ import com.conexentools.data.local.model.Client
 import com.conexentools.data.repository.AndroidUtilsImpl
 import com.conexentools.domain.repository.AndroidUtils
 import kotlinx.coroutines.flow.flowOf
+import my.nanihadesuka.compose.LazyColumnScrollbar
 
 
 @Composable
@@ -53,97 +54,101 @@ fun ClientsListPage(
 
   val listState = rememberLazyListState()
 
-  LazyColumn(
-    state = listState,
-    verticalArrangement = Arrangement.Center,
-    horizontalAlignment = Alignment.CenterHorizontally,
+  LazyColumnScrollbar(
+    listState = listState,
     modifier = Modifier
-      .fillMaxSize()
       .padding(paddingValues)
       .animateContentSize()
   ) {
-    items(
-      count = clientPagingItems.itemCount,
-      key = { clientPagingItems[it]?.hashCode() ?: -1 }
+    LazyColumn(
+      state = listState,
+      verticalArrangement = Arrangement.Center,
+      horizontalAlignment = Alignment.CenterHorizontally,
+      modifier = Modifier.fillMaxSize()
+    ) {
+      items(
+        count = clientPagingItems.itemCount,
+        key = { clientPagingItems[it]?.hashCode() ?: -1 }
 //      key = { clientPagingItems.itemKey { it.hashCode() } } // -> throws java.lang.IllegalArgumentException: Type of the key Function1<java.lang.Integer, java.lang.Object> is not supported. On Android you can only use types which can be stored inside the Bundle.
-    ) { index ->
+      ) { index ->
 
-      val client = clientPagingItems[index]
-      var showClient by remember(client, searchBarText) {
-        mutableStateOf(
-          if (client == null)
-            false
-          else {
-            searchBarText.isBlank() ||
-                client.name.contains(searchBarText, ignoreCase = true) ||
-                client.cardNumber != null && client.cardNumber!!.contains(
-              searchBarText,
-              ignoreCase = true
-            ) ||
-                client.phoneNumber != null && client.phoneNumber!!.contains(
-              searchBarText,
-              ignoreCase = true
-            )
-          }
-        )
-      }
-
-      if (client != null) {
-        AnimatedVisibility(
-          visible = showClient,
-          enter = fadeIn(animationSpec = tween(durationMillis = 200)) + expandVertically(
-            animationSpec = tween(durationMillis = 200)
-          ),
-          exit = fadeOut(animationSpec = tween(durationMillis = 200)) + shrinkVertically(
-            animationSpec = tween(durationMillis = 200)
-          )
-        ) {
-          ClientCard(
-            client = client,
-            onEdit = onClientEdit,
-            onRecharge = onClientRecharge,
-            onDelete = {
-              showClient = false
-              onClientDelete(it) { showClient = true }
-            },
-            showDivider = index < clientPagingItems.itemCount - 1,
-            onSendMessage = onClientSendMessage,
-            onClientRechargeCounterReset = onClientRechargeCounterReset,
-            au = au
+        val client = clientPagingItems[index]
+        var showClient by remember(client, searchBarText) {
+          mutableStateOf(
+            if (client == null)
+              false
+            else {
+              searchBarText.isBlank() ||
+                  client.name.contains(searchBarText, ignoreCase = true) ||
+                  client.cardNumber != null && client.cardNumber!!.contains(
+                searchBarText,
+                ignoreCase = true
+              ) ||
+                  client.phoneNumber != null && client.phoneNumber!!.contains(
+                searchBarText,
+                ignoreCase = true
+              )
+            }
           )
         }
+
+        if (client != null) {
+          AnimatedVisibility(
+            visible = showClient,
+            enter = fadeIn(animationSpec = tween(durationMillis = 200)) + expandVertically(
+              animationSpec = tween(durationMillis = 200)
+            ),
+            exit = fadeOut(animationSpec = tween(durationMillis = 200)) + shrinkVertically(
+              animationSpec = tween(durationMillis = 200)
+            )
+          ) {
+            ClientCard(
+              client = client,
+              onEdit = onClientEdit,
+              onRecharge = onClientRecharge,
+              onDelete = {
+                showClient = false
+                onClientDelete(it) { showClient = true }
+              },
+              showDivider = index < clientPagingItems.itemCount - 1,
+              onSendMessage = onClientSendMessage,
+              onClientRechargeCounterReset = onClientRechargeCounterReset,
+              au = au
+            )
+          }
+        }
       }
-    }
 
-    item {
-      clientPagingItems.run {
-        when {
-          loadState.refresh is LoadState.Loading -> {
-            PageLoader(
-              modifier = Modifier.height(Constants.Dimens.ClientCardHeight)
-            )
-          }
+      item {
+        clientPagingItems.run {
+          when {
+            loadState.refresh is LoadState.Loading -> {
+              PageLoader(
+                modifier = Modifier.height(Constants.Dimens.HorizontalCardHeight)
+              )
+            }
 
-          loadState.refresh is LoadState.Error -> {
-            val error = clientPagingItems.loadState.refresh as LoadState.Error
-            ErrorMessage(
-              modifier = Modifier.height(Constants.Dimens.ClientCardHeight),//fillParentMaxSize(),
-              message = error.error.localizedMessage!!,
-              onClickRetry = { retry() }
-            )
-          }
+            loadState.refresh is LoadState.Error -> {
+              val error = clientPagingItems.loadState.refresh as LoadState.Error
+              ErrorMessage(
+                modifier = Modifier.height(Constants.Dimens.HorizontalCardHeight),//fillParentMaxSize(),
+                message = error.error.localizedMessage!!,
+                onClickRetry = { retry() }
+              )
+            }
 
-          loadState.append is LoadState.Loading -> {
-            LoadingNextPageItem(modifier = Modifier)
-          }
+            loadState.append is LoadState.Loading -> {
+              LoadingNextPageItem(modifier = Modifier)
+            }
 
-          loadState.append is LoadState.Error -> {
-            val error = clientPagingItems.loadState.append as LoadState.Error
-            ErrorMessage(
-              modifier = Modifier,
-              message = error.error.localizedMessage!!,
-              onClickRetry = { retry() }
-            )
+            loadState.append is LoadState.Error -> {
+              val error = clientPagingItems.loadState.append as LoadState.Error
+              ErrorMessage(
+                modifier = Modifier,
+                message = error.error.localizedMessage!!,
+                onClickRetry = { retry() }
+              )
+            }
           }
         }
       }

@@ -144,7 +144,6 @@ fun AddEditClientScreen(
 
   ScreenSurface(
     title = client?.name ?: "Nuevo Cliente",
-    onNavigateBack = onNavigateBack,
     verticalArrangement = Arrangement.Center,
     bottomContent = {
       Column(modifier = Modifier.padding(Constants.Dimens.ExtraLarge)) {
@@ -186,28 +185,29 @@ fun AddEditClientScreen(
           }
         }
       }
-    }
+    },
+    onNavigateBack = onNavigateBack,
   ) {
-
-    Column (
+    Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center
-    ){
+    ) {
 
-    if (!imageUri.isNullOrEmpty()) {
-      AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
-          .data(imageUri)
-          .build(),
-        placeholder = painterResource(id = R.drawable.contact_image_placeholder_02),
-        contentDescription = null,
-        modifier = Modifier
-          .size(200.dp)
-          .padding(20.dp)
-          .clip(CircleShape),
-        contentScale = ContentScale.Crop,
-      )
-    }
+      if (!imageUri.isNullOrEmpty()) {
+        AsyncImage(
+          model = ImageRequest.Builder(LocalContext.current)
+            .data(imageUri)
+            .build(),
+          placeholder = painterResource(id = R.drawable.contact_image_placeholder_02),
+          contentDescription = null,
+          modifier = Modifier
+            .size(200.dp)
+            .padding(20.dp)
+            .clip(CircleShape),
+          contentScale = ContentScale.Crop,
+        )
+      }
+
       Spacer(modifier = Modifier.height(Constants.Dimens.Small))
 
       // Name - Number
@@ -307,8 +307,9 @@ fun AddEditClientScreen(
           Row {
 
             PrimaryIconButton(
-              imageVector =  Icons.Rounded.RemoveCircleOutline,
-              enabled = rechargesMade > 0) {
+              imageVector = Icons.Rounded.RemoveCircleOutline,
+              enabled = rechargesMade > 0
+            ) {
               if (rechargesMade > 0) {
                 rechargesMade--
                 onEditionClient.rechargesMade = rechargesMade
@@ -332,7 +333,6 @@ fun AddEditClientScreen(
               onEditionClient.rechargesMade = rechargesMade
             }
           }
-
 
           if (rechargesMade > 0) {
             Box(
@@ -359,7 +359,7 @@ fun AddEditClientScreen(
           ) {
 
             // Delete
-            PrimaryIconButton(Icons.Rounded.Cancel){
+            PrimaryIconButton(Icons.Rounded.Cancel) {
               onEditionClient.latestRechargeDateISOString = null
               latestRechargeDateISOString = null
             }

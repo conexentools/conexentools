@@ -1,13 +1,11 @@
 package com.conexentools.core.di
 
 import android.content.Context
-import android.os.Build
 import android.os.Environment
 import androidx.paging.ExperimentalPagingApi
 import androidx.room.Room
 import com.conexentools.R
 import com.conexentools.core.app.Constants
-import com.conexentools.core.util.isPermissionGranted
 import com.conexentools.core.util.log
 import com.conexentools.data.local.model.ClientDao
 import com.conexentools.data.local.model.ClientDatabase
@@ -27,21 +25,20 @@ import javax.inject.Singleton
 object RoomModule {
 
   @Provides
-  @Singleton
+//  @Singleton
   fun provideClientDatabase(
     @ApplicationContext context: Context,
     au: AndroidUtils
   ): ClientDatabase {
 
+    log("Creating database")
     val appName = context.resources.getString(R.string.app_name)
     val isExternalStorageWritable: Boolean =
       Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
 
     val databasePath = if (isExternalStorageWritable) {
       // Trying to locate database on external storage shared folder
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager() ||
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.R && au.isPermissionGranted(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-      ) {
+      if (au.hasExternalStorageWriteReadAccess()) {
         val externalStorage = Environment.getExternalStorageDirectory()
         log("Locating database in external storage shared folder")
 //      val downloadsDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)

@@ -18,7 +18,7 @@ object Constants {
   const val ITEMS_PER_PAGE = 15
 
   object Dimens {
-    val ClientCardHeight = 65.dp
+    val HorizontalCardHeight = 65.dp
     val HomeScreenFabContainer = 120.dp
 
     val MegaSmall = 2.dp
@@ -40,6 +40,7 @@ object Constants {
     val RECHARGES_AVAILABILITY_DATE = stringPreferencesKey("recharges_availability_date")
     val IS_MANAGER = booleanPreferencesKey("is_manager")
     val INITIAL_HOME_SCREEN_PAGE = intPreferencesKey("initial_home_screen_page")
+    val APP_LAUNCH_COUNT = intPreferencesKey("app_launch_count")
     val WA_CONTACT_IMAGE_URI_STRING = stringPreferencesKey("wa_contact_image_uri_string")
     val ALWAYS_WA_MESSAGE_BY_INTENT = booleanPreferencesKey("always_wa_message_by_intent")
   }

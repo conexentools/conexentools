@@ -19,6 +19,7 @@ interface UserPreferences {
   suspend fun saveInitialHomeScreenPage(value: Int?)
   suspend fun saveAppTheme(value: Int?)
   suspend fun saveAlwaysWaMessageByIntent(value: Boolean?)
+  suspend fun saveAppLaunchCount(value: Int?)
 
   val bank: Flow<String?>
   val waContact: Flow<String?>
@@ -32,4 +33,5 @@ interface UserPreferences {
   val initialHomeScreenPage: Flow<Int?>
   val appTheme: Flow<Int?>
   val alwaysWaMessageByIntent: Flow<Boolean?>
+  val appLaunchCount: Flow<Int?>
 }

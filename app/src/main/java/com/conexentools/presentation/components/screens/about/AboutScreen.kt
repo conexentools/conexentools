@@ -37,9 +37,8 @@ fun AboutScreen(
 
   ScreenSurface(
     title = "Acerca de",
-    onNavigateBack = onNavigateBack,
-    horizontalAlignment = Alignment.CenterHorizontally,
     lazyColumnModifier = Modifier.fillMaxHeight(),
+    horizontalAlignment = Alignment.CenterHorizontally,
     bottomContent = {
       Row(
         modifier = Modifier
@@ -66,7 +65,8 @@ fun AboutScreen(
           },
         )
       }
-    }
+    },
+    onNavigateBack = onNavigateBack,
   ) {
 
     Text(

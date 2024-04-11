@@ -1,6 +1,12 @@
-package com.conexentools.presentation.components.screens.home
+package com.conexentools.presentation.components.screens.home.components
 
+import android.Manifest
 import android.content.res.Configuration
+import android.os.Build
+import android.os.Environment
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -10,6 +16,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -39,19 +46,20 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.conexentools.R
 import com.conexentools.core.util.PreviewComposable
+import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.components.screens.home.enums.HomeScreenPage
 import com.conexentools.presentation.components.screens.home.pages.client_list.SearchAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeTopBar(
-//  onListClientButtonClicked: () -> Unit,
   onSearchBarTextChange: (String) -> Unit,
   onSettings: () -> Unit,
   onAbout: () -> Unit,
-//  on: () -> Unit,
+  onHelp: () -> Unit,
   onPageChange: (HomeScreenPage) -> Unit,
-  page: MutableState<HomeScreenPage>
+  page: MutableState<HomeScreenPage>,
+  au: AndroidUtils
 ) {
   Column(
     modifier = Modifier.height(65.dp)
@@ -59,6 +67,9 @@ fun HomeTopBar(
 
     var isSearchingClients by remember { mutableStateOf(false) }
     var isMoreDropDownMenuExpanded by remember { mutableStateOf(false) }
+
+    val writeExternalStorageLauncher =
+      rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     AnimatedVisibility(
       visible = !isSearchingClients,
@@ -127,7 +138,8 @@ fun HomeTopBar(
             // More DropDownMenu
             DropdownMenu(
               expanded = isMoreDropDownMenuExpanded,
-              onDismissRequest = { isMoreDropDownMenuExpanded = false }
+              onDismissRequest = { isMoreDropDownMenuExpanded = false },
+              modifier = Modifier.defaultMinSize(minWidth = 80.dp)
             ) {
               DropdownMenuItem(
                 text = { Text("Configuración") },
@@ -137,6 +149,25 @@ fun HomeTopBar(
                 text = { Text("Acerca de") },
                 onClick = onAbout
               )
+              DropdownMenuItem(
+                text = { Text("Ayuda") },
+                onClick = onHelp
+              )
+              if (!au.hasExternalStorageWriteReadAccess()){
+                DropdownMenuItem(
+                  text = { Text("Solicitar permiso para escribir en el almacenamiento externo") },
+                  onClick = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()){
+                      au.openSettings(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    } else if (au.shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                      writeExternalStorageLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    } else {
+                      // User has selected Deny and don't ask again
+                      au.openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    }
+                  }
+                )
+              }
             }
           }
         }
@@ -159,7 +190,6 @@ fun HomeTopBar(
       )
     ) {
       SearchAppBar(
-        text = "",
         onTextChange = onSearchBarTextChange,
         onNavigateBack = { isSearchingClients = false },
       )
@@ -182,6 +212,8 @@ fun PreviewHomeTopBar() {
       onPageChange = {},
       onSettings = {},
       onAbout = {},
+      onHelp = {},
+      au = AndroidUtils.create()
     )
   }
 }

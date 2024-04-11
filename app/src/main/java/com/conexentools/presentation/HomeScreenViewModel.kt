@@ -1,29 +1,19 @@
 package com.conexentools.presentation
 
 import android.Manifest
-import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
-import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -32,6 +22,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.conexentools.BuildConfig
+import com.conexentools.R
 import com.conexentools.core.util.CoroutinesDispatchers
 import com.conexentools.core.util.RootUtil
 import com.conexentools.core.util.log
@@ -44,6 +35,7 @@ import com.conexentools.domain.use_cases.room.GetAllClientsUseCase
 import com.conexentools.domain.use_cases.room.InsertClientUseCase
 import com.conexentools.domain.use_cases.room.UpdateClientUseCase
 import com.conexentools.presentation.components.common.enums.AppTheme
+import com.conexentools.presentation.components.screens.home.components.PermissionInfoDialog
 import com.conexentools.presentation.components.screens.home.enums.HomeScreenPage
 import com.conexentools.presentation.components.screens.home.state.HomeScreenLoadingState
 import com.conexentools.presentation.components.screens.home.state.HomeScreenState
@@ -101,6 +93,7 @@ class HomeScreenViewModel @Inject constructor(
   var initialHomeScreenPage = mutableStateOf(HomeScreenPage.INSTRUMENTED_TEST)
   var appTheme = mutableStateOf(AppTheme.MODE_AUTO)
   var alwaysWaMessageByIntent = mutableStateOf(false)
+  var appLaunchCount = mutableIntStateOf(0)
 
   // Client List Screen
 //  private val _searchText = MutableStateFlow("")
@@ -112,6 +105,7 @@ class HomeScreenViewModel @Inject constructor(
   val clients: MutableStateFlow<PagingData<Client>> get() = _clients
 
   init {
+    log("Home View Model initialization")
     initialize()
   }
 
@@ -172,8 +166,9 @@ class HomeScreenViewModel @Inject constructor(
       initialHomeScreenPage.value = HomeScreenPage.fromOrdinal(up.initialHomeScreenPage.first())
       appTheme.value = AppTheme.fromOrdinal(up.appTheme.first())
       alwaysWaMessageByIntent.value = up.alwaysWaMessageByIntent.first() ?: false
+      appLaunchCount.intValue = (up.appLaunchCount.first() ?: 0) + 1
 
-      log("Preferences successfully loaded")
+//      log("Preferences successfully loaded")
     } catch (exc: Exception) {
       au.toast("Error al cargar las preferencias de usuario")
       au.toast(exc.message)
@@ -195,6 +190,7 @@ class HomeScreenViewModel @Inject constructor(
     up.saveInitialHomeScreenPage(initialHomeScreenPage.value.ordinal)
     up.saveAppTheme(appTheme.value.ordinal)
     up.saveAlwaysWaMessageByIntent(alwaysWaMessageByIntent.value)
+    up.saveAppLaunchCount(appLaunchCount.intValue)
   }
 
   private suspend fun getClients() =
@@ -347,95 +343,106 @@ class HomeScreenViewModel @Inject constructor(
 @Composable
 fun RequestAppPermissions(
   au: AndroidUtils,
+  appLaunchCount: Int,
   onPermissionsRequestComplete: () -> Unit
 ) {
-//  val context = LocalContext.current as ComponentActivity
+
   fun isGranted(permission: String) = au.isPermissionGranted(permission)
 
-//  fun isCallPermissionNotGranted() = !isGranted(Manifest.permission.CALL_PHONE)
-//  fun isReadContactsPermissionNotGranted() = !isGranted(Manifest.permission.READ_CONTACTS)
+  var checkReadSmsPermission by remember { mutableStateOf(true) }
+  var checkCallAndReadContactsPermission by remember { mutableStateOf(false) }
+  var checkManageExternalStoragePermission by remember { mutableStateOf(false) }
+  var checkWriteExternalStoragePermission by remember { mutableStateOf(false) }
+  var checkDisplayOverOtherAppsPermission by remember { mutableStateOf(false) }
 
-  var showReadSmsPermissionDialog by remember { mutableStateOf(true) }
-  var showCallAndReadContactsPermissionDialog by remember { mutableStateOf(false) }
-  var showManageExternalStoragePermissionDialog by remember { mutableStateOf(false) }
-  var showWriteExternalStoragePermissionDialog by remember { mutableStateOf(false) }
-  var showDisplayOverOtherAppsPermissionDialog by remember { mutableStateOf(false) }
+  val readSmsLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+      checkCallAndReadContactsPermission = true
+    }
+
+  val callReadContactsLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestMultiplePermissions()
+  ) {
+    checkManageExternalStoragePermission = true
+  }
+
+  val manageExternalStorageLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+      checkDisplayOverOtherAppsPermission = true
+    }
+
+  val writeExternalStorageLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+      checkDisplayOverOtherAppsPermission = true
+    }
 
   // READ_SMS -> (CALL_PHONE - READ_CONTACTS)
-  if (showReadSmsPermissionDialog) {
+  if (checkReadSmsPermission) {
     if (isGranted(Manifest.permission.READ_SMS)) {
-      showCallAndReadContactsPermissionDialog = true
-      showReadSmsPermissionDialog = false
+      checkCallAndReadContactsPermission = true
+      checkReadSmsPermission = false
     } else {
-      val launcher = prl { showCallAndReadContactsPermissionDialog = true }
-      PermissionInfoDialog("A continuacón conceda el permiso de leer mensajes para poder verificar los mensajes de confirmación enviados por Transfermóvil") {
-        launcher.launch(Manifest.permission.READ_SMS)
-        showReadSmsPermissionDialog = false
+      PermissionInfoDialog(stringResource(R.string.READ_SMS_PERMISSION_MESSAGE)) {
+        checkReadSmsPermission = false
+        readSmsLauncher.launch(Manifest.permission.READ_SMS)
       }
     }
   }
 
-  // (CALL_PHONE - READ_CONTACTS) ->
-  if (showCallAndReadContactsPermissionDialog) {
+  // (CALL_PHONE - READ_CONTACTS) -> MANAGE_EXTERNAL_STORAGE | WRITE_EXTERNAL_STORAGE
+  if (checkCallAndReadContactsPermission) {
 
     if (isGranted(Manifest.permission.CALL_PHONE) && isGranted(Manifest.permission.READ_CONTACTS)) {
-      showManageExternalStoragePermissionDialog = true
-      showCallAndReadContactsPermissionDialog = false
+      checkManageExternalStoragePermission = true
+      checkCallAndReadContactsPermission = false
     } else {
-      val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-      ) { showManageExternalStoragePermissionDialog = true }
-      PermissionInfoDialog("Unicamente necesarios para una mejor experiencia con la aplicación a continuación conceda los permisos para hacer llamadas y leer los contactos") {
-        launcher.launch(
+      PermissionInfoDialog(stringResource(R.string.CALL_PHONE_READ_CONTACTS_PERMISSION_MESSAGE)) {
+        checkCallAndReadContactsPermission = false
+        callReadContactsLauncher.launch(
           arrayOf(
             Manifest.permission.CALL_PHONE,
             Manifest.permission.READ_CONTACTS,
           )
         )
-        showCallAndReadContactsPermissionDialog = false
       }
     }
   }
 
   // MANAGE_EXTERNAL_STORAGE fallbacks to WRITE_EXTERNAL_STORAGE
-  if (showManageExternalStoragePermissionDialog) {
+  if (checkManageExternalStoragePermission) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-      showManageExternalStoragePermissionDialog = false
-      showWriteExternalStoragePermissionDialog = true
-    } else if (!Environment.isExternalStorageManager()) {
-      val launcher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-          log("Activity Result: $it")
-          log("Result Code: ${it.resultCode}")
-          log("Data: ${it.data}")
-          showManageExternalStoragePermissionDialog = false
-//          onPermissionsRequestComplete()
-        }
-      PermissionInfoDialog("A continuación conceda el permiso para acceder a todos los archivos del dispositivo, necesario para crear la carpeta 'Conexen Tools' en el almacenamiento interno. Si usted es administrador en esta carpeta se guardará la lista de los clientes para que pueda hacerle una copia de seguridad cuando desee, o sincronizar la carpeta con algún proveedor de almacenamiento en la nube (como FolderSync) que esta última sería la verdadera ventaja de crear esa carpeta. Si no concede este permiso y usted es administrador los clientes se guardarán el almacenamiento externo de la aplicación -> 'Android/data/com.conexentools/database'") {
-        launcher.launch(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-        showManageExternalStoragePermissionDialog = false
+      checkManageExternalStoragePermission = false
+      checkWriteExternalStoragePermission = true
+    } else if (!Environment.isExternalStorageManager() && appLaunchCount == 1) {
+      PermissionInfoDialog(stringResource(R.string.MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE)) {
+        manageExternalStorageLauncher.launch(
+          au.openSettings(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, onlyReturnIntent = true)
+        )
+        checkManageExternalStoragePermission = false
       }
+    } else {
+      checkManageExternalStoragePermission = false
+      checkDisplayOverOtherAppsPermission = true
     }
   }
 
   // WRITE_EXTERNAL_STORAGE -> Display over other apps
-  if (showWriteExternalStoragePermissionDialog) {
+  if (checkWriteExternalStoragePermission) {
     if (isGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-      showDisplayOverOtherAppsPermissionDialog = true
-      showWriteExternalStoragePermissionDialog = false
-    } else {
-      val launcher = prl { showDisplayOverOtherAppsPermissionDialog = true }
-      PermissionInfoDialog("A continuacón conceda el permiso de leer mensajes para poder verificar los mensajes de confirmación enviados por Transfermóvil cuando se esté ejecutando un test automatizado") {
-        launcher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        showWriteExternalStoragePermissionDialog = false
+      checkWriteExternalStoragePermission = false
+      checkDisplayOverOtherAppsPermission = true
+    } else if (appLaunchCount == 1) {
+      PermissionInfoDialog(stringResource(R.string.MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE)) {
+        writeExternalStorageLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        checkWriteExternalStoragePermission = false
       }
     }
   }
 
   // Display over other apps
-  if (showDisplayOverOtherAppsPermissionDialog) {
+  if (checkDisplayOverOtherAppsPermission) {
     // TODO Implement
-    showDisplayOverOtherAppsPermissionDialog = false
+    checkDisplayOverOtherAppsPermission = false
     onPermissionsRequestComplete()
 //    if (au.canDrawOverlays()){
 //      showDisplayOverOtherAppsPermissionDialog = false
@@ -475,41 +482,4 @@ fun RequestAppPermissions(
 //    componentActivityInstance = context,
 //    requestPermissionsImmediately = false
 //  )
-}
-
-@Composable
-fun PermissionInfoDialog(
-  text: String,
-  onOk: () -> Unit
-) {
-  AlertDialog(
-    title = {
-      Icon(
-        imageVector = Icons.Rounded.Info,
-        tint = MaterialTheme.colorScheme.primary,
-        contentDescription = null,
-        modifier = Modifier.fillMaxWidth()
-      )
-    },
-    onDismissRequest = { },
-    confirmButton = { TextButton(onClick = onOk) { Text("OK") } },
-    text = {
-      LazyColumn {
-        item {
-          Text(
-            text = text
-          )
-        }
-      }
-    }
-  )
-}
-
-// Permission Requester Launcher
-@Composable
-fun prl(onResult: () -> Unit): ManagedActivityResultLauncher<String, Boolean> {
-  return rememberLauncherForActivityResult(
-    contract = ActivityResultContracts.RequestPermission(),
-    onResult = { onResult() }
-  )
 }

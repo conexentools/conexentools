@@ -180,13 +180,16 @@ dependencies {
   // Coil
   implementation("io.coil-kt:coil-compose:2.6.0")
 
-  implementation("com.github.MshariAlsayari:Request-Permission-Compose:<last-version>")
+  implementation("com.github.MshariAlsayari:Request-Permission-Compose:1.2.0")
+
+  //Easy Permissions
+  implementation("com.vmadalin:easypermissions-ktx:1.0.0")
 
   // Message App Bar
 //  implementation("com.github.stevdza-san:MessageBarCompose:1.0.8")
 
 //  implementation("com.github.BILLyTheLiTTle:LazyColumns:0.2.7")
-//  implementation("com.github.nanihadesuka:LazyColumnScrollbar:1.10.0")
+  implementation("com.github.nanihadesuka:LazyColumnScrollbar:1.10.0")
 
   // Libphonenumber
   implementation("com.googlecode.libphonenumber:libphonenumber:8.13.34")

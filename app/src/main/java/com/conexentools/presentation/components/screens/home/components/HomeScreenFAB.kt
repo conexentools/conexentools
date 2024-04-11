@@ -1,8 +1,9 @@
-package com.conexentools.presentation.components.screens.home
+package com.conexentools.presentation.components.screens.home.components
 
-import android.Manifest
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +17,6 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableIntState
@@ -30,11 +30,12 @@ import com.conexentools.core.app.Constants
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.components.screens.home.enums.HomeScreenPage
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreenFAB(
   runInstrumentationTest: () -> Unit,
   updateRechargeAvailability: () -> Unit,
-  savePreferencesAction: () -> Unit,
+//  savePreferencesAction: () -> Unit,
   firstClientNumber: MutableState<String?>,
   secondClientNumber: MutableState<String?>,
   firstClientRecharge: MutableState<String?>,
@@ -46,7 +47,8 @@ fun HomeScreenFAB(
   au: AndroidUtils,
   showAdbRunCommandDialog: MutableState<Boolean>,
   maxPinLength: MutableIntState,
-  onAddClient: () -> Unit
+  onAddClient: () -> Unit,
+  onBatchAddClient: () -> Unit,
 ) {
   Row(
     verticalAlignment = Alignment.Bottom, modifier = Modifier
@@ -132,55 +134,20 @@ fun HomeScreenFAB(
 
       Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
         FloatingActionButton(
-          containerColor = MaterialTheme.colorScheme.primary,
-          contentColor = MaterialTheme.colorScheme.onPrimary,
-          modifier = Modifier.alpha(if (rechargesAvailabilityDateISOString.value == null) 1f else 0.25f),
-          onClick = {
-            if (page.value.isInstrumentedTestPage()) {
+          modifier = Modifier
+            .alpha(if (page.value.isInstrumentedTestPage() && !rechargesAvailabilityDateISOString.value.isNullOrEmpty()) 0.25f else 1f)
+            .combinedClickable(
+              onLongClick = {
+                onBatchAddClient()
+              },
+              onClick = {}
+            ),
+          onClick = { onAddClient() },
 
-              if (!fetchDataFromWA.value && (firstClientNumber.value!!.length != 8 || (secondClientNumber.value != null && secondClientNumber.value!!.length != 8))) {
-                au.toast(
-                  "El número del cliente debe tener 8 dígitos", vibrate = true
-                )
-                return@FloatingActionButton
-              }
-              if (!fetchDataFromWA.value && (firstClientRecharge.value!!.isEmpty() || firstClientRecharge.value!!.toInt() !in 25..1250 || (secondClientRecharge.value != null && secondClientRecharge.value!!.toInt() !in 25..1250))) {
-                au.toast(
-                  "Cada recarga debe estar entre $25 y $1250", vibrate = true
-                )
-                return@FloatingActionButton
-              }
-              if (pin.value.length != maxPinLength.intValue) {
-                au.toast(
-                  "El PIN debe tener ${maxPinLength.intValue} dígitos", vibrate = true
-                )
-                return@FloatingActionButton
-              }
-              if (!au.isPermissionGranted(Manifest.permission.READ_SMS)) {
-                au.toast(
-                  "Permiso para leer mensajes requerido", vibrate = true
-                )
-                return@FloatingActionButton
-              }
-              if (!au.canDrawOverlays()) {
-                au.toast(
-                  "Display pop-up windows permission is necessary to launch the instrumented test",
-                  vibrate = true
-                )
-                return@FloatingActionButton
-              }
-
-              updateRechargeAvailability()
-              savePreferencesAction()
-              runInstrumentationTest()
-            } else {
-              onAddClient()
-            }
-          },
-        ) {
+          ) {
           Icon(
             imageVector = if (page.value.isInstrumentedTestPage()) Icons.Rounded.PlayArrow else Icons.Rounded.Add,
-            contentDescription = "Run Test Button"
+            contentDescription = null
           )
         }
       }

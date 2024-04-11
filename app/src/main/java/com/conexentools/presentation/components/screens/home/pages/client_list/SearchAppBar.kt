@@ -34,14 +34,13 @@ import com.conexentools.presentation.components.common.PrimaryIconButton
 
 @Composable
 fun SearchAppBar(
-  text: String,
   onTextChange: (String) -> Unit,
   onNavigateBack: () -> Unit,
 ) {
 
   val focusRequester = remember { FocusRequester() }
   var value by remember {
-    mutableStateOf(text)
+    mutableStateOf("")
   }
 
   val trailingIcon = @Composable {
@@ -116,7 +115,6 @@ fun PreviewSearchAppBar() {
         .background(MaterialTheme.colorScheme.background),
       ) {
       SearchAppBar(
-        text = "",
         onTextChange = { },
         onNavigateBack = { },
       )

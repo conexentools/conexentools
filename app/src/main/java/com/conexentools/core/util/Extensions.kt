@@ -2,6 +2,10 @@ package com.conexentools.core.util
 
 import android.icu.text.DateFormat
 import android.view.KeyEvent
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
@@ -12,6 +16,13 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
+import androidx.navigation.NamedNavArgument
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
+import androidx.navigation.NavDeepLink
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable
+import com.conexentools.presentation.navigation.Screen
 import java.time.Instant
 import java.util.Date
 
@@ -45,7 +56,10 @@ fun String?.toInstant(): Instant? {
     Instant.parse(this)
 }
 
-fun Modifier.moveFocusOnTabPressed(direction: FocusDirection, focusManager: FocusManager): Modifier {
+fun Modifier.moveFocusOnTabPressed(
+  direction: FocusDirection,
+  focusManager: FocusManager
+): Modifier {
   return then(onPreviewKeyEvent {
     if (it.key == Key.Tab && it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
       focusManager.moveFocus(direction)
@@ -54,4 +68,36 @@ fun Modifier.moveFocusOnTabPressed(direction: FocusDirection, focusManager: Focu
       false
     }
   })
+}
+
+fun NavGraphBuilder.composable(
+  screen: Screen,
+  arguments: List<NamedNavArgument> = emptyList(),
+  deepLinks: List<NavDeepLink> = emptyList(),
+  enterTransition: (@JvmSuppressWildcards
+  AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition?)? = null,
+  exitTransition: (@JvmSuppressWildcards
+  AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition?)? = null,
+  popEnterTransition: (@JvmSuppressWildcards
+  AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition?)? =
+    enterTransition,
+  popExitTransition: (@JvmSuppressWildcards
+  AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition?)? =
+    exitTransition,
+  content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit
+) {
+  this.composable(
+    route = screen.route,
+    arguments = arguments,
+    deepLinks = deepLinks,
+    enterTransition = enterTransition,
+    exitTransition = exitTransition,
+    popEnterTransition = popEnterTransition,
+    popExitTransition = popExitTransition,
+    content = content
+  )
+}
+
+fun NavController.navigate(screen: Screen) {
+  navigate(screen.route)
 }

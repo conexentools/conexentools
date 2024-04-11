@@ -6,4 +6,7 @@
     <string name="pin_visibility_icon_content_description">PIN Visibility Icon</string>
     <string name="fetching_data">Obteniendo datos</string>
     <string name="retry">Reintentar</string>
+    <string name="MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE"><![CDATA[A continuación conceda el permiso para acceder a los contenidos del almacenamiento externo del dispositivo, necesario para crear la carpeta \'Conexen Tools\' en el almacenamiento interno. En esta carpeta se guardará la lista de los clientes para cuando desee hacerle una copia de seguridad o sincronizar la carpeta con algún proveedor de almacenamiento en la nube (como FolderSync), que esta última sería la verdadera ventaja de crear esa carpeta. Si no concede este permiso los clientes se guardarán en el almacenamiento externo de la aplicación -> \'Android/data/com.conexentools/database\']]></string>
+    <string name="CALL_PHONE_READ_CONTACTS_PERMISSION_MESSAGE">Unicamente necesarios para una mejor experiencia con la aplicación a continuación conceda los permisos para hacer llamadas y leer los contactos</string>
+    <string name="READ_SMS_PERMISSION_MESSAGE">A continuacón conceda el permiso de leer mensajes para poder verificar los mensajes de confirmación enviados por Transfermóvil</string>
 </resources>

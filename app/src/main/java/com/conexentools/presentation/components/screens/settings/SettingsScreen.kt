@@ -38,25 +38,12 @@ fun SettingsScreen(
 
   ScreenSurface(
     title = "Configuración",
-    onNavigateBack = onNavigateBack,
-    horizontalAlignment = Alignment.Start,
     lazyColumnModifier = Modifier
       .fillMaxHeight()
-//      .heightIn(0.dp, 232.dp) //mention max height here
-      .widthIn(0.dp, 350.dp)
-//      .fillMaxWidth()
-//    modifier = Modifier,
-//    horizontalAlignment = ,
-//    verticalArrangement = Arrangement.SpaceAround
-
-  ) {
-
-
-//    Text(
-//      text = "Configuración",
-//      style = MaterialTheme.typography.headlineMedium
-//    )
-
+      .widthIn(0.dp, 350.dp),
+    horizontalAlignment = Alignment.Start,
+    onNavigateBack = onNavigateBack,
+    ) {
     val themeItems by remember {
       mutableStateOf(
         listOf(
