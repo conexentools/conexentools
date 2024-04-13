@@ -38,6 +38,7 @@ import com.conexentools.data.repository.AndroidUtilsImpl
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.components.common.Contact
 import com.conexentools.presentation.components.common.RadialProgressTimeIndicator
+import com.conexentools.presentation.components.common.ScrollableAlertDialog
 import com.conexentools.presentation.components.common.cleanNumberString
 import me.saket.swipe.SwipeAction
 import me.saket.swipe.SwipeableActionsBox
@@ -144,28 +145,17 @@ fun ClientCard(
       }
 
       if (showResetRechargeTimerDialog) {
-        AlertDialog(
-          onDismissRequest = { showResetRechargeTimerDialog = false },
-          title = {
-            Text(text = "Reiniciar Contador?")
+        ScrollableAlertDialog(
+          title = "Reiniciar Contador?",
+          isInfoDialog = false,
+          yesNoDialog = true,
+          onConfirm = {
+            client.latestRechargeDateISOString = null
+            showResetRechargeTimerDialog = false
+            onClientRechargeCounterReset(client)
           },
-          confirmButton = {
-            TextButton(
-              onClick = {
-                client.latestRechargeDateISOString = null
-                showResetRechargeTimerDialog = false
-                onClientRechargeCounterReset(client)
-              }) {
-              Text("Si")
-            }
-          },
-          dismissButton = {
-            TextButton(onClick = {
-              showResetRechargeTimerDialog = false
-            }) {
-              Text("No")
-            }
-          },
+          onDismiss = { showResetRechargeTimerDialog = false },
+          onDismissRequest = { showResetRechargeTimerDialog = false }
         )
       }
     }

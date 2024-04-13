@@ -222,7 +222,7 @@ class HomeScreenViewModel @Inject constructor(
     client.latestRechargeDateISOString = Instant.now().plus(15, ChronoUnit.MINUTES).toString()
     client.rechargesMade = (client.rechargesMade ?: 0) + 1
     updateClient(client)
-    
+
     // TODO recharge instrumented test
   }
 

@@ -5,6 +5,9 @@ import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,16 +26,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -50,7 +50,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -69,8 +68,10 @@ import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.components.common.CreditCardTextField
 import com.conexentools.presentation.components.common.LabelSwitch
 import com.conexentools.presentation.components.common.PrimaryIconButton
+import com.conexentools.presentation.components.common.ScrollableAlertDialog
 import contacts.core.util.phoneList
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun InstrumentedTestPage(
   paddingValues: PaddingValues,
@@ -196,22 +197,14 @@ fun InstrumentedTestPage(
     var showCardLast4DigitsInfoDialog by remember { mutableStateOf(false) }
 
     if (showCardLast4DigitsInfoDialog) {
-      AlertDialog(
-        onDismissRequest = {
-          showCardLast4DigitsInfoDialog = false
-        },
-        text = {
-          Text(
-            text = "Últimos 4 dígitos de la tarjeta en CUP que vaya a usar para hacer la recarga. Deje sin especificar si tiene una sola tarjeta asociada al banco seleccionado."
-          )
-        },
-        confirmButton = {
-          TextButton(onClick = {
-            showCardLast4DigitsInfoDialog = false
-          }) {
-            Text("OK")
-          }
-        },
+      ScrollableAlertDialog(
+        text = "Últimos 4 dígitos de la tarjeta en CUP que vaya a usar para hacer la recarga. Deje sin especificar si tiene una sola tarjeta asociada al banco seleccionado",
+        isInfoDialog = true,
+        title = null,
+        yesNoDialog = false,
+        onDismiss = null,
+        onDismissRequest = { showCardLast4DigitsInfoDialog = false },
+        onConfirm = { showCardLast4DigitsInfoDialog = false }
       )
     }
 
@@ -332,17 +325,41 @@ fun InstrumentedTestPage(
       }
     }
 
-    if (rechargesAvailabilityDateISOString.value != null) {
-      Spacer(modifier = Modifier.height(Constants.Dimens.ExtraSmall))
-      Text(
-        text = "Próximas recargas disponibles el: ",
-        style = MaterialTheme.typography.bodyMedium
-      )
-      Text(
-        text = rechargesAvailabilityDateISOString.value!!.toFormattedDate(),
-        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
-      )
+    if (!rechargesAvailabilityDateISOString.value.isNullOrEmpty()) {
+
+      var showDialog by remember { mutableStateOf(false) }
+
+      Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.combinedClickable(
+          onLongClick = { showDialog = true },
+          onClick = {}
+        )
+      ) {
+        Spacer(modifier = Modifier.height(Constants.Dimens.ExtraSmall))
+        Text(
+          text = "Próximas recargas disponibles el: ",
+          style = MaterialTheme.typography.bodyMedium
+        )
+        Text(
+          text = rechargesAvailabilityDateISOString.value!!.toFormattedDate(),
+          style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+        )
+      }
+
+      if (showDialog) {
+        ScrollableAlertDialog(
+          text = "Restaurar la fecha de disponibilidad de las recargas?",
+          isInfoDialog = false,
+          yesNoDialog = true,
+          onConfirm = {
+            showDialog = false
+            rechargesAvailabilityDateISOString.value = null
+          },
+          onDismiss = { showDialog = false },
+          onDismissRequest = { showDialog = false }
+        )
+      }
     }
   }
-
 }

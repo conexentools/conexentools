@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.conexentools.R
 import com.conexentools.domain.repository.AndroidUtils
+import com.conexentools.presentation.components.common.ScrollableAlertDialog
 
 @Composable
 fun RequestAppPermissions(
@@ -57,7 +58,7 @@ fun RequestAppPermissions(
       checkCallAndReadContactsPermission = true
       checkReadSmsPermission = false
     } else {
-      PermissionInfoDialog(stringResource(R.string.READ_SMS_PERMISSION_MESSAGE)) {
+      ScrollableAlertDialog(stringResource(R.string.READ_SMS_PERMISSION_MESSAGE)) {
         checkReadSmsPermission = false
         readSmsLauncher.launch(Manifest.permission.READ_SMS)
       }
@@ -71,7 +72,7 @@ fun RequestAppPermissions(
       checkManageExternalStoragePermission = true
       checkCallAndReadContactsPermission = false
     } else {
-      PermissionInfoDialog(stringResource(R.string.CALL_PHONE_READ_CONTACTS_PERMISSION_MESSAGE)) {
+      ScrollableAlertDialog(stringResource(R.string.CALL_PHONE_READ_CONTACTS_PERMISSION_MESSAGE)) {
         checkCallAndReadContactsPermission = false
         callReadContactsLauncher.launch(
           arrayOf(
@@ -89,7 +90,7 @@ fun RequestAppPermissions(
       checkManageExternalStoragePermission = false
       checkWriteExternalStoragePermission = true
     } else if (!Environment.isExternalStorageManager() && appLaunchCount == 1) {
-      PermissionInfoDialog(stringResource(R.string.MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE)) {
+      ScrollableAlertDialog(stringResource(R.string.MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE)) {
         manageExternalStorageLauncher.launch(
           au.openSettings(
             Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
@@ -110,7 +111,7 @@ fun RequestAppPermissions(
       checkWriteExternalStoragePermission = false
       checkDisplayOverOtherAppsPermission = true
     } else if (appLaunchCount == 1) {
-      PermissionInfoDialog(stringResource(R.string.MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE)) {
+      ScrollableAlertDialog(stringResource(R.string.MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE)) {
         writeExternalStorageLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         checkWriteExternalStoragePermission = false
       }

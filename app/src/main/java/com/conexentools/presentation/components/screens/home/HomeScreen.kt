@@ -226,7 +226,7 @@ private fun DrawHome(
 ) {
 
   val showAdbRunCommandDialog = remember { mutableStateOf(false) }
-  var searchBarText = remember { mutableStateOf("") }
+  val searchBarText = remember { mutableStateOf("") }
 
   // ADB Command Dialog
   if (showAdbRunCommandDialog.value) {

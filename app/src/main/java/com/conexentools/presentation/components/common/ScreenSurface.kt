@@ -49,6 +49,7 @@ fun ScreenSurface(
   lazyColumnModifier: Modifier = Modifier,
   lazyColumnHorizontalAlignment: Alignment.Horizontal = Alignment.CenterHorizontally,
   lazyColumnVerticalArrangement: Arrangement.HorizontalOrVertical = Arrangement.Center,
+  showTopAppBarHorizontalDivider: Boolean = false,
   bottomContent: @Composable () -> Unit = {},
   onNavigateBack: () -> Unit,
   defaultTopAppBarActions: @Composable (RowScope.() -> Unit) = {},
@@ -108,8 +109,9 @@ fun ScreenSurface(
         ) {
           customTopAppBar?.invoke()
         }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f))
+        
+        if (showTopAppBarHorizontalDivider)
+          HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f))
       }
     },
     bottomBar = bottomContent

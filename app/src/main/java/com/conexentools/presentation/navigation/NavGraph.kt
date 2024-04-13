@@ -2,7 +2,6 @@ package com.conexentools.presentation.navigation
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,12 +29,6 @@ import com.conexentools.presentation.components.screens.help.HelpScreen
 import com.conexentools.presentation.components.screens.home.HomeScreen
 import com.conexentools.presentation.components.screens.home.components.RequestAppPermissions
 import com.conexentools.presentation.components.screens.settings.SettingsScreen
-import contacts.core.entities.Contact
-
-
-private var onEditionClient: Client? = null
-private var selectedClientsFromContactPicker: List<Contact> = listOf()
-private var latestIndexOfClientAddedFromContactPicker = 0
 
 @Composable
 fun SetUpNavGraph(
@@ -44,6 +37,7 @@ fun SetUpNavGraph(
   startDestination: Screen = Screen.Home,
   au: AndroidUtils
 ) {
+
 
   hvm.ObserveLifecycleEvents(lifecycle = LocalLifecycleOwner.current.lifecycle)
   var permissionsRequested by remember { mutableStateOf(false) }
@@ -64,7 +58,10 @@ fun SetUpNavGraph(
   ) {
 
 
-    fun navigateBack() = navController.popBackStack()
+    fun popBackStack() = navController.popBackStack()
+    AddEditClientScreenParameters.hvm = hvm
+    AddEditClientScreenParameters.au = au
+    AddEditClientScreenParameters.navigateBack = ::popBackStack
 
 //    fun onClientAddEdit(client: Client, action: () -> Unit) {
 //      hvm.checkIfClientIsPresent(client, onClientNotPresent = {
@@ -86,42 +83,7 @@ fun SetUpNavGraph(
           }
         },
      */
-    var onAddEditClientScreen_SubmitClient: (Client) -> Unit = {}
-    val onAddEditClientScreen_AddClientFromContactPicker: (client: Client) -> Unit = { client ->
-      hvm.checkIfClientIsPresentInDatabase(client, onClientNotPresent = {
-        hvm.insertClient(client)
-        log("Client added from batch selection. $client")
-        au.toast("${client.name} añadid@")
-      })
-    }
-    val onAddEditClientScreen_ClientAddedFromContactPicker: (MutableState<Client>) -> Unit =
-      { onEditionClient ->
-        if (latestIndexOfClientAddedFromContactPicker != -1) {
-          if (latestIndexOfClientAddedFromContactPicker < selectedClientsFromContactPicker.count()) {
-            onEditionClient.value =
-              selectedClientsFromContactPicker[++latestIndexOfClientAddedFromContactPicker].toClient()
-          } else {
-            selectedClientsFromContactPicker = listOf()
-            latestIndexOfClientAddedFromContactPicker = 0
-            navigateBack()
-          }
-        }
-      }
 
-    val onAddEditClientScreen_AddClient: (client: Client) -> Unit = { client ->
-      hvm.checkIfClientIsPresentInDatabase(client, onClientNotPresent = {
-        log("Client added. $client")
-        hvm.insertClient(client)
-        navigateBack()
-      })
-    }
-    val onAddEditClientScreen_EditClient: (client: Client) -> Unit = { client ->
-      hvm.checkIfClientIsPresentInDatabase(client, onClientNotPresent = {
-        log("Client edited. $client")
-        hvm.updateClient(client)
-        navigateBack()
-      })
-    }
     composable(Screen.Home) {
 
       val homeScreenState by hvm.state.collectAsState()
@@ -161,13 +123,6 @@ fun SetUpNavGraph(
         // ClientList Page
         isManager = hvm.isManager,
         clientPagingItems = clientPagingItems,
-        onClientCardEdit = { client ->
-          log("About to edit client: $client")
-          onEditionClient = client
-          latestIndexOfClientAddedFromContactPicker = -1
-          onAddEditClientScreen_SubmitClient = { onAddEditClientScreen_EditClient(it) }
-          navController.navigate(Screen.AddEditClient)
-        },
         onClientCardSendMessage = { number, message ->
           log("Sending message to number: $number. With message: $message")
           hvm.sendWAMessage(number, message)
@@ -177,10 +132,23 @@ fun SetUpNavGraph(
           log("Client deleted: $client")
           hvm.deleteClient(clientId = client.id)
         },
+        onClientCardEdit = { client ->
+          log("About to edit client: $client")
+          AddEditClientScreenParameters.client = client
+//          latestIndexOfClientAddedFromContactPicker = -1
+          AddEditClientScreenParameters.onSubmitClient = AddEditClientScreenParameters.onEditClient
+//          AddEditClientScreenParameters.onClientAddedFromContactPicker = null
+          AddEditClientScreenParameters.isNewClient = false
+//          onAddEditClientScreen_SubmitClient = onAddEditClientScreen_EditClient
+//          onAddEditClientScreen_ClientAddedFromContactPicker = null
+          navController.navigate(Screen.AddEditClient)
+        },
         onAddClient = {
-          onEditionClient = null
-          onAddEditClientScreen_SubmitClient = { onAddEditClientScreen_AddClient(it) }
-          latestIndexOfClientAddedFromContactPicker = -1
+          AddEditClientScreenParameters.client = null
+          AddEditClientScreenParameters.onSubmitClient = AddEditClientScreenParameters.onAddClient
+//          AddEditClientScreenParameters.onClientAddedFromContactPicker = null
+          AddEditClientScreenParameters.isNewClient = true
+//          latestIndexOfClientAddedFromContactPicker = -1
           navController.navigate(Screen.AddEditClient)
         },
         onBatchAddClient = {
@@ -189,7 +157,21 @@ fun SetUpNavGraph(
 //          onAddEditClientScreen_AddClientFromContactPicker = {
 //
 //          }
-          onAddEditClientScreen_SubmitClient = onAddEditClientScreen_AddClientFromContactPicker
+//          AddEditClientScreenParameters.onEditionClient = null
+          AddEditClientScreenParameters.onSubmitClient =
+            AddEditClientScreenParameters.onAddClientFromContactPicker
+          AddEditClientScreenParameters.isNewClient = true
+//          AddEditClientScreenParameters.onClientAddedFromContactPicker = { client ->
+//            if (AddEditClientScreenParameters.latestIndexOfClientAddedFromContactPicker < AddEditClientScreenParameters.selectedClientsFromContactPicker.count()) {
+//              AddEditClientScreenParameters.client =
+//                AddEditClientScreenParameters.selectedClientsFromContactPicker[++AddEditClientScreenParameters.latestIndexOfClientAddedFromContactPicker].toClient()
+//            } else {
+//              AddEditClientScreenParameters.selectedClientsFromContactPicker = listOf()
+//              AddEditClientScreenParameters.latestIndexOfClientAddedFromContactPicker = 0
+//              navigateBack()
+//            }
+//          }
+
           navController.navigate(Screen.ContactPicker)
         },
         onClientCardRechargeCounterReset = {
@@ -202,11 +184,12 @@ fun SetUpNavGraph(
     // Add|Edit Client Screen
     composable(Screen.AddEditClient) {
       AddEditClientScreen(
-        client = onEditionClient,
-        onCancel = ::navigateBack,
-        onNavigateBack = ::navigateBack,
-        onSubmit = onAddEditClientScreen_SubmitClient,
-        onClientAddedFromContactPicker = onAddEditClientScreen_ClientAddedFromContactPicker,
+        client = AddEditClientScreenParameters.client ?: Client(),
+        onCancel = ::popBackStack,
+        onNavigateBack = ::popBackStack,
+        onSubmit = AddEditClientScreenParameters.onSubmitClient,
+//        onClientAddedFromContactPicker = AddEditClientScreenParameters.onClientAddedFromContactPicker,
+        isNewClient = AddEditClientScreenParameters.isNewClient,
         au = au,
       )
     }
@@ -216,14 +199,14 @@ fun SetUpNavGraph(
       SettingsScreen(
         appTheme = hvm.appTheme,
         alwaysWaMessageByIntent = hvm.alwaysWaMessageByIntent,
-        onNavigateBack = ::navigateBack
+        onNavigateBack = ::popBackStack
       )
     }
 
     // About Screen
     composable(Screen.About) {
       AboutScreen(
-        onNavigateBack = ::navigateBack,
+        onNavigateBack = ::popBackStack,
         au = au
       )
     }
@@ -231,7 +214,7 @@ fun SetUpNavGraph(
     // Help Screen
     composable(Screen.Help) {
       HelpScreen(
-        onNavigateBack = ::navigateBack,
+        onNavigateBack = ::popBackStack,
       )
     }
 
@@ -239,18 +222,17 @@ fun SetUpNavGraph(
     composable(Screen.ContactPicker) {
       ContactPickerScreen(
         onSelectionDone = { selectedContacts ->
-
-          if (selectedContacts.isNotEmpty()) {
-            onEditionClient = selectedContacts.first().toClient()
-            latestIndexOfClientAddedFromContactPicker = 0
-            selectedClientsFromContactPicker = selectedContacts
+          if (selectedContacts.isEmpty()) {
+            popBackStack()
+          } else {
+            AddEditClientScreenParameters.client = selectedContacts.first().toClient()
+            AddEditClientScreenParameters.indexOfLatestClientAddedFromContactPicker = 0
+            AddEditClientScreenParameters.contactPickerSelectedContacts = selectedContacts
             navController.navigate(Screen.AddEditClient) {
               popUpTo(Screen.AddEditClient) {
                 inclusive = true
               }
             }
-          } else {
-            navigateBack()
           }
 //          onAddEditClientScreen_ClientAddedFromBatch = {
 //
@@ -280,8 +262,9 @@ fun SetUpNavGraph(
 //          }
 
         },
-        onNavigateBack = ::navigateBack,
+        onNavigateBack = ::popBackStack,
       )
     }
   }
 }
+
