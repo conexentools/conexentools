@@ -41,7 +41,7 @@ fun SettingsScreen(
     lazyColumnModifier = Modifier
       .fillMaxHeight()
       .widthIn(0.dp, 350.dp),
-    horizontalAlignment = Alignment.Start,
+    lazyColumnHorizontalAlignment = Alignment.Start,
     onNavigateBack = onNavigateBack,
     ) {
     val themeItems by remember {

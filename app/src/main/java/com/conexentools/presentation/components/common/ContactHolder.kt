@@ -3,7 +3,6 @@ package com.conexentools.presentation.components.common
 import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,7 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,8 +47,8 @@ import coil.request.ImageRequest
 import com.conexentools.R
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
+import com.conexentools.core.util.toUnicodeString
 import com.conexentools.presentation.components.screens.home.pages.client_list.clientsForTesting
-import kotlin.random.Random
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -59,12 +57,14 @@ fun Contact(
   name: String,
   imageUriString: String?,
   showDivider: Boolean,
-//  isSelected: MutableState<Boolean> = mutableStateOf(false),
   isSelected: Boolean? = null,
   subtitle: String? = null,
   onSelected: (() -> Unit)? = null,
   onSubtitleLongClick: ((String) -> Unit)? = null,
   onClick: (() -> Unit)? = null,
+  backgroundColor: Color = MaterialTheme.colorScheme.background,
+  titleLetter: Color = backgroundColor,
+  contactImageColor: Color = MaterialTheme.colorScheme.primary,
   extraContent: @Composable (RowScope.() -> Unit)? = null,
 ) {
   Column(
@@ -74,6 +74,7 @@ fun Contact(
       .fillMaxWidth()
       .height(Constants.Dimens.HorizontalCardHeight)
       .padding(PaddingValues(horizontal = Constants.Dimens.Medium))
+      .background(backgroundColor)
       .then(modifier)
     if (onClick != null || onSelected != null)
       m = modifier.combinedClickable(
@@ -85,13 +86,17 @@ fun Contact(
 
     Row(
       modifier = m,
-      verticalAlignment = Alignment.CenterVertically
+      verticalAlignment = Alignment.CenterVertically,
     ) {
 
       if (isSelected != null) {
-        Checkbox(checked = isSelected, onCheckedChange = {
-          onClick?.invoke()
-        })
+        Checkbox(
+          modifier = Modifier.width(35.dp),
+          checked = isSelected,
+          onCheckedChange = {
+            onClick?.invoke()
+          }
+        )
       }
 
       // Contact Image
@@ -100,22 +105,12 @@ fun Contact(
       ) {
         if (imageUriString.isNullOrEmpty()) {
 
-          val backgroundColor by remember {
-            mutableStateOf(
-              Color.hsv(
-                Random.nextFloat() * 360,
-                saturation = 1f,
-                value = 1f
-              )
-            )
-          }
-
           Box(
             modifier = Modifier
               .fillMaxSize()
               .padding(Constants.Dimens.MegaSmall)
               .clip(CircleShape)
-              .background(backgroundColor)
+              .background(contactImageColor)
           ) {
 //            Icon(
 //              imageVector = Icons.Filled.AccountCircle,
@@ -130,9 +125,9 @@ fun Contact(
 //              contentDescription = null
 //            )
             Text(
-              text = name[0].toString().uppercase(),
+              text = name.codePointAt(0).toUnicodeString().uppercase(),
               style = MaterialTheme.typography.headlineMedium,
-              color = Color.Transparent,
+              color = titleLetter,
               modifier = Modifier
                 .fillMaxSize()
                 .wrapContentHeight(align = Alignment.CenterVertically),
@@ -196,7 +191,7 @@ fun Contact(
 @Composable
 fun PreviewClientView() {
   PreviewComposable(fillMaxSize = false) {
-    var areContactsSelectable by remember { mutableStateOf(false) }
+    var areContactsSelectable by remember { mutableStateOf(true) }
 
     LazyColumn {
       items(clientsForTesting) {
@@ -222,7 +217,7 @@ fun PreviewClientView() {
           },
           onSubtitleLongClick = null,
           onClick = {
-            if (areContactsSelectable){
+            if (areContactsSelectable) {
               isSelected = !isSelected
             }
           },
@@ -233,3 +228,4 @@ fun PreviewClientView() {
     }
   }
 }
+

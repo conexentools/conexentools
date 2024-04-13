@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.ApplicationDefaultConfig
+
 /**
  * The first section in the build configuration applies the Android Gradle plugin
  * to this build and makes the android block available to specify
@@ -31,6 +33,7 @@ kotlin {
  */
 
 android {
+
 
   /**
    * The app's namespace. Used primarily to access app resources.
@@ -68,18 +71,21 @@ android {
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-    android.buildFeatures.buildConfig = true
-    buildConfigField("String", "RUNNER", "\"$testInstrumentationRunner\"")
-    buildConfigField("String", "TEST_NAMESPACE", "\"$testNamespace\"")
-    buildConfigField("String", "TESTED_TM_VERSION_CODE", "\"232583002\"")
-    buildConfigField("String", "TESTED_TM_VERSION_NAME", "\"2.23.25.83\"")
-    buildConfigField("String", "TESTED_WA_VERSION_NAME", "\"unknown\"")
-    buildConfigField("String", "TESTED_WA_VERSION_CODE", "\"unknown\"")
-    buildConfigField("String", "LOG_TAG", "\"<<CONEXEN>>\"")
 
     vectorDrawables {
       useSupportLibrary = true
     }
+
+    addToBuildConfig("runner", testInstrumentationRunner)
+    addToBuildConfig("testNamespace", testNamespace)
+    addToBuildConfig("logTag")
+    addToBuildConfig("whatsappPackageName")
+    addToBuildConfig("transfermovilPackageName")
+    addToBuildConfig("testedTmVersionName")
+    addToBuildConfig("testedTmVersionCode")
+    addToBuildConfig("testedWaVersionName")
+    addToBuildConfig("testedWaVersionCode")
+    addToBuildConfig("perico")
   }
 
   /**
@@ -132,6 +138,7 @@ android {
   buildFeatures {
     compose = true
     viewBinding = true
+    buildConfig = true
   }
   packaging {
     resources {
@@ -271,3 +278,20 @@ dependencies {
 //kapt {
 //  correctErrorTypes = true
 //}
+
+fun ApplicationDefaultConfig.addToBuildConfig(name: String, value: String? = null) {
+  buildConfigField("String", name.toUpperSnakeCase(),
+    "\"${value ?: providers.gradleProperty(name).get()}\""
+  )
+}
+
+fun String.toUpperSnakeCase(): String {
+  val string = this
+  return StringBuilder().apply {
+    string.forEach {
+      if (it.isUpperCase())
+        append("_")
+      append(it.uppercase())
+    }
+  }.toString()
+}

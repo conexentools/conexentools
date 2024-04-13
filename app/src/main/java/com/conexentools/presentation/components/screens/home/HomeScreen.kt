@@ -1,6 +1,5 @@
 package com.conexentools.presentation.components.screens.home
 
-//import com.conexentools.data.model.MainViewModelFactory
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.net.Uri
@@ -57,6 +56,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
+import com.conexentools.core.util.navigate
 import com.conexentools.core.util.textFilter
 import com.conexentools.core.util.truncate
 import com.conexentools.data.local.model.Client
@@ -71,14 +71,10 @@ import com.conexentools.presentation.components.screens.home.pages.instrumented_
 import com.conexentools.presentation.components.screens.home.state.HomeScreenLoadingState
 import com.conexentools.presentation.components.screens.home.state.HomeScreenState
 import com.conexentools.presentation.navigation.Screen
-import com.conexentools.presentation.navigation.navigate
 import com.conexentools.presentation.theme.LocalTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-
-//@Inject
-//lateinit var au: AndroidUtils
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -89,10 +85,9 @@ fun HomeScreen(
   au: AndroidUtils,
 
   // InstrumentationTest Page
-  onPickContactButton: () -> Unit,
+//  onPickContactButton: () -> Unit,
   adbInstrumentationRunCommandGetter: () -> String,
-  runInstrumentationTest: () -> Unit,
-  updateRechargeAvailability: () -> Unit,
+//  updateRechargeAvailability: () -> Unit,
   firstClientNumber: MutableState<String?>,
   secondClientNumber: MutableState<String?>,
   firstClientRecharge: MutableState<String?>,
@@ -104,17 +99,18 @@ fun HomeScreen(
   waContactImageUri: MutableState<Uri?>,
   rechargesAvailabilityDateISOString: MutableState<String?>,
   waContact: MutableState<String>,
+  onRunInstrumentedTest: () -> Unit,
 
   // ClientList Page
   isManager: MutableState<Boolean>,
   clientPagingItems: LazyPagingItems<Client>,
-  onClientEdit: (Client) -> Unit,
-  onClientRecharge: (Client) -> Unit,
-  onClientDelete: (Client) -> Unit,
-  onClientSendMessage: (String, String?) -> Unit,
+  onClientCardEdit: (Client) -> Unit,
+  onClientCardRecharge: (Client) -> Unit,
+  onClientCardDelete: (Client) -> Unit,
+  onClientCardSendMessage: (String, String?) -> Unit,
   onAddClient: () -> Unit,
   onBatchAddClient: () -> Unit,
-  onClientRechargeCounterReset: (Client) -> Unit,
+  onClientCardRechargeCounterReset: (Client) -> Unit,
 ) {
 
   when (homeScreenState.state) {
@@ -135,10 +131,9 @@ fun HomeScreen(
         page = page,
         au = au,
 
-        onPickContactButton = onPickContactButton,
+//        onPickContactButton = onPickContactButton,
         adbInstrumentationRunCommandGetter = adbInstrumentationRunCommandGetter,
-        runInstrumentationTest = runInstrumentationTest,
-        updateRechargeAvailability = updateRechargeAvailability,
+//        updateRechargeAvailability = updateRechargeAvailability,
         firstClientNumber = firstClientNumber,
         secondClientNumber = secondClientNumber,
         firstClientRecharge = firstClientRecharge,
@@ -150,16 +145,17 @@ fun HomeScreen(
         waContactImageUri = waContactImageUri,
         rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
         waContact = waContact,
+        onRunInstrumentedTest = onRunInstrumentedTest,
 
         isManager = isManager,
         clientPagingItems = clientPagingItems,
-        onClientEdit = onClientEdit,
-        onClientRecharge = onClientRecharge,
-        onClientDelete = onClientDelete,
-        onClientSendMessage = onClientSendMessage,
+        onClientCardEdit = onClientCardEdit,
+        onClientCardRecharge = onClientCardRecharge,
+        onClientCardDelete = onClientCardDelete,
+        onClientCardSendMessage = onClientCardSendMessage,
         onAddClient = onAddClient,
         onBatchAddClient = onBatchAddClient,
-        onClientRechargeCounterReset = onClientRechargeCounterReset
+        onClientCardRechargeCounterReset = onClientCardRechargeCounterReset
       )
     }
 
@@ -198,10 +194,10 @@ private fun DrawHome(
   au: AndroidUtils,
 
   // InstrumentationTest Page
-  onPickContactButton: () -> Unit,
+//  onPickContactButton: () -> Unit,
   adbInstrumentationRunCommandGetter: () -> String,
-  runInstrumentationTest: () -> Unit,
-  updateRechargeAvailability: () -> Unit,
+//  runInstrumentationTest: () -> Unit,
+//  updateRechargeAvailability: () -> Unit,
   firstClientNumber: MutableState<String?>,
   secondClientNumber: MutableState<String?>,
   firstClientRecharge: MutableState<String?>,
@@ -213,24 +209,24 @@ private fun DrawHome(
   waContactImageUri: MutableState<Uri?>,
   rechargesAvailabilityDateISOString: MutableState<String?>,
   waContact: MutableState<String>,
+  onRunInstrumentedTest: () -> Unit,
 
   // ClientList Page
   isManager: MutableState<Boolean>,
 //  onSearchBarValueChange: (String) -> Unit,
   clientPagingItems: LazyPagingItems<Client>,
 //  searchBarText: String = "",
-  onClientEdit: (Client) -> Unit,
-  onClientRecharge: (Client) -> Unit,
-  onClientSendMessage: (String, String?) -> Unit,
-  onClientDelete: (Client) -> Unit,
+  onClientCardEdit: (Client) -> Unit,
+  onClientCardRecharge: (Client) -> Unit,
+  onClientCardSendMessage: (String, String?) -> Unit,
+  onClientCardDelete: (Client) -> Unit,
   onAddClient: () -> Unit,
   onBatchAddClient: () -> Unit,
-  onClientRechargeCounterReset: (Client) -> Unit,
+  onClientCardRechargeCounterReset: (Client) -> Unit,
 ) {
 
   val showAdbRunCommandDialog = remember { mutableStateOf(false) }
-  val maxPinLength = remember { mutableIntStateOf(if (bank.value == "Metropolitano") 4 else 5) }
-  var searchBarText by remember { mutableStateOf("") }
+  var searchBarText = remember { mutableStateOf("") }
 
   // ADB Command Dialog
   if (showAdbRunCommandDialog.value) {
@@ -265,7 +261,8 @@ private fun DrawHome(
             onClick = {
               au.openBrowser(Constants.LOCAL_ADB_ARTICLE_URL)
               showAdbRunCommandDialog.value = false
-            }) {
+            }
+          ) {
             Text("ADB local?")
           }
 
@@ -273,7 +270,8 @@ private fun DrawHome(
             onClick = {
               au.openBrowser(Constants.ADB_DOWNLOAD_PAGE_URL)
               showAdbRunCommandDialog.value = false
-            }) {
+            }
+          ) {
             Text("Descargar ADB")
           }
         }
@@ -294,7 +292,7 @@ private fun DrawHome(
     topBar = {
       HomeTopBar(
         page = page,
-        onSearchBarTextChange = { searchBarText = it },
+        searchBarText = searchBarText,
         onPageChange = { page ->
           coroutineScope.launch {
             pagerState.animateScrollToPage(page.ordinal)
@@ -320,22 +318,20 @@ private fun DrawHome(
     },
     floatingActionButton = {
       HomeScreenFAB(
-        runInstrumentationTest = runInstrumentationTest,
-        updateRechargeAvailability = updateRechargeAvailability,
+//        runInstrumentationTest = runInstrumentationTest,
+//        updateRechargeAvailability = updateRechargeAvailability,
 //        savePreferencesAction = savePreferencesAction,
         firstClientNumber = firstClientNumber,
         secondClientNumber = secondClientNumber,
         firstClientRecharge = firstClientRecharge,
         secondClientRecharge = secondClientRecharge,
         fetchDataFromWA = fetchDataFromWA,
-        pin = pin,
         rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
         page = page,
         showAdbRunCommandDialog = showAdbRunCommandDialog,
-        maxPinLength = maxPinLength,
         onAddClient = onAddClient,
+        onRunInstrumentedTest = onRunInstrumentedTest,
         onBatchAddClient = onBatchAddClient,
-        au = au
       )
     },
     modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
@@ -429,7 +425,6 @@ private fun DrawHome(
         HomeScreenPage.INSTRUMENTED_TEST -> {
           InstrumentedTestPage(
             paddingValues = paddingValues,
-            onPickContact = onPickContactButton,
             au = au,
             firstClientNumber = firstClientNumber,
             secondClientNumber = secondClientNumber,
@@ -442,7 +437,6 @@ private fun DrawHome(
             waContactImageUri = waContactImageUri,
             rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
             waContact = waContact,
-            maxPinLength = maxPinLength
           )
         }
 
@@ -450,10 +444,10 @@ private fun DrawHome(
           if (isManager.value) {
             ClientsListPage(
               clientPagingItems = clientPagingItems,
-              searchBarText = searchBarText,
-              onClientEdit = onClientEdit,
-              onClientRecharge = onClientRecharge,
-              onClientSendMessage = onClientSendMessage,
+              searchBarText = searchBarText.value,
+              onClientEdit = onClientCardEdit,
+              onClientRecharge = onClientCardRecharge,
+              onClientSendMessage = onClientCardSendMessage,
               onClientDelete = { client, onClientDeleteDismissed ->
                 coroutineScope.launch {
                   val snackbarResult = snackbarHostState.showSnackbar(
@@ -463,7 +457,7 @@ private fun DrawHome(
                   )
                   when (snackbarResult) {
                     SnackbarResult.Dismissed -> {
-                      onClientDelete(client)
+                      onClientCardDelete(client)
                     }
 //                  SnackbarResult.ActionPerformed -> {
 //                    showClient.value = true
@@ -475,7 +469,7 @@ private fun DrawHome(
                 }
               },
               paddingValues = paddingValues,
-              onClientRechargeCounterReset = onClientRechargeCounterReset,
+              onClientRechargeCounterReset = onClientCardRechargeCounterReset,
               au = au
             )
           }
@@ -492,14 +486,15 @@ fun HomeScreenPreview() {
   val context = LocalContext.current
   PreviewComposable {
     val clientPagingItems = flowOf(PagingData.from(clientsForTesting)).collectAsLazyPagingItems()
+
     HomeScreen(
       homeScreenState = HomeScreenState(HomeScreenLoadingState.Success),
 //      homeScreenState = HomeScreenState(HomeScreenLoadingState.Error("Some error occurred")),
       navController = rememberNavController(),
-      onPickContactButton = {},
+//      onPickContactButton = {},
       adbInstrumentationRunCommandGetter = { "" },
-      runInstrumentationTest = {},
-      updateRechargeAvailability = {},
+//      runInstrumentationTest = {},
+//      updateRechargeAvailability = {},
       firstClientNumber = remember { mutableStateOf("55797140") },
       secondClientNumber = remember { mutableStateOf("58469745") },
 //      secondClientNumber = remember { mutableStateOf(null) },
@@ -517,13 +512,14 @@ fun HomeScreenPreview() {
       page = remember { mutableStateOf(HomeScreenPage.CLIENT_LIST) },
       au = AndroidUtilsImpl(context = context),
       clientPagingItems = clientPagingItems,
-      onClientEdit = {},
-      onClientRecharge = {},
-      onClientDelete = {},
-      onClientSendMessage = { _, _ -> },
-      onClientRechargeCounterReset = {},
+      onClientCardEdit = {},
+      onClientCardRecharge = {},
+      onClientCardDelete = {},
+      onClientCardSendMessage = { _, _ -> },
+      onClientCardRechargeCounterReset = {},
       onAddClient = {},
       onBatchAddClient = {},
+      onRunInstrumentedTest = {}
     )
   }
 }

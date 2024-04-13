@@ -13,11 +13,7 @@ import com.conexentools.Utils.Companion.log
 
 class TransfermovilHelper(device: UiDevice) {
 
-  companion object {
-    const val PACKAGE_NAME = "cu.etecsa.cubacel.tr.tm"
-  }
-
-  val installedVersion = Utils.getPackageVersion(PACKAGE_NAME)
+  val installedVersion = Utils.getPackageVersion(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME)
   val testedVersion = Pair(BuildConfig.TESTED_TM_VERSION_CODE.toLong(), BuildConfig.TESTED_TM_VERSION_NAME)
 
   val dm: DeviceManager = DeviceManager(device)
@@ -65,7 +61,7 @@ class TransfermovilHelper(device: UiDevice) {
     }
   }
 
-  fun launch(clearOutPreviousInstances: Boolean = true) = dm.launchPackage(PACKAGE_NAME, clearOutPreviousInstances = clearOutPreviousInstances)
+  fun launch(clearOutPreviousInstances: Boolean = true) = dm.launchPackage(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME, clearOutPreviousInstances = clearOutPreviousInstances)
 
   fun authenticate(pin: String): Boolean {
     selectBankTab("Sesión")

@@ -1,4 +1,4 @@
-package com.conexentools.presentation.components.screens.home.pages.client_list
+package com.conexentools.presentation.components.common
 
 import android.content.res.Configuration
 import androidx.compose.foundation.background
@@ -17,6 +17,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,23 +31,23 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.ContentAlpha
 import com.conexentools.core.util.PreviewComposable
-import com.conexentools.presentation.components.common.PrimaryIconButton
 
 @Composable
 fun SearchAppBar(
-  onTextChange: (String) -> Unit,
+  text: MutableState<String>,
+  onTextChange: (String) -> Unit = { },
   onNavigateBack: () -> Unit,
 ) {
 
   val focusRequester = remember { FocusRequester() }
-  var value by remember {
-    mutableStateOf("")
-  }
+//  var value by remember {
+//    mutableStateOf(text)
+//  }
 
   val trailingIcon = @Composable {
     PrimaryIconButton(Icons.Default.Close){
       onTextChange("")
-      value = ""
+      text.value = ""
     }
   }
 
@@ -58,10 +59,10 @@ fun SearchAppBar(
     color = Color.Transparent
   ) {
     TextField(
-      value = value,
+      value = text.value,
       onValueChange = {
         onTextChange(it)
-        value = it
+        text.value = it
       },
       modifier = Modifier
 //        .fillMaxWidth()
@@ -77,18 +78,12 @@ fun SearchAppBar(
       singleLine = true,
       leadingIcon = {
         PrimaryIconButton(Icons.AutoMirrored.Default.ArrowBack){
+          onTextChange("")
+          text.value = ""
           onNavigateBack()
         }
       },
-      trailingIcon = if (value.isEmpty()) null else trailingIcon,
-//      keyboardOptions = KeyboardOptions(
-//        imeAction = ImeAction.Done
-//      ),
-//      keyboardActions = KeyboardActions(
-//        onSearch = {
-//          onSearchClicked(value)
-//        }
-//      ),
+      trailingIcon = if (text.value.isEmpty()) null else trailingIcon,
       colors = TextFieldDefaults.colors(
         unfocusedContainerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),//Color.Transparent,
         focusedContainerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),//Color.Transparent,
@@ -115,6 +110,7 @@ fun PreviewSearchAppBar() {
         .background(MaterialTheme.colorScheme.background),
       ) {
       SearchAppBar(
+        text = remember { mutableStateOf("") },
         onTextChange = { },
         onNavigateBack = { },
       )

@@ -1,19 +1,8 @@
 package com.conexentools.presentation
 
-import android.Manifest
 import android.net.Uri
-import android.os.Build
-import android.os.Environment
-import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -22,7 +11,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.conexentools.BuildConfig
-import com.conexentools.R
 import com.conexentools.core.util.CoroutinesDispatchers
 import com.conexentools.core.util.RootUtil
 import com.conexentools.core.util.log
@@ -35,7 +23,6 @@ import com.conexentools.domain.use_cases.room.GetAllClientsUseCase
 import com.conexentools.domain.use_cases.room.InsertClientUseCase
 import com.conexentools.domain.use_cases.room.UpdateClientUseCase
 import com.conexentools.presentation.components.common.enums.AppTheme
-import com.conexentools.presentation.components.screens.home.components.PermissionInfoDialog
 import com.conexentools.presentation.components.screens.home.enums.HomeScreenPage
 import com.conexentools.presentation.components.screens.home.state.HomeScreenLoadingState
 import com.conexentools.presentation.components.screens.home.state.HomeScreenState
@@ -95,6 +82,10 @@ class HomeScreenViewModel @Inject constructor(
   var alwaysWaMessageByIntent = mutableStateOf(false)
   var appLaunchCount = mutableIntStateOf(0)
 
+  private val whatsAppInstalledVersion = au.getPackageVersion(BuildConfig.WHATSAPP_PACKAGE_NAME)
+  private val transfermovilInstalledVersion =
+    au.getPackageVersion(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME)
+
   // Client List Screen
 //  private val _searchText = MutableStateFlow("")
 //  val searchText = _searchText.asStateFlow()
@@ -133,7 +124,7 @@ class HomeScreenViewModel @Inject constructor(
     }
   }
 
-  fun initialClientsLoad() = viewModelScope.launch {
+  fun initialClientsLoad() = viewModelScope.launch(coroutinesDispatchers.unconfined) {
     log("Running first client load")
     _state.value = HomeScreenState(HomeScreenLoadingState.ScreenLoading)
     val lodClientsDeferredJob = async {
@@ -152,7 +143,7 @@ class HomeScreenViewModel @Inject constructor(
     }
   }
 
-  private fun loadUserPreferences() = viewModelScope.launch {
+  private fun loadUserPreferences() = viewModelScope.launch(coroutinesDispatchers.unconfined) {
     try {
       bank.value = up.bank.first() ?: "Metropolitano"
       waContact.value = up.waContact.first() ?: ""
@@ -177,7 +168,7 @@ class HomeScreenViewModel @Inject constructor(
     }
   }
 
-  fun saveUserPreferences() = viewModelScope.launch {
+  private fun saveUserPreferences() = viewModelScope.launch(coroutinesDispatchers.unconfined) {
     up.saveBank(bank.value)
     up.saveWaContact(waContact.value)
     up.saveWaContactImageUriString(waContactImageUri.value?.toString())
@@ -205,17 +196,17 @@ class HomeScreenViewModel @Inject constructor(
       log("Clients successfully loaded")
     }
 
-  fun updateClient(client: Client) = viewModelScope.launch {
+  fun updateClient(client: Client) = viewModelScope.launch(coroutinesDispatchers.unconfined) {
     updateClientUseCase(client)
     getClients()
   }
 
-  fun deleteClient(clientId: Long) = viewModelScope.launch {
+  fun deleteClient(clientId: Long) = viewModelScope.launch(coroutinesDispatchers.unconfined) {
     deleteClientUseCase(clientId)
     getClients()
   }
 
-  fun insertClient(client: Client) = viewModelScope.launch {
+  fun insertClient(client: Client) = viewModelScope.launch(coroutinesDispatchers.unconfined) {
     insertClientUseCase(client)
     getClients()
   }
@@ -225,9 +216,13 @@ class HomeScreenViewModel @Inject constructor(
 //  }
 
   fun rechargeClient(client: Client) {
+    if (!areMainConditionsToRunInstrumentedTestMet())
+      return
+
     client.latestRechargeDateISOString = Instant.now().plus(15, ChronoUnit.MINUTES).toString()
     client.rechargesMade = (client.rechargesMade ?: 0) + 1
     updateClient(client)
+    
     // TODO recharge instrumented test
   }
 
@@ -241,7 +236,28 @@ class HomeScreenViewModel @Inject constructor(
     }
   }
 
-  suspend fun countClientMatches(client: Client) = countClientMatchesUseCase(client)
+  fun checkIfClientIsPresentInDatabase(client: Client, onClientNotPresent: () -> Unit = {}) {
+    var clientExists = false
+    viewModelScope.launch(context = coroutinesDispatchers.unconfined) {
+      val count = countClientMatchesUseCase(client)
+      log("count: $count")
+      clientExists = count > 0
+    }.invokeOnCompletion { exception ->
+      if (exception == null) {
+        if (clientExists) {
+          au.toast("El cliente ya existe", vibrate = true)
+        } else {
+          onClientNotPresent()
+        }
+      } else {
+        au.toast(
+          "Un error ocurrió mientras se contaban los clientes en la base de datos",
+          vibrate = true
+        )
+        au.toast(exception.localizedMessage)
+      }
+    }
+  }
 
 
 //  companion object {
@@ -299,7 +315,7 @@ class HomeScreenViewModel @Inject constructor(
       command += " -e digitosTarjeta ${cardLast4Digits.value}"
     if (bank.value == "Metropolitano")
       bank.value = "metro"
-    command += " -e pin ${pin.value} -e banco ${bank.value.lowercase()} ${BuildConfig.APPLICATION_ID}.test/${BuildConfig.RUNNER} --no-window-animation --no-hidden-api-checks"
+    command += " -e pin ${pin.value} -e banco ${bank.value.lowercase()} ${BuildConfig.TEST_NAMESPACE}/${BuildConfig.RUNNER} --no-window-animation --no-hidden-api-checks"
     return command
   }
 
@@ -317,18 +333,64 @@ class HomeScreenViewModel @Inject constructor(
 ////    return Date.from(remaining)
 //  }
 
-  fun updateRechargeAvailability() {
+  private fun updateRechargeAvailability() {
     rechargesMade += if (secondClientNumber.value != null) 2 else 1
     rechargesAvailabilityDateISOString.value = if (rechargesMade < 2) {
       null
     } else {
-      Instant.now().plus(1, ChronoUnit.DAYS).toString()
+      Instant.now().plus(1, ChronoUnit.DAYS).plusSeconds(60 * 15).toString()
     }
 //    areRechargesAvailable.value = false
   }
 
-  fun runInstrumentationTest() {
-    au.executeCommand(getAdbInstrumentationRunCommand().removePrefix("adb shell "), true)
+  fun runInstrumentedTest() {
+
+    if (!areMainConditionsToRunInstrumentedTestMet())
+      return
+
+    val errorMessage = if (fetchDataFromWA.value) {
+      if (whatsAppInstalledVersion == null)
+        "WhatsApp parece no estar instalado"
+      else if (waContact.value.isEmpty())
+        "Especifique el nombre|número del contacto de WhatsApp que le envió los números a recargar"
+      else ""
+    } else {
+      if (firstClientNumber.value!!.length != 8 || secondClientNumber.value != null && secondClientNumber.value!!.length != 8)
+        "El número del cliente a recargar debe tener 8 dígitos"
+      else if (firstClientRecharge.value!!.isEmpty() || firstClientRecharge.value!!.toInt() !in 25..1250 ||
+        secondClientRecharge.value != null && secondClientRecharge.value!!.isEmpty() || secondClientRecharge.value!!.toInt() !in 25..1250
+      )
+        "El monto de la recarga debe estar entre $25 y $1205"
+      else ""
+    }
+
+    if (errorMessage.isEmpty()) {
+      log("Running instrumented test")
+      au.executeCommand(getAdbInstrumentationRunCommand().removePrefix("adb shell "), true)
+      updateRechargeAvailability()
+    } else
+      au.toast(errorMessage, vibrate = true)
+  }
+
+  private fun areMainConditionsToRunInstrumentedTestMet(): Boolean {
+    val maxPinLength = if (bank.value == "Metropolitano") 4 else 5
+
+    val errorMessage = if (!RootUtil.isDeviceRooted)
+      "Acceso root es requerido para ejecutar el test automatizado"
+    else if (transfermovilInstalledVersion == null)
+      "Transfermóvil parece no estar instalado"
+    else if (cardLast4Digits.value.length in 1..3)
+      "Especifique los cuatro dígitos de la tarjeta o deje el campo vacío"
+    else if (pin.value.length != maxPinLength)
+      "El PIN debe tener $maxPinLength dígitos"
+    else ""
+
+    return if (errorMessage.isEmpty()) {
+      true
+    } else {
+      au.toast(errorMessage, vibrate = true)
+      false
+    }
   }
 
   override fun onPause(owner: LifecycleOwner) {
@@ -338,148 +400,4 @@ class HomeScreenViewModel @Inject constructor(
   }
 
 
-}
-
-@Composable
-fun RequestAppPermissions(
-  au: AndroidUtils,
-  appLaunchCount: Int,
-  onPermissionsRequestComplete: () -> Unit
-) {
-
-  fun isGranted(permission: String) = au.isPermissionGranted(permission)
-
-  var checkReadSmsPermission by remember { mutableStateOf(true) }
-  var checkCallAndReadContactsPermission by remember { mutableStateOf(false) }
-  var checkManageExternalStoragePermission by remember { mutableStateOf(false) }
-  var checkWriteExternalStoragePermission by remember { mutableStateOf(false) }
-  var checkDisplayOverOtherAppsPermission by remember { mutableStateOf(false) }
-
-  val readSmsLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-      checkCallAndReadContactsPermission = true
-    }
-
-  val callReadContactsLauncher = rememberLauncherForActivityResult(
-    contract = ActivityResultContracts.RequestMultiplePermissions()
-  ) {
-    checkManageExternalStoragePermission = true
-  }
-
-  val manageExternalStorageLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-      checkDisplayOverOtherAppsPermission = true
-    }
-
-  val writeExternalStorageLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-      checkDisplayOverOtherAppsPermission = true
-    }
-
-  // READ_SMS -> (CALL_PHONE - READ_CONTACTS)
-  if (checkReadSmsPermission) {
-    if (isGranted(Manifest.permission.READ_SMS)) {
-      checkCallAndReadContactsPermission = true
-      checkReadSmsPermission = false
-    } else {
-      PermissionInfoDialog(stringResource(R.string.READ_SMS_PERMISSION_MESSAGE)) {
-        checkReadSmsPermission = false
-        readSmsLauncher.launch(Manifest.permission.READ_SMS)
-      }
-    }
-  }
-
-  // (CALL_PHONE - READ_CONTACTS) -> MANAGE_EXTERNAL_STORAGE | WRITE_EXTERNAL_STORAGE
-  if (checkCallAndReadContactsPermission) {
-
-    if (isGranted(Manifest.permission.CALL_PHONE) && isGranted(Manifest.permission.READ_CONTACTS)) {
-      checkManageExternalStoragePermission = true
-      checkCallAndReadContactsPermission = false
-    } else {
-      PermissionInfoDialog(stringResource(R.string.CALL_PHONE_READ_CONTACTS_PERMISSION_MESSAGE)) {
-        checkCallAndReadContactsPermission = false
-        callReadContactsLauncher.launch(
-          arrayOf(
-            Manifest.permission.CALL_PHONE,
-            Manifest.permission.READ_CONTACTS,
-          )
-        )
-      }
-    }
-  }
-
-  // MANAGE_EXTERNAL_STORAGE fallbacks to WRITE_EXTERNAL_STORAGE
-  if (checkManageExternalStoragePermission) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-      checkManageExternalStoragePermission = false
-      checkWriteExternalStoragePermission = true
-    } else if (!Environment.isExternalStorageManager() && appLaunchCount == 1) {
-      PermissionInfoDialog(stringResource(R.string.MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE)) {
-        manageExternalStorageLauncher.launch(
-          au.openSettings(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, onlyReturnIntent = true)
-        )
-        checkManageExternalStoragePermission = false
-      }
-    } else {
-      checkManageExternalStoragePermission = false
-      checkDisplayOverOtherAppsPermission = true
-    }
-  }
-
-  // WRITE_EXTERNAL_STORAGE -> Display over other apps
-  if (checkWriteExternalStoragePermission) {
-    if (isGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-      checkWriteExternalStoragePermission = false
-      checkDisplayOverOtherAppsPermission = true
-    } else if (appLaunchCount == 1) {
-      PermissionInfoDialog(stringResource(R.string.MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE)) {
-        writeExternalStorageLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        checkWriteExternalStoragePermission = false
-      }
-    }
-  }
-
-  // Display over other apps
-  if (checkDisplayOverOtherAppsPermission) {
-    // TODO Implement
-    checkDisplayOverOtherAppsPermission = false
-    onPermissionsRequestComplete()
-//    if (au.canDrawOverlays()){
-//      showDisplayOverOtherAppsPermissionDialog = false
-//      onPermissionsRequestComplete()
-//    }
-  }
-
-
-//  var showRuntimePermissionDialog by remember {
-//    mutableStateOf(
-//      Build.VERSION.SDK_INT < Build.VERSION_CODES.R && !isGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE) ||
-//          !isGranted(Manifest.permission.READ_SMS) ||
-//          isGranted(Manifest.permission.READ_CONTACTS)
-//    )
-//  }
-//  var showRuntimePermissionDialog by remember { mutableStateOf(false) }
-
-//  var runtimePermissionsLauncher =
-//    rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-//      runtimePermissionsAttended = true
-//    }
-//  val permissionsRequester = Permission.requestPermissions(
-//    Permission(Manifest.permission.READ_CONTACTS, context, au = au),
-//    Permission(Manifest.permission.CALL_PHONE, context, au = au),
-//    Permission(
-//      Manifest.permission.READ_SMS, context,
-//      permissionDeniedMessage = "Debe conceder el permiso a leer mensajes para poder iniciar el proceso de automatización",
-//      au = au
-//    ),
-//    Permission(Manifest.permission.SYSTEM_ALERT_WINDOW, context, au = au),
-//    Permission(
-//      Manifest.permission.WRITE_EXTERNAL_STORAGE,
-//      context,
-//      maxSdkVersion = Build.VERSION_CODES.Q,
-//      au = au
-//    ),
-//    componentActivityInstance = context,
-//    requestPermissionsImmediately = false
-//  )
 }

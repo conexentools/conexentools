@@ -38,7 +38,6 @@ fun AboutScreen(
   ScreenSurface(
     title = "Acerca de",
     lazyColumnModifier = Modifier.fillMaxHeight(),
-    horizontalAlignment = Alignment.CenterHorizontally,
     bottomContent = {
       Row(
         modifier = Modifier

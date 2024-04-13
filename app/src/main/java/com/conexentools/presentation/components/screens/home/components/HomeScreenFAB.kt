@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -25,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.unit.dp
 import com.conexentools.core.app.Constants
 import com.conexentools.domain.repository.AndroidUtils
@@ -33,20 +35,15 @@ import com.conexentools.presentation.components.screens.home.enums.HomeScreenPag
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreenFAB(
-  runInstrumentationTest: () -> Unit,
-  updateRechargeAvailability: () -> Unit,
-//  savePreferencesAction: () -> Unit,
   firstClientNumber: MutableState<String?>,
   secondClientNumber: MutableState<String?>,
   firstClientRecharge: MutableState<String?>,
   secondClientRecharge: MutableState<String?>,
   fetchDataFromWA: MutableState<Boolean>,
-  pin: MutableState<String>,
   rechargesAvailabilityDateISOString: MutableState<String?>,
   page: MutableState<HomeScreenPage>,
-  au: AndroidUtils,
   showAdbRunCommandDialog: MutableState<Boolean>,
-  maxPinLength: MutableIntState,
+  onRunInstrumentedTest: () -> Unit,
   onAddClient: () -> Unit,
   onBatchAddClient: () -> Unit,
 ) {
@@ -54,7 +51,6 @@ fun HomeScreenFAB(
     verticalAlignment = Alignment.Bottom, modifier = Modifier
       .size(Constants.Dimens.HomeScreenFabContainer)
   ) {
-
     Column(
       modifier = Modifier.weight(1f),
       verticalArrangement = Arrangement.Center,
@@ -89,12 +85,10 @@ fun HomeScreenFAB(
       }
     }
 
-//        Spacer(modifier = Modifier.width(10.dp))
-
     fun canAddRecharge() =
       page.value.isInstrumentedTestPage() && !fetchDataFromWA.value && secondClientNumber.value == null
 
-    Column(
+    Column (
       modifier = Modifier.weight(1f),
       verticalArrangement = Arrangement.Bottom,
       horizontalAlignment = Alignment.CenterHorizontally
@@ -130,24 +124,35 @@ fun HomeScreenFAB(
         }
       }
 
-//          Spacer(modifier = Modifier.height(10.dp))
-
-      Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+      Box(
+        modifier = Modifier.weight(1f),
+        contentAlignment = Alignment.Center
+      ) {
         FloatingActionButton(
           modifier = Modifier
-            .alpha(if (page.value.isInstrumentedTestPage() && !rechargesAvailabilityDateISOString.value.isNullOrEmpty()) 0.25f else 1f)
-            .combinedClickable(
-              onLongClick = {
-                onBatchAddClient()
-              },
-              onClick = {}
-            ),
-          onClick = { onAddClient() },
-
-          ) {
+            .alpha(if (page.value.isInstrumentedTestPage() && !rechargesAvailabilityDateISOString.value.isNullOrEmpty()) 0.25f else 1f),
+          onClick = { },
+        ) {
           Icon(
             imageVector = if (page.value.isInstrumentedTestPage()) Icons.Rounded.PlayArrow else Icons.Rounded.Add,
             contentDescription = null
+          )
+          Box(
+            modifier = Modifier
+              .fillMaxSize()
+              .clipToBounds()
+              .combinedClickable(
+                onLongClick = {
+                  if (!page.value.isInstrumentedTestPage())
+                    onBatchAddClient()
+                },
+                onClick = {
+                  if (page.value.isInstrumentedTestPage())
+                    onRunInstrumentedTest()
+                  else
+                    onAddClient()
+                }
+              )
           )
         }
       }

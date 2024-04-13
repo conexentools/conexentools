@@ -8,16 +8,12 @@ import androidx.test.uiautomator.UiDevice
 
 class WhatsAppHelper(val device: UiDevice) {
 
-  companion object {
-    const val PACKAGE_NAME = "com.whatsapp"
-  }
-
-  val installedVersion = Utils.getPackageVersion(PACKAGE_NAME)
+  val installedVersion = Utils.getPackageVersion(BuildConfig.WHATSAPP_PACKAGE_NAME)
 
   val dm: DeviceManager = DeviceManager(device)
 
   fun launch(clearOutPreviousInstances: Boolean = true) =
-    dm.launchPackage(PACKAGE_NAME, clearOutPreviousInstances = clearOutPreviousInstances)
+    dm.launchPackage(BuildConfig.WHATSAPP_PACKAGE_NAME, clearOutPreviousInstances = clearOutPreviousInstances)
 
   fun startConversation(contactNameOrNumber: String) {
       // Assuming WA is already open at main screen

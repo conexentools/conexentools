@@ -113,6 +113,8 @@ fun ClientCard(
       },
       imageUriString = client.imageUriString,
       showDivider = showDivider,
+      backgroundColor = Color.Transparent,
+      titleLetter = MaterialTheme.colorScheme.background
     ) {
 
       Spacer(modifier = Modifier.width(Constants.Dimens.Small))

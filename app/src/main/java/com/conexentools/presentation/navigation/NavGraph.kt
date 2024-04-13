@@ -2,11 +2,11 @@ package com.conexentools.presentation.navigation
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -18,19 +18,24 @@ import com.conexentools.core.util.ObserveLifecycleEvents
 import com.conexentools.core.util.composable
 import com.conexentools.core.util.log
 import com.conexentools.core.util.navigate
-import com.conexentools.core.util.pickContact
+import com.conexentools.core.util.popUpTo
+import com.conexentools.core.util.toClient
 import com.conexentools.data.local.model.Client
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.HomeScreenViewModel
-import com.conexentools.presentation.RequestAppPermissions
 import com.conexentools.presentation.components.screens.about.AboutScreen
 import com.conexentools.presentation.components.screens.add_edit_client.AddEditClientScreen
 import com.conexentools.presentation.components.screens.contact_picker.ContactPickerScreen
 import com.conexentools.presentation.components.screens.help.HelpScreen
 import com.conexentools.presentation.components.screens.home.HomeScreen
+import com.conexentools.presentation.components.screens.home.components.RequestAppPermissions
 import com.conexentools.presentation.components.screens.settings.SettingsScreen
-import contacts.core.util.phoneList
-import kotlinx.coroutines.launch
+import contacts.core.entities.Contact
+
+
+private var onEditionClient: Client? = null
+private var selectedClientsFromContactPicker: List<Contact> = listOf()
+private var latestIndexOfClientAddedFromContactPicker = 0
 
 @Composable
 fun SetUpNavGraph(
@@ -58,111 +63,17 @@ fun SetUpNavGraph(
     startDestination = startDestination.route
   ) {
 
-    var onEditionClient: Client? = null
-    fun navigateBack() {
-      navController.popBackStack()
-    }
 
-    composable(Screen.Home) {
-      val pickContactLauncher = pickContact(au = au) { contact ->
-        if (contact != null) {
-          val number =
-            if (contact.phoneList().isNotEmpty()) contact.phoneList().first().number else null
-          hvm.waContact.value = number ?: contact.displayNamePrimary ?: "sin nombre :("
-          hvm.waContactImageUri.value = contact.photoThumbnailUri
-        }
-      }
+    fun navigateBack() = navController.popBackStack()
 
-      val homeScreenState by hvm.state.collectAsState()
-
-      val clientPagingItems = hvm.clients.collectAsLazyPagingItems()
-//      val clientPagingItems = flowOf(PagingData.from(clientsForTesting)).collectAsLazyPagingItems()
-      HomeScreen(
-        homeScreenState = homeScreenState,
-        navController = navController,
-//        onInitialCompositionOfClientsPage = {
-//          hvm.initialClientsLoad()
-//        },
-        page = hvm.initialHomeScreenPage,
-        au = au,
-
-        // InstrumentationTest Page
-        onPickContactButton = {
-          pickContactLauncher.launch(null)
-//          contactPickerActivityLauncher.launch(pickContact)
-        },
-        adbInstrumentationRunCommandGetter = hvm::getAdbInstrumentationRunCommand,
-        runInstrumentationTest = hvm::runInstrumentationTest,
-        updateRechargeAvailability = hvm::updateRechargeAvailability,
-        firstClientNumber = hvm.firstClientNumber,
-        secondClientNumber = hvm.secondClientNumber,
-        firstClientRecharge = hvm.firstClientRecharge,
-        secondClientRecharge = hvm.secondClientRecharge,
-        fetchDataFromWA = hvm.fetchDataFromWA,
-        pin = hvm.pin,
-        bank = hvm.bank,
-        cardLast4Digits = hvm.cardLast4Digits,
-        waContactImageUri = hvm.waContactImageUri,
-        rechargesAvailabilityDateISOString = hvm.rechargesAvailabilityDateISOString,
-        waContact = hvm.waContact,
-
-        // ClientList Page
-        isManager = hvm.isManager,
-        clientPagingItems = clientPagingItems,
-        onClientEdit = {
-          log("About to edit client: $it")
-          onEditionClient = it
-          navController.navigate(Screen.AddEditClient)
-        },
-        onClientSendMessage = { number, message ->
-          log("Sending message to number: $number. With message: $message")
-          hvm.sendWAMessage(number, message)
-        },
-        onClientRecharge = hvm::rechargeClient,
-        onClientDelete = { client: Client ->
-          log("Client deleted: $client")
-          hvm.deleteClient(clientId = client.id)
-        },
-        onAddClient = {
-          onEditionClient = null
-          navController.navigate(Screen.AddEditClient)
-        },
-        onBatchAddClient = {
-          onEditionClient = null
-          navController.navigate(Screen.AddEditClient)
-        },
-        onClientRechargeCounterReset = {
-          log("Client recharge counter restored")
-          hvm.updateClient(it)
-        }
-      )
-    }
-
-    // Add/Edit Client Screen
-    composable(Screen.AddEditClient) {
-
-      val coroutineScope = rememberCoroutineScope()
-
-      fun onClientAddEdit(client: Client, action: () -> Unit) {
-        var clientExists = false
-        coroutineScope.launch {
-          log("about to count matching clients")
-          val count = hvm.countClientMatches(client)
-          log("count: $count")
-          clientExists = count != 0
-        }.invokeOnCompletion {
-          if (clientExists) {
-            au.toast("El cliente ya existe", vibrate = true)
-          } else {
-            action()
-            navController.popBackStack()
-          }
-        }
-      }
-
-      AddEditClientScreen(
-        client = onEditionClient,
-        onAdd = {
+//    fun onClientAddEdit(client: Client, action: () -> Unit) {
+//      hvm.checkIfClientIsPresent(client, onClientNotPresent = {
+//        action()
+//        navController.popBackStack()
+//      })
+//    }
+    /*
+            onAdd = {
           onClientAddEdit(it) {
             log("Client added. $it")
             hvm.insertClient(it)
@@ -174,8 +85,128 @@ fun SetUpNavGraph(
             hvm.updateClient(it)
           }
         },
+     */
+    var onAddEditClientScreen_SubmitClient: (Client) -> Unit = {}
+    val onAddEditClientScreen_AddClientFromContactPicker: (client: Client) -> Unit = { client ->
+      hvm.checkIfClientIsPresentInDatabase(client, onClientNotPresent = {
+        hvm.insertClient(client)
+        log("Client added from batch selection. $client")
+        au.toast("${client.name} añadid@")
+      })
+    }
+    val onAddEditClientScreen_ClientAddedFromContactPicker: (MutableState<Client>) -> Unit =
+      { onEditionClient ->
+        if (latestIndexOfClientAddedFromContactPicker != -1) {
+          if (latestIndexOfClientAddedFromContactPicker < selectedClientsFromContactPicker.count()) {
+            onEditionClient.value =
+              selectedClientsFromContactPicker[++latestIndexOfClientAddedFromContactPicker].toClient()
+          } else {
+            selectedClientsFromContactPicker = listOf()
+            latestIndexOfClientAddedFromContactPicker = 0
+            navigateBack()
+          }
+        }
+      }
+
+    val onAddEditClientScreen_AddClient: (client: Client) -> Unit = { client ->
+      hvm.checkIfClientIsPresentInDatabase(client, onClientNotPresent = {
+        log("Client added. $client")
+        hvm.insertClient(client)
+        navigateBack()
+      })
+    }
+    val onAddEditClientScreen_EditClient: (client: Client) -> Unit = { client ->
+      hvm.checkIfClientIsPresentInDatabase(client, onClientNotPresent = {
+        log("Client edited. $client")
+        hvm.updateClient(client)
+        navigateBack()
+      })
+    }
+    composable(Screen.Home) {
+
+      val homeScreenState by hvm.state.collectAsState()
+
+      val clientPagingItems = hvm.clients.collectAsLazyPagingItems()
+
+//      val clientPagingItems = flowOf(PagingData.from(clientsForTesting)).collectAsLazyPagingItems()
+      HomeScreen(
+        homeScreenState = homeScreenState,
+        navController = navController,
+//        onInitialCompositionOfClientsPage = {
+//          hvm.initialClientsLoad()
+//        },
+        page = hvm.initialHomeScreenPage,
+        au = au,
+
+        // InstrumentationTest Page
+//        onPickContactButton = {
+//          pickContactLauncher.launch(null)
+////          contactPickerActivityLauncher.launch(pickContact)
+//        },
+        adbInstrumentationRunCommandGetter = hvm::getAdbInstrumentationRunCommand,
+//        runInstrumentationTest = hvm::runInstrumentedTest,
+//        updateRechargeAvailability = hvm::updateRechargeAvailability,
+        firstClientNumber = hvm.firstClientNumber,
+        secondClientNumber = hvm.secondClientNumber,
+        firstClientRecharge = hvm.firstClientRecharge,
+        secondClientRecharge = hvm.secondClientRecharge,
+        fetchDataFromWA = hvm.fetchDataFromWA,
+        pin = hvm.pin,
+        bank = hvm.bank,
+        cardLast4Digits = hvm.cardLast4Digits,
+        waContactImageUri = hvm.waContactImageUri,
+        rechargesAvailabilityDateISOString = hvm.rechargesAvailabilityDateISOString,
+        waContact = hvm.waContact,
+        onRunInstrumentedTest = hvm::runInstrumentedTest,
+        // ClientList Page
+        isManager = hvm.isManager,
+        clientPagingItems = clientPagingItems,
+        onClientCardEdit = { client ->
+          log("About to edit client: $client")
+          onEditionClient = client
+          latestIndexOfClientAddedFromContactPicker = -1
+          onAddEditClientScreen_SubmitClient = { onAddEditClientScreen_EditClient(it) }
+          navController.navigate(Screen.AddEditClient)
+        },
+        onClientCardSendMessage = { number, message ->
+          log("Sending message to number: $number. With message: $message")
+          hvm.sendWAMessage(number, message)
+        },
+        onClientCardRecharge = hvm::rechargeClient,
+        onClientCardDelete = { client: Client ->
+          log("Client deleted: $client")
+          hvm.deleteClient(clientId = client.id)
+        },
+        onAddClient = {
+          onEditionClient = null
+          onAddEditClientScreen_SubmitClient = { onAddEditClientScreen_AddClient(it) }
+          latestIndexOfClientAddedFromContactPicker = -1
+          navController.navigate(Screen.AddEditClient)
+        },
+        onBatchAddClient = {
+//          onEditionClient = null
+//          onAddEditClientScreen_SubmitClient = onAddEditClientScreen_AddClientFromContactPicker
+//          onAddEditClientScreen_AddClientFromContactPicker = {
+//
+//          }
+          onAddEditClientScreen_SubmitClient = onAddEditClientScreen_AddClientFromContactPicker
+          navController.navigate(Screen.ContactPicker)
+        },
+        onClientCardRechargeCounterReset = {
+          log("Client recharge counter restored")
+          hvm.updateClient(it)
+        }
+      )
+    }
+
+    // Add|Edit Client Screen
+    composable(Screen.AddEditClient) {
+      AddEditClientScreen(
+        client = onEditionClient,
         onCancel = ::navigateBack,
         onNavigateBack = ::navigateBack,
+        onSubmit = onAddEditClientScreen_SubmitClient,
+        onClientAddedFromContactPicker = onAddEditClientScreen_ClientAddedFromContactPicker,
         au = au,
       )
     }
@@ -207,13 +238,50 @@ fun SetUpNavGraph(
     // Contact Picker Screen
     composable(Screen.ContactPicker) {
       ContactPickerScreen(
-        onNavigateBack = ::navigateBack,
-        onSelectionDone = {
+        onSelectionDone = { selectedContacts ->
+
+          if (selectedContacts.isNotEmpty()) {
+            onEditionClient = selectedContacts.first().toClient()
+            latestIndexOfClientAddedFromContactPicker = 0
+            selectedClientsFromContactPicker = selectedContacts
+            navController.navigate(Screen.AddEditClient) {
+              popUpTo(Screen.AddEditClient) {
+                inclusive = true
+              }
+            }
+          } else {
+            navigateBack()
+          }
+//          onAddEditClientScreen_ClientAddedFromBatch = {
+//
+//          }
+
+//          fun addClient(index: Int){
+////            val remainingContacts = contacts.subList(index, toIndex = contacts.count() - 1)
+//            val client = selectedContacts[index]
+////                      onAddEditClientScreen_ClientAddedFromBatch = {
+////
+////          }
+//            if (index < selectedContacts.count()){
+//              addClient(index + 1)
+//            } else {
+//
+//            }
+//          }
+//          addClient(selectedContacts)
+//          onAddEditClientScreen_AddClientFromContactPicker = {
+//            onAddEditClientScreen_AddClientFromContactPicker(it)
+//
+//          }
+//          onAddEditClientScreen_SubmitClient = onAddEditClientScreen_AddClientFromContactPicker
+//
+//          onAddEditClientScreen_ClientAddedFromBatch = {
+//
+//          }
 
         },
+        onNavigateBack = ::navigateBack,
       )
     }
   }
 }
-
-

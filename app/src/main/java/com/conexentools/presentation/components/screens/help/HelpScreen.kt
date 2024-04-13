@@ -14,27 +14,22 @@ import com.conexentools.presentation.components.common.ScreenSurface
 @Composable
 fun HelpScreen(
   onNavigateBack: () -> Unit,
-
-) {
-
+  ) {
   ScreenSurface(
     title = "Ayuda",
     lazyColumnModifier = Modifier.fillMaxHeight(),
-    horizontalAlignment = Alignment.CenterHorizontally,
     onNavigateBack = onNavigateBack
   ) {
-      Text(
-        text = "Test Instrumentado",
-        style = MaterialTheme.typography.headlineSmall
-      )
+    Text(
+      text = "Test Instrumentado",
+      style = MaterialTheme.typography.headlineSmall
+    )
 
-      Text(
-        text = "Lista de Clientes",
-        style = MaterialTheme.typography.headlineSmall
-      )
-
-    },,
-  )
+    Text(
+      text = "Lista de Clientes",
+      style = MaterialTheme.typography.headlineSmall
+    )
+  }
 }
 
 @Preview(apiLevel = 33)

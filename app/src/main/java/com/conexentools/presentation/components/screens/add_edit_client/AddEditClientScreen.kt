@@ -31,6 +31,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -74,37 +75,40 @@ import java.time.Instant
 fun AddEditClientScreen(
   client: Client?,
   au: AndroidUtils,
-  onEdit: (Client) -> Unit,
-  onAdd: (Client) -> Unit,
+//  onEdit: (Client) -> Unit,
+//  onAdd: (Client) -> Unit,
+  onSubmit: (Client) -> Unit,
   onCancel: () -> Unit,
   onNavigateBack: () -> Unit,
+//  lastClientOnBatch: Client? = null
+  onClientAddedFromContactPicker: (MutableState<Client>) -> Unit,
 ) {
 
-  val onEditionClient by remember {
+  val onEditionClient = remember {
     mutableStateOf(client?.copy() ?: Client())
   }
 
   // States
-  var name by remember { mutableStateOf(onEditionClient.name) }
-  var phoneNumber by remember { mutableStateOf(onEditionClient.phoneNumber ?: "") }
-  var cardNumber by remember { mutableStateOf(onEditionClient.cardNumber ?: "") }
+  var name by remember { mutableStateOf(onEditionClient.value.name) }
+  var phoneNumber by remember { mutableStateOf(onEditionClient.value.phoneNumber ?: "") }
+  var cardNumber by remember { mutableStateOf(onEditionClient.value.cardNumber ?: "") }
   var quickMessage by remember {
     mutableStateOf(
       if (client == null) {
-        onEditionClient.quickMessage = "💸💸💳📲💸💸"
-        onEditionClient.quickMessage!!
+        onEditionClient.value.quickMessage = "💸💸💳📲💸💸"
+        onEditionClient.value.quickMessage!!
       } else
-        onEditionClient.quickMessage ?: ""
+        onEditionClient.value.quickMessage ?: ""
     )
   }
-  var latestRechargeDateISOString by remember { mutableStateOf(onEditionClient.latestRechargeDateISOString) }
-  var rechargesMade by remember { mutableIntStateOf(onEditionClient.rechargesMade ?: 0) }
-  var imageUri by remember { mutableStateOf(onEditionClient.imageUriString) }
+  var latestRechargeDateISOString by remember { mutableStateOf(onEditionClient.value.latestRechargeDateISOString) }
+  var rechargesMade by remember { mutableIntStateOf(onEditionClient.value.rechargesMade ?: 0) }
+  var imageUri by remember { mutableStateOf(onEditionClient.value.imageUriString) }
 
   val quickMessageTrailingIcon = @Composable {
     IconButton(
       onClick = {
-        onEditionClient.quickMessage = null
+        onEditionClient.value.quickMessage = null
         quickMessage = ""
       }
     ) {
@@ -132,19 +136,18 @@ fun AddEditClientScreen(
       val number = contact.phoneList().firstOrNull()?.normalizedNumber?.cleanCubanMobileNumber()
       phoneNumber = number ?: ""
       imageUri = contact.photoUri?.toString() ?: contact.photoThumbnailUri?.toString()
-      onEditionClient.name = name
-      onEditionClient.phoneNumber = number
-      onEditionClient.imageUriString = imageUri
+      onEditionClient.value.name = name
+      onEditionClient.value.phoneNumber = number
+      onEditionClient.value.imageUriString = imageUri
       log("name: $name")
       log("phoneNumber: $phoneNumber")
-      log("onEditionClient.imageUriString: ${onEditionClient.imageUriString}")
+      log("onEditionClient.imageUriString: ${onEditionClient.value.imageUriString}")
       log("imageUri: $imageUri")
     }
   }
 
   ScreenSurface(
     title = client?.name ?: "Nuevo Cliente",
-    verticalArrangement = Arrangement.Center,
     bottomContent = {
       Column(modifier = Modifier.padding(Constants.Dimens.ExtraLarge)) {
         Row(
@@ -154,6 +157,8 @@ fun AddEditClientScreen(
           horizontalArrangement = Arrangement.SpaceAround,
           verticalAlignment = Alignment.CenterVertically
         ) {
+
+          // Cancel Button
           Button(
             onClick = onCancel,
             modifier = Modifier.fillMaxHeight(),
@@ -164,6 +169,7 @@ fun AddEditClientScreen(
             )
           }
 
+          // Add/Edit Button
           Button(
             modifier = Modifier.fillMaxHeight(),
             onClick = {
@@ -173,9 +179,13 @@ fun AddEditClientScreen(
                 au.toast("El número de la tarjeta debe tener 16 dígitos", vibrate = true)
                 au.toast("Deje el campo vacío para no adjuntar una tarjeta al cliente")
               } else if (phoneNumber.length in 1..7) {
-                au.toast("El número de telefono debe tener 8 dígitos", vibrate = true)
+                au.toast("El número de teléfono debe tener 8 dígitos", vibrate = true)
                 au.toast("Deje el campo vacío para no adjuntar un número de teléfono al cliente")
-              } else if (client == null) onAdd(onEditionClient) else onEdit(onEditionClient)
+//              } else if (client == null) onAdd(onEditionClient) else onEdit(onEditionClient)
+              } else {
+                onSubmit(onEditionClient.value)
+                onClientAddedFromContactPicker.invoke(onEditionClient)
+              }
             }
           ) {
             Text(
@@ -188,27 +198,28 @@ fun AddEditClientScreen(
     },
     onNavigateBack = onNavigateBack,
   ) {
+
+    if (!imageUri.isNullOrEmpty()) {
+      AsyncImage(
+        model = ImageRequest.Builder(LocalContext.current)
+          .data(imageUri)
+          .build(),
+        placeholder = painterResource(id = R.drawable.contact_image_placeholder_02),
+        contentDescription = null,
+        modifier = Modifier
+          .size(200.dp)
+          .padding(Constants.Dimens.ExtraLarge)
+          .clip(CircleShape),
+        contentScale = ContentScale.Crop,
+      )
+    }
+
+    Spacer(modifier = Modifier.height(Constants.Dimens.Small))
+
     Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center
     ) {
-
-      if (!imageUri.isNullOrEmpty()) {
-        AsyncImage(
-          model = ImageRequest.Builder(LocalContext.current)
-            .data(imageUri)
-            .build(),
-          placeholder = painterResource(id = R.drawable.contact_image_placeholder_02),
-          contentDescription = null,
-          modifier = Modifier
-            .size(200.dp)
-            .padding(20.dp)
-            .clip(CircleShape),
-          contentScale = ContentScale.Crop,
-        )
-      }
-
-      Spacer(modifier = Modifier.height(Constants.Dimens.Small))
 
       // Name - Number
       Row(
@@ -230,7 +241,7 @@ fun AddEditClientScreen(
             label = { Text("Nombre") },
             value = name,
             onValueChange = {
-              onEditionClient.name = it
+              onEditionClient.value.name = it
               name = it
             },
             keyboardOptions = KeyboardOptions.Default.copy(
@@ -248,7 +259,7 @@ fun AddEditClientScreen(
             modifier = Modifier.fillMaxWidth(),
             value = phoneNumber,
             onValueChange = {
-              onEditionClient.phoneNumber = it
+              onEditionClient.value.phoneNumber = it
               phoneNumber = it
             },
             isOutlinedTextField = true,
@@ -271,7 +282,7 @@ fun AddEditClientScreen(
       CreditCardTextField(
         value = cardNumber,
         onValueChange = {
-          onEditionClient.cardNumber = it
+          onEditionClient.value.cardNumber = it
           cardNumber = it
         },
         isFourDigitsCard = false
@@ -288,7 +299,7 @@ fun AddEditClientScreen(
         onValueChange = {
           if (it.length <= Constants.MAX_QUICK_MESSAGE_LENGTH) {
             quickMessage = it
-            onEditionClient.quickMessage = it
+            onEditionClient.value.quickMessage = it
           }
         }
       )
@@ -312,7 +323,7 @@ fun AddEditClientScreen(
             ) {
               if (rechargesMade > 0) {
                 rechargesMade--
-                onEditionClient.rechargesMade = rechargesMade
+                onEditionClient.value.rechargesMade = rechargesMade
               }
             }
 
@@ -330,7 +341,7 @@ fun AddEditClientScreen(
 
             PrimaryIconButton(Icons.Rounded.AddCircleOutline) {
               rechargesMade++
-              onEditionClient.rechargesMade = rechargesMade
+              onEditionClient.value.rechargesMade = rechargesMade
             }
           }
 
@@ -339,7 +350,7 @@ fun AddEditClientScreen(
               modifier = Modifier.absoluteOffset(x = LocalDensity.current.run { size.width.toDp() })
             ) {
               PrimaryIconButton(Icons.Rounded.RestartAlt) {
-                onEditionClient.rechargesMade = 0
+                onEditionClient.value.rechargesMade = 0
                 rechargesMade = 0
               }
             }
@@ -348,7 +359,7 @@ fun AddEditClientScreen(
 
         fun updateRechargeDate() {
           latestRechargeDateISOString = Instant.now().toString()
-          onEditionClient.latestRechargeDateISOString = latestRechargeDateISOString
+          onEditionClient.value.latestRechargeDateISOString = latestRechargeDateISOString
         }
 
         if (!latestRechargeDateISOString.isNullOrEmpty()) {
@@ -360,7 +371,7 @@ fun AddEditClientScreen(
 
             // Delete
             PrimaryIconButton(Icons.Rounded.Cancel) {
-              onEditionClient.latestRechargeDateISOString = null
+              onEditionClient.value.latestRechargeDateISOString = null
               latestRechargeDateISOString = null
             }
 
@@ -425,10 +436,12 @@ fun PreviewAddEditClientScreen() {
         quickMessage = "",
         rechargesMade = 45
       ),
-      onAdd = {},
-      onEdit = {},
+//      onAdd = {},
+//      onEdit = {},
+      onSubmit = {},
       onCancel = {},
       onNavigateBack = {},
+      onClientAddedFromContactPicker = {},
       au = AndroidUtils.create(),
     )
   }

@@ -10,9 +10,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,16 +46,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import com.conexentools.R
 import com.conexentools.core.util.PreviewComposable
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.components.screens.home.enums.HomeScreenPage
-import com.conexentools.presentation.components.screens.home.pages.client_list.SearchAppBar
+import com.conexentools.presentation.components.common.SearchAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeTopBar(
-  onSearchBarTextChange: (String) -> Unit,
+  searchBarText: MutableState<String>,
+//  onSearchBarTextChange: (String) -> Unit,
   onSettings: () -> Unit,
   onAbout: () -> Unit,
   onHelp: () -> Unit,
@@ -66,7 +70,7 @@ fun HomeTopBar(
   ) {
 
     var isSearchingClients by remember { mutableStateOf(false) }
-    var isMoreDropDownMenuExpanded by remember { mutableStateOf(false) }
+    var dropDownMenuExpanded by remember { mutableStateOf(false) }
 
     val writeExternalStorageLauncher =
       rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -128,7 +132,7 @@ fun HomeTopBar(
           // More Button
           IconButton(
             onClick = {
-              isMoreDropDownMenuExpanded = !isMoreDropDownMenuExpanded
+              dropDownMenuExpanded = !dropDownMenuExpanded
             }) {
             Icon(
               imageVector = Icons.Default.MoreVert,
@@ -136,37 +140,63 @@ fun HomeTopBar(
             )
 
             // More DropDownMenu
-            DropdownMenu(
-              expanded = isMoreDropDownMenuExpanded,
-              onDismissRequest = { isMoreDropDownMenuExpanded = false },
-              modifier = Modifier.defaultMinSize(minWidth = 80.dp)
-            ) {
-              DropdownMenuItem(
-                text = { Text("Configuración") },
-                onClick = onSettings
+            AnimatedVisibility(
+              visible = dropDownMenuExpanded,
+              enter = slideInHorizontally(
+                initialOffsetX = { it },
+                animationSpec = tween(durationMillis = 300)
+              ) + expandVertically(
+                animationSpec = tween(delayMillis = 300)
+              ),
+              exit = slideOutHorizontally(
+                targetOffsetX = { -it },
+                animationSpec = tween(durationMillis = 300)
+              ) + shrinkVertically(
+                animationSpec = tween(delayMillis = 300)
               )
-              DropdownMenuItem(
-                text = { Text("Acerca de") },
-                onClick = onAbout
-              )
-              DropdownMenuItem(
-                text = { Text("Ayuda") },
-                onClick = onHelp
-              )
-              if (!au.hasExternalStorageWriteReadAccess()){
+              ) {
+              DropdownMenu(
+                expanded = true,
+                onDismissRequest = { dropDownMenuExpanded = false },
+                modifier = Modifier.defaultMinSize(minWidth = 80.dp)
+              ) {
                 DropdownMenuItem(
-                  text = { Text("Solicitar permiso para escribir en el almacenamiento externo") },
+                  text = { Text("Configuración") },
                   onClick = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()){
-                      au.openSettings(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                    } else if (au.shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                      writeExternalStorageLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    } else {
-                      // User has selected Deny and don't ask again
-                      au.openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                    }
+                    dropDownMenuExpanded = false
+                    onSettings()
                   }
                 )
+                DropdownMenuItem(
+                  text = { Text("Acerca de") },
+                  onClick = {
+                    dropDownMenuExpanded = false
+                    onAbout()
+                  }
+                )
+                DropdownMenuItem(
+                  text = { Text("Ayuda") },
+                  onClick = {
+                    dropDownMenuExpanded = false
+                    onHelp()
+                  }
+                )
+                if (!au.hasExternalStorageWriteReadAccess()){
+                  DropdownMenuItem(
+                    text = { Text("Solicitar permiso para escribir en el almacenamiento externo") },
+                    onClick = {
+                      dropDownMenuExpanded = false
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()){
+                        au.openSettings(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                      } else if (au.shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                        writeExternalStorageLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                      } else {
+                        // User has selected Deny and don't ask again
+                        au.openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                      }
+                    }
+                  )
+                }
               }
             }
           }
@@ -190,7 +220,7 @@ fun HomeTopBar(
       )
     ) {
       SearchAppBar(
-        onTextChange = onSearchBarTextChange,
+        text = searchBarText,
         onNavigateBack = { isSearchingClients = false },
       )
     }
@@ -208,7 +238,7 @@ fun PreviewHomeTopBar() {
       page = remember {
         mutableStateOf(HomeScreenPage.INSTRUMENTED_TEST)
       },
-      onSearchBarTextChange = {},
+      searchBarText = remember { mutableStateOf("") },
       onPageChange = {},
       onSettings = {},
       onAbout = {},

@@ -36,6 +36,7 @@ import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,15 +63,17 @@ import coil.request.ImageRequest
 import com.conexentools.R
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.moveFocusOnTabPressed
+import com.conexentools.core.util.pickContact
 import com.conexentools.core.util.toFormattedDate
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.components.common.CreditCardTextField
 import com.conexentools.presentation.components.common.LabelSwitch
 import com.conexentools.presentation.components.common.PrimaryIconButton
+import contacts.core.util.phoneList
 
 @Composable
 fun InstrumentedTestPage(
-  onPickContact: () -> Unit,
+  paddingValues: PaddingValues,
   au: AndroidUtils,
   // States
   firstClientNumber: MutableState<String?>,
@@ -84,9 +87,29 @@ fun InstrumentedTestPage(
   waContactImageUri: MutableState<Uri?>,
   rechargesAvailabilityDateISOString: MutableState<String?>,
   waContact: MutableState<String>,
-  paddingValues: PaddingValues,
-  maxPinLength: MutableIntState
 ) {
+
+  val pickContactLauncher = pickContact(au = au) { contact ->
+    if (contact != null) {
+      val number =
+        if (contact.phoneList().isNotEmpty()) contact.phoneList().first().number else null
+      waContact.value = number ?: contact.displayNamePrimary ?: "sin nombre :("
+      waContactImageUri.value = contact.photoThumbnailUri
+    }
+  }
+
+  var maxPinLength by remember { mutableIntStateOf(if (bank.value == "Metropolitano") 4 else 5) }
+
+  var isPinVisible by remember { mutableStateOf(false) }
+  val pinVisibilityTintColor by animateColorAsState(
+    targetValue = MaterialTheme.colorScheme.primary.copy(alpha = if (isPinVisible) 1f else 0.4f),
+    animationSpec = tween(650),
+    label = ""
+  )
+
+  var isWrongPin by remember { mutableStateOf(false) }
+  var pinTextFieldSupportingText: @Composable (() -> Unit)? by remember { mutableStateOf(null) }
+
   // Main Column
   Column(
     modifier = Modifier
@@ -105,16 +128,6 @@ fun InstrumentedTestPage(
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
 
-    var isPinVisible by remember { mutableStateOf(false) }
-    val pinVisibilityTintColor by animateColorAsState(
-      targetValue = MaterialTheme.colorScheme.primary.copy(alpha = if (isPinVisible) 1f else 0.4f),
-      animationSpec = tween(650),
-      label = ""
-    )
-
-    var isWrongPin by remember { mutableStateOf(false) }
-    var pinTextFieldSupportingText: @Composable (() -> Unit)? by remember { mutableStateOf(null) }
-
     Row(modifier = Modifier.fillMaxWidth()) {
       // Bank
       key(bank.value) {
@@ -128,7 +141,7 @@ fun InstrumentedTestPage(
           ),
           onItemSelected = {
             bank.value = it
-            maxPinLength.intValue = if (it == "Metropolitano") 4 else 5
+            maxPinLength = if (it == "Metropolitano") 4 else 5
           },
           modifier = Modifier.weight(1f)
         )
@@ -141,7 +154,7 @@ fun InstrumentedTestPage(
       // PIN
       OutlinedTextField(value = pin.value,
         onValueChange = {
-          if (it.length <= maxPinLength.intValue) pin.value = it
+          if (it.length <= maxPinLength) pin.value = it
         },
         supportingText = pinTextFieldSupportingText,
         label = { Text(text = "PIN") },
@@ -149,10 +162,10 @@ fun InstrumentedTestPage(
         modifier = Modifier
           .weight(0.7f)
           .onFocusChanged { focusState ->
-            if (!focusState.isFocused && pin.value.isNotEmpty() && pin.value.length != maxPinLength.intValue) {
+            if (!focusState.isFocused && pin.value.isNotEmpty() && pin.value.length != maxPinLength) {
               isWrongPin = true
               pinTextFieldSupportingText =
-                { Text("El PIN debe tener ${maxPinLength.intValue} dígitos") }
+                { Text("El PIN debe tener $maxPinLength dígitos") }
             } else {
               isWrongPin = false
               pinTextFieldSupportingText = null
@@ -171,7 +184,7 @@ fun InstrumentedTestPage(
             Icon(
               painter = painterResource(id = com.google.android.material.R.drawable.design_ic_visibility),
               tint = pinVisibilityTintColor,
-              contentDescription = stringResource(R.string.pin_visibility_icon_content_description)
+              contentDescription = null
             )
           }
         },
@@ -266,7 +279,7 @@ fun InstrumentedTestPage(
                 message = "Permiso para leer contactos requerido",
                 vibrate = true
               )
-            else onPickContact()
+            else pickContactLauncher.launch(null)
           }
         },
       )
@@ -318,18 +331,18 @@ fun InstrumentedTestPage(
         }
       }
     }
+
+    if (rechargesAvailabilityDateISOString.value != null) {
+      Spacer(modifier = Modifier.height(Constants.Dimens.ExtraSmall))
+      Text(
+        text = "Próximas recargas disponibles el: ",
+        style = MaterialTheme.typography.bodyMedium
+      )
+      Text(
+        text = rechargesAvailabilityDateISOString.value!!.toFormattedDate(),
+        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+      )
+    }
   }
 
-  if (rechargesAvailabilityDateISOString.value != null) {
-    Spacer(modifier = Modifier.height(Constants.Dimens.ExtraSmall))
-    Text(
-      text = "Próximas recargas disponibles el:",
-    )
-    Text(
-      text = rechargesAvailabilityDateISOString.value!!.toFormattedDate(),
-      style = TextStyle.Default.copy(
-        fontWeight = FontWeight.Bold
-      )
-    )
-  }
 }

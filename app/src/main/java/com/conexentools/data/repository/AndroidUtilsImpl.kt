@@ -224,6 +224,21 @@ class AndroidUtilsImpl @Inject constructor(
     return intent
   }
 
+  override fun getPackageVersion(packageName: String): Pair<Long, String>? {
+    return try {
+      val packageInfo = context.packageManager.getPackageInfo(packageName, 0)
+      val verCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        packageInfo.longVersionCode
+      } else {
+        -1
+      }
+      val verName = packageInfo.versionName
+      return Pair(verCode, verName)
+    } catch (e: Exception){
+      null
+    }
+  }
+
   override fun shouldShowRequestPermissionRationale(permission: String): Boolean {
     return ActivityCompat.shouldShowRequestPermissionRationale(context as Activity, permission)
   }

@@ -21,8 +21,15 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavDeepLink
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavOptionsBuilder
+import androidx.navigation.PopUpToBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.navOptions
+import com.conexentools.data.local.model.Client
+import com.conexentools.presentation.components.common.cleanCubanMobileNumber
 import com.conexentools.presentation.navigation.Screen
+import contacts.core.entities.Contact
+import contacts.core.util.phoneList
 import java.time.Instant
 import java.util.Date
 
@@ -98,6 +105,42 @@ fun NavGraphBuilder.composable(
   )
 }
 
-fun NavController.navigate(screen: Screen) {
-  navigate(screen.route)
+//fun NavHostController.navigate(
+//  screen: Screen,
+//  builder: NavOptionsBuilder.() -> Unit,
+//) {
+//  navigate(
+//    route = screen.route,
+//    builder = builder
+//  )
+//}
+
+fun NavController.navigate(
+  screen: Screen,
+) {
+  navigate(route = screen.route)
 }
+
+fun NavController.navigate(screen: Screen, builder: NavOptionsBuilder.() -> Unit) {
+  navigate(screen.route, navOptions(builder))
+}
+
+fun NavOptionsBuilder.popUpTo(screen: Screen, popUpToBuilder: PopUpToBuilder.() -> Unit = {}) {
+  popUpTo(
+    route = screen.route,
+    popUpToBuilder = popUpToBuilder
+  )
+}
+
+fun Contact.toClient() = Client(
+  name = this.displayNamePrimary ?: this.displayNameAlt ?: "",
+  phoneNumber = this.phoneList()
+    .firstOrNull()?.normalizedNumber?.cleanCubanMobileNumber(),
+  cardNumber = null,
+  latestRechargeDateISOString = null,
+  imageUriString = (this.photoUri ?: this.photoThumbnailUri)?.toString(),
+  quickMessage = null,
+  rechargesMade = 0
+)
+
+fun Int.toUnicodeString() =  String(Character.toChars(this))

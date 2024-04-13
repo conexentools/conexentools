@@ -20,6 +20,7 @@ interface AndroidUtils {
   fun openSettings(settingsMenu: String, onlyReturnIntent: Boolean = false): Intent
   fun hasExternalStorageWriteReadAccess(): Boolean
   fun shouldShowRequestPermissionRationale(permission: String): Boolean
+  fun getPackageVersion(packageName: String): Pair<Long, String>?
 
   companion object {
     fun create(): AndroidUtils {
@@ -76,10 +77,15 @@ interface AndroidUtils {
           TODO("Not yet implemented")
         }
 
+        override fun getPackageVersion(packageName: String): Pair<Long, String>? {
+          TODO("Not yet implemented")
+        }
+
         override fun sendWaMessage(number: String, message: String?) {
           TODO("Not yet implemented")
         }
       }
     }
   }
+
 }
