@@ -71,12 +71,11 @@ android {
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-
     vectorDrawables {
       useSupportLibrary = true
     }
 
-    addToBuildConfig("runner", testInstrumentationRunner)
+    addToBuildConfig("testInstrumentationRunner", testInstrumentationRunner)
     addToBuildConfig("testNamespace", testNamespace)
     addToBuildConfig("logTag")
     addToBuildConfig("whatsappPackageName")
@@ -85,7 +84,6 @@ android {
     addToBuildConfig("testedTmVersionCode")
     addToBuildConfig("testedWaVersionName")
     addToBuildConfig("testedWaVersionCode")
-    addToBuildConfig("perico")
   }
 
   /**

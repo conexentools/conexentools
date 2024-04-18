@@ -5,6 +5,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+import android.content.Intent.FLAG_ACTIVITY_NO_HISTORY
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
@@ -210,12 +212,16 @@ class AndroidUtilsImpl @Inject constructor(
     }
   }
 
-  override fun openSettings(settingsMenu: String, onlyReturnIntent: Boolean): Intent {
+  override fun openSettings(settingsMenuAction: String, onlyReturnIntent: Boolean): Intent {
     val intent = Intent(
-      settingsMenu,
+      settingsMenuAction,
       "package:${BuildConfig.APPLICATION_ID}".toUri()
-    )
-    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    ).apply {
+      addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      addFlags(FLAG_ACTIVITY_NO_HISTORY)
+      addFlags(FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+    }
+
     if (onlyReturnIntent)
       return intent
 

@@ -17,7 +17,7 @@ class Utils {
     private var isProcessingToast = false
     private var latestToastMessage = ""
 
-    val context = InstrumentationRegistry.getInstrumentation().context
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
 
     fun getMessages(sender: String): Map<Int, String> {
       val contentResolver = InstrumentationRegistry.getInstrumentation().targetContext.contentResolver

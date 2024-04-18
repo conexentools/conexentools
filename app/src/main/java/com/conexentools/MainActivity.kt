@@ -104,9 +104,6 @@ class MainActivity : ComponentActivity() {
   }
 }
 
-fun requestPermissions(){
-
-}
 
 //  @Composable
 //  private fun CheckPermissions(

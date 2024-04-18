@@ -131,9 +131,13 @@ fun RequestAppPermissions(
 
   // Display over other apps
   if (checkDisplayOverOtherAppsPermission) {
-    if (!au.canDrawOverlays()){
-      au.openSettings(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-    }
+//    if ()
+//    if (!au.canDrawOverlays()){
+//      ScrollableAlertDialog("A continuación conceda el permiso 'Mostrar sobre otras aplicaciones' para ") {
+//        au.openSettings(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+//        checkWriteExternalStoragePermission = false
+//      }
+//    }
     // TODO Implement
     checkDisplayOverOtherAppsPermission = false
     onPermissionsRequestComplete()
@@ -145,43 +149,10 @@ fun RequestAppPermissions(
 
   if (showRestartAppDialog){
     ScrollableAlertDialog(
-      text = "La aplicación necesita reiniciarse para crear la base de datos en el almacenamiento interno primario",
+      text = "La aplicación necesita reiniciarse para crear/leer la base de datos en el almacenamiento interno primario",
       confirmButtonText = "Reiniciar"
     ) {
       au.restartApp()
     }
   }
-
-
-//  var showRuntimePermissionDialog by remember {
-//    mutableStateOf(
-//      Build.VERSION.SDK_INT < Build.VERSION_CODES.R && !isGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE) ||
-//          !isGranted(Manifest.permission.READ_SMS) ||
-//          isGranted(Manifest.permission.READ_CONTACTS)
-//    )
-//  }
-//  var showRuntimePermissionDialog by remember { mutableStateOf(false) }
-
-//  var runtimePermissionsLauncher =
-//    rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-//      runtimePermissionsAttended = true
-//    }
-//  val permissionsRequester = Permission.requestPermissions(
-//    Permission(Manifest.permission.READ_CONTACTS, context, au = au),
-//    Permission(Manifest.permission.CALL_PHONE, context, au = au),
-//    Permission(
-//      Manifest.permission.READ_SMS, context,
-//      permissionDeniedMessage = "Debe conceder el permiso a leer mensajes para poder iniciar el proceso de automatización",
-//      au = au
-//    ),
-//    Permission(Manifest.permission.SYSTEM_ALERT_WINDOW, context, au = au),
-//    Permission(
-//      Manifest.permission.WRITE_EXTERNAL_STORAGE,
-//      context,
-//      maxSdkVersion = Build.VERSION_CODES.Q,
-//      au = au
-//    ),
-//    componentActivityInstance = context,
-//    requestPermissionsImmediately = false
-//  )
 }

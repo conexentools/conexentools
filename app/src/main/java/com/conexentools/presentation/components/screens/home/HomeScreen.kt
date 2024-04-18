@@ -107,7 +107,6 @@ fun HomeScreen(
   homeScreenState: HomeScreenState,
   navController: NavController,
   page: MutableState<HomeScreenPage?>,
-  appLaunchCount: Int,
   clientListPageHelpDialogShowed: MutableState<Boolean>,
   au: AndroidUtils,
 
@@ -155,7 +154,6 @@ fun HomeScreen(
         navController = navController,
         page = page,
         au = au,
-        appLaunchCount = appLaunchCount,
         clientListPageHelpDialogsShowed = clientListPageHelpDialogShowed,
 
         adbInstrumentationRunCommandGetter = adbInstrumentationRunCommandGetter,
@@ -212,7 +210,6 @@ fun HomeScreen(
 private fun DrawHome(
   navController: NavController,
   page: MutableState<HomeScreenPage?>,
-  appLaunchCount: Int,
   clientListPageHelpDialogsShowed: MutableState<Boolean>,
   au: AndroidUtils,
 
@@ -680,7 +677,6 @@ fun HomeScreenPreview() {
       onClientCardRechargeCounterReset = {},
       onAddClient = {},
       onBatchAddClient = {},
-      appLaunchCount = 0,
       onRunInstrumentedTest = {}
     )
   }

@@ -274,7 +274,7 @@ class HomeScreenViewModel @Inject constructor(
       command += " -e digitosTarjeta ${cardLast4Digits.value}"
     if (bank.value == "Metropolitano")
       bank.value = "metro"
-    command += " -e pin ${pin.value} -e banco ${bank.value.lowercase()} ${BuildConfig.TEST_NAMESPACE}/${BuildConfig.RUNNER} --no-window-animation --no-hidden-api-checks"
+    command += " -e pin ${pin.value} -e banco ${bank.value.lowercase()} ${BuildConfig.TEST_NAMESPACE}/${BuildConfig.TEST_INSTRUMENTATION_RUNNER} --no-window-animation --no-hidden-api-checks"
     return command
   }
 

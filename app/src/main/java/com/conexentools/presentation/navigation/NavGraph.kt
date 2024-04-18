@@ -73,7 +73,6 @@ fun SetUpNavGraph(
         homeScreenState = homeScreenState,
         navController = navController,
         page = hvm.initialHomeScreenPage,
-        appLaunchCount = hvm.appLaunchCount.intValue,
         clientListPageHelpDialogShowed = hvm.clientListPageHelpDialogsShowed,
         au = au,
 

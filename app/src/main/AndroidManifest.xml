@@ -16,7 +16,6 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
-<!--        android:roundIcon="@mipmap/ic_launcher_round"-->
     <uses-permission android:name="android.permission.VIBRATE" />
     <application
         android:name=".core.app.ConexenToolsApplication"

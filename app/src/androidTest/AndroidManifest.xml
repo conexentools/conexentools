@@ -8,8 +8,14 @@
     <instrumentation
         android:targetPackage="com.conexentools"
         android:name="androidx.test.runner.AndroidJUnitRunner"/>
+<!--        android:icon="@mipmap/i" />-->
 
-    <application tools:replace="label" android:label="Conexen Tools - Instrumentation App" />
+<!--    <application tools:replace="label" android:label="Conexen Tools - Instrumentation App" />-->
+    <application
+        android:label="Conexen Tools - Instrumentation App"
+        android:icon="@mipmap/ia_icon"
+        >
+    </application>
 
     <queries>
         <package android:name="com.whatsapp" />
