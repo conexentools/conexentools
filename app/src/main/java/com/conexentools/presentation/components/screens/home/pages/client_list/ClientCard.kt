@@ -5,6 +5,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,11 +23,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.DefaultAlpha
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -126,21 +129,23 @@ fun ClientCard(
         client.getRemainingTimeForNextRechargeToBeAvailable()
 
       // Recharge Availability Remaining Time Indicator
-      if (remainingTimeForNextRechargeToBeAvailable != null) {
-        Surface(modifier = Modifier.size(55.dp)) {
-          RadialProgressTimeIndicator(
-            value = remainingTimeForNextRechargeToBeAvailable.seconds.toFloat(),
-            maxValue = 60 * 60 * 24f, //24h
-            timeNumericTextRepresentation = remainingTimeForNextRechargeToBeAvailable.numericRepresentationPart,
-            timeUnit = remainingTimeForNextRechargeToBeAvailable.unit,
-            strokeWidthRatio = 0.3f,
-            modifier = Modifier.combinedClickable(
-              onClick = { },
-              onLongClick = {
-                showResetRechargeTimerDialog = true
-              },
+      key(remainingTimeForNextRechargeToBeAvailable){
+        if (remainingTimeForNextRechargeToBeAvailable != null) {
+          Surface(modifier = Modifier.size(55.dp)) {
+            RadialProgressTimeIndicator(
+              value = remainingTimeForNextRechargeToBeAvailable.seconds.toFloat(),
+              maxValue = 60 * 60 * 24f, //24h
+              timeNumericTextRepresentation = remainingTimeForNextRechargeToBeAvailable.numericRepresentationPart,
+              timeUnit = remainingTimeForNextRechargeToBeAvailable.unit,
+              strokeWidthRatio = 0.3f,
+              modifier = Modifier.combinedClickable(
+                onClick = { },
+                onLongClick = {
+                  showResetRechargeTimerDialog = true
+                },
+              )
             )
-          )
+          }
         }
       }
 
@@ -159,6 +164,13 @@ fun ClientCard(
         )
       }
     }
+
+    Text(
+      text = (client.rechargesMade ?: 0).toString(),
+      color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f),
+      style = MaterialTheme.typography.labelMedium,
+      modifier = Modifier.padding(Constants.Dimens.MegaSmall)
+    )
   }
 }
 

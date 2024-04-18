@@ -14,6 +14,7 @@ import com.conexentools.BuildConfig
 import com.conexentools.core.util.CoroutinesDispatchers
 import com.conexentools.core.util.RootUtil
 import com.conexentools.core.util.log
+import com.conexentools.core.util.logError
 import com.conexentools.data.local.model.Client
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.domain.repository.UserPreferences
@@ -28,7 +29,6 @@ import com.conexentools.presentation.components.screens.home.state.HomeScreenLoa
 import com.conexentools.presentation.components.screens.home.state.HomeScreenState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,8 +38,7 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
-import kotlin.random.Random
-
+import javax.xml.transform.TransformerFactory
 
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
@@ -57,7 +56,6 @@ class HomeScreenViewModel @Inject constructor(
   val state: StateFlow<HomeScreenState> = _state.asStateFlow()
 
   private var rechargesMade = 0
-  private var permissionsConcernedByUser = false
 
   // States
   var bank = mutableStateOf("Metropolitano")
@@ -65,32 +63,28 @@ class HomeScreenViewModel @Inject constructor(
   var waContact = mutableStateOf<String>("")
   var isManager = mutableStateOf(false)
 
-  var firstClientNumber = mutableStateOf<String?>("")
-  var firstClientRecharge = mutableStateOf<String?>("")
+  var firstClientNumber = mutableStateOf("")
+  var firstClientRecharge = mutableStateOf("")
   var secondClientNumber = mutableStateOf<String?>(null)
-  var secondClientRecharge = mutableStateOf<String?>(null)
+  var secondClientRecharge = mutableStateOf("")
 
   var fetchDataFromWA = mutableStateOf(false)
-  var cardLast4Digits = mutableStateOf<String>("")
+  var cardLast4Digits = mutableStateOf("")
 
-  //  var userRedirectedToSpecialPermissionsToAllowDisplayPopUpWhileRunningInTheBackground by mutableStateOf(false)
   var rechargesAvailabilityDateISOString = mutableStateOf<String?>(null)
   var waContactImageUri = mutableStateOf<Uri?>(null)
 
-  var initialHomeScreenPage = mutableStateOf(HomeScreenPage.INSTRUMENTED_TEST)
+  var initialHomeScreenPage = mutableStateOf<HomeScreenPage?>(null)
   var appTheme = mutableStateOf(AppTheme.MODE_AUTO)
-  var alwaysWaMessageByIntent = mutableStateOf(false)
+  var alwaysWaMessageByIntent = mutableStateOf(!RootUtil.isDeviceRooted)
   var appLaunchCount = mutableIntStateOf(0)
+  var clientListPageHelpDialogsShowed = mutableStateOf(false)
 
   private val whatsAppInstalledVersion = au.getPackageVersion(BuildConfig.WHATSAPP_PACKAGE_NAME)
+  private val instrumentationAppVersion = au.getPackageVersion(BuildConfig.TEST_NAMESPACE)
   private val transfermovilInstalledVersion =
     au.getPackageVersion(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME)
 
-  // Client List Screen
-//  private val _searchText = MutableStateFlow("")
-//  val searchText = _searchText.asStateFlow()
-
-  //  val _clients: SnapshotStateList<Client> = mutableStateListOf()
   private val _clients: MutableStateFlow<PagingData<Client>> =
     MutableStateFlow(value = PagingData.empty())
   val clients: MutableStateFlow<PagingData<Client>> get() = _clients
@@ -103,19 +97,11 @@ class HomeScreenViewModel @Inject constructor(
   private fun initialize() {
 
     viewModelScope.launch {
-      val loadUserPreferencesDeferredJob = async {
-        loadUserPreferences()
-      }
-//      val lodClientsDeferredJob = async {
-//        getAllClients()
-//      }
+      val loadUserPreferencesDeferredJob = async { loadUserPreferences() }
       loadUserPreferencesDeferredJob.await()
-//      lodClientsDeferredJob.await()
-      // Giving time for initial recomposition to finish
-//      delay(Random.nextLong(from = 800, until = 1300))
     }.invokeOnCompletion {
       if (it != null) {
-        log("Fail at initialization. Cause ${it.localizedMessage}")
+        logError("Fail at initialization. Cause ${it.localizedMessage}")
         _state.value = HomeScreenState(HomeScreenLoadingState.Error(it.localizedMessage))
       } else {
         _state.value = HomeScreenState(HomeScreenLoadingState.Success)
@@ -127,15 +113,11 @@ class HomeScreenViewModel @Inject constructor(
   fun initialClientsLoad() = viewModelScope.launch(coroutinesDispatchers.unconfined) {
     log("Running first client load")
     _state.value = HomeScreenState(HomeScreenLoadingState.ScreenLoading)
-    val lodClientsDeferredJob = async {
-      getClients()
-    }
+    val lodClientsDeferredJob = async { getClients() }
     lodClientsDeferredJob.await()
-    // Giving time for initial recomposition to finish
-    delay(Random.nextLong(from = 800, until = 1300))
   }.invokeOnCompletion {
     if (it != null) {
-      log("Fail at initialization. Cause ${it.localizedMessage}")
+      logError("Fail at initialization. Cause ${it.localizedMessage}")
       _state.value = HomeScreenState(HomeScreenLoadingState.Error(it.localizedMessage))
     } else {
       _state.value = HomeScreenState(HomeScreenLoadingState.Success)
@@ -151,20 +133,19 @@ class HomeScreenViewModel @Inject constructor(
       fetchDataFromWA.value = up.fetchDataFromWA.first() ?: false
       cardLast4Digits.value = up.cardLast4Digits.first() ?: ""
       firstClientRecharge.value = up.firstClientRecharge.first() ?: ""
-      secondClientRecharge.value = up.secondClientRecharge.first()
+      secondClientRecharge.value = up.secondClientRecharge.first() ?: ""
       rechargesAvailabilityDateISOString.value = up.rechargeAvailabilityDate.first()
       isManager.value = up.isManager.first() ?: false
-      initialHomeScreenPage.value = HomeScreenPage.fromOrdinal(up.initialHomeScreenPage.first())
       appTheme.value = AppTheme.fromOrdinal(up.appTheme.first())
       alwaysWaMessageByIntent.value = up.alwaysWaMessageByIntent.first() ?: false
       appLaunchCount.intValue = (up.appLaunchCount.first() ?: 0) + 1
-
-//      log("Preferences successfully loaded")
+      clientListPageHelpDialogsShowed.value = up.clientListPageHelpDialogsShowed.first() ?: false
+      initialHomeScreenPage.value = HomeScreenPage.fromOrdinal(up.initialHomeScreenPage.first())
+      log("Preferences loaded")
     } catch (exc: Exception) {
       au.toast("Error al cargar las preferencias de usuario")
       au.toast(exc.message)
       throw exc
-//      _state.value = HomeScreenState(HomeScreenLoadingState.Error(exc.localizedMessage))
     }
   }
 
@@ -178,10 +159,11 @@ class HomeScreenViewModel @Inject constructor(
     up.saveSecondClientRecharge(secondClientRecharge.value)
     up.saveRechargeAvailabilityDateISOString(rechargesAvailabilityDateISOString.value)
     up.saveIsManager(isManager.value)
-    up.saveInitialHomeScreenPage(initialHomeScreenPage.value.ordinal)
+    up.saveInitialHomeScreenPage(initialHomeScreenPage.value?.ordinal)
     up.saveAppTheme(appTheme.value.ordinal)
     up.saveAlwaysWaMessageByIntent(alwaysWaMessageByIntent.value)
     up.saveAppLaunchCount(appLaunchCount.intValue)
+    up.saveClientListPageHelpDialogsShowed(clientListPageHelpDialogsShowed.value)
   }
 
   private suspend fun getClients() =
@@ -191,9 +173,7 @@ class HomeScreenViewModel @Inject constructor(
         .cachedIn(viewModelScope)
         .collect {
           _clients.value = it
-          log("Clients collected")
         }
-      log("Clients successfully loaded")
     }
 
   fun updateClient(client: Client) = viewModelScope.launch(coroutinesDispatchers.unconfined) {
@@ -211,41 +191,62 @@ class HomeScreenViewModel @Inject constructor(
     getClients()
   }
 
-//  fun onClientsSearchBarValueChange(text: String) {
-//
-//  }
-
   fun rechargeClient(client: Client) {
-    if (!areMainConditionsToRunInstrumentedTestMet())
+    val areMainConditionsToRunInstrumentedTestMet = areMainConditionsToRunInstrumentedTestMet()
+
+    if (transfermovilInstalledVersion == null)
       return
 
     client.latestRechargeDateISOString = Instant.now().plus(15, ChronoUnit.MINUTES).toString()
     client.rechargesMade = (client.rechargesMade ?: 0) + 1
     updateClient(client)
 
-    // TODO recharge instrumented test
+    if (areMainConditionsToRunInstrumentedTestMet) {
+      // TODO Launch recharge instrumented test
+    } else {
+      if (!au.launchPackage(transfermovilInstalledVersion.second))
+        au.toast("Transfermóvil no pudo ser iniciado :(", vibrate = true)
+    }
   }
 
   fun sendWAMessage(number: String, message: String?) {
     log("Sending message to number: $number, Message: $message")
     log("alwaysWaMessageByIntent: ${alwaysWaMessageByIntent.value}")
+    if (whatsAppInstalledVersion == null) {
+      au.toast(
+        "WhatsApp (${BuildConfig.WHATSAPP_PACKAGE_NAME}) parece no estar instalado",
+        vibrate = true
+      )
+      return
+    }
+
     if (alwaysWaMessageByIntent.value || !RootUtil.isDeviceRooted) {
       au.sendWaMessage(number, message)
     } else {
-      // send message through instrumented test
+      if (!RootUtil.isDeviceRooted) {
+        au.toast(
+          "Acceso root requerido para poder enviar el mensaje a través de WhatsApp",
+          vibrate = true
+        )
+        au.toast("Active la opción en configuraciones 'Siempre API WA Message' para escribir el mensaje")
+        au.toast("en la entrada de texto del chat. Esta opción no requiere acceso root")
+        au.toast("pero el mensaje deberá ser enviado manualmente y es necesario tener una conexión de Internet activa")
+      }
+
+      // TODO send message through instrumented test
     }
   }
 
   fun checkIfClientIsPresentInDatabase(client: Client, onClientNotPresent: () -> Unit = {}) {
     var clientExists = false
-    viewModelScope.launch(context = coroutinesDispatchers.unconfined) {
+    viewModelScope.launch(context = coroutinesDispatchers.main) {
       val count = countClientMatchesUseCase(client)
       log("count: $count")
       clientExists = count > 0
     }.invokeOnCompletion { exception ->
       if (exception == null) {
         if (clientExists) {
-          au.toast("El cliente ya existe", vibrate = true)
+          au.toast("El cliente '${client.name}' ya existe", vibrate = true, shortToast = true)
         } else {
           onClientNotPresent()
         }
@@ -258,48 +259,6 @@ class HomeScreenViewModel @Inject constructor(
       }
     }
   }
-
-
-//  companion object {
-//    //    @SuppressLint("SimpleDateFormat")
-////    val DATE_FORMATTER = SimpleDateFormat("d MMM, yyyy, hh:mm:ss a")
-////    SimpleDateFormat.getDateInstance()
-////    val s = getDateInstance().
-//
-//  }
-
-//  fun fetchContacts() {
-//    viewModelScope.launch {
-//      val contactsListAsync = async { getPhoneContacts(appContext) }
-////      val contactNumbersAsync = async { getContactNumbers() }
-////      val contactEmailAsync = async { getContactEmails() }
-//
-//      val contacts = contactsListAsync.await()
-////      val contactNumbers = contactNumbersAsync.await()
-////      val contactEmails = contactEmailAsync.await()
-//
-////      contacts.forEach {
-////        contactNumbers[it.id]?.let { numbers ->
-////          it.numbers = numbers
-////        }
-////        contactEmails[it.id]?.let { emails ->
-////          it.emails = emails
-////        }
-////      }
-//      _contactsLiveData.postValue(contacts)
-//    }
-//  }
-
-//  fun <T> LoadData(key: Preferences.Key<T>, default: T?): Flow<T?> =
-//    appContext.dataStore.data.map { preferences ->
-//      Log.i("<<CONEXEN>>", "Loading data for key: ${key.name}")
-//      val data = preferences[key] ?: default
-//      Log.i("<<CONEXEN>>", "Data Loaded for key: ${key.name}, value: $data")
-//      data
-//    }
-
-
-//  fun canAddRecharge() = !fetchDataFromWA.value && secondClientNumber.value == null
 
   fun getAdbInstrumentationRunCommand(): String {
 
@@ -319,20 +278,6 @@ class HomeScreenViewModel @Inject constructor(
     return command
   }
 
-//  @RequiresApi(Build.VERSION_CODES.O)
-//  fun GetRechargeAvailablityFormattedString(): String {
-//    var rechargeAvailabilityDate = DATE_FORMATTER.parse(this.rechargeAvailabilityDate)!!.toInstant()
-//    if (rechargeAvailabilityDate.compareTo(Instant.now()) < 1)
-//      return ""
-//
-//    var date = Date.from(rechargeAvailabilityDate)
-//    var formatter = DateFormat.getDateTimeInstance()
-//    return formatter.format(date)
-////    var duration = Duration.parse(date.toString())
-////    var remaining = nextRechargeAvailabilityDate.minus(Instant.now().toEpochMilli(), ChronoUnit.MILLIS)
-////    return Date.from(remaining)
-//  }
-
   private fun updateRechargeAvailability() {
     rechargesMade += if (secondClientNumber.value != null) 2 else 1
     rechargesAvailabilityDateISOString.value = if (rechargesMade < 2) {
@@ -340,7 +285,6 @@ class HomeScreenViewModel @Inject constructor(
     } else {
       Instant.now().plus(1, ChronoUnit.DAYS).plusSeconds(60 * 15).toString()
     }
-//    areRechargesAvailable.value = false
   }
 
   fun runInstrumentedTest() {
@@ -350,15 +294,15 @@ class HomeScreenViewModel @Inject constructor(
 
     val errorMessage = if (fetchDataFromWA.value) {
       if (whatsAppInstalledVersion == null)
-        "WhatsApp parece no estar instalado"
+        "WhatsApp (${BuildConfig.WHATSAPP_PACKAGE_NAME}) parece no estar instalado"
       else if (waContact.value.isEmpty())
         "Especifique el nombre|número del contacto de WhatsApp que le envió los números a recargar"
       else ""
     } else {
-      if (firstClientNumber.value!!.length != 8 || secondClientNumber.value != null && secondClientNumber.value!!.length != 8)
+      if (firstClientNumber.value.length != 8 || (secondClientNumber.value != null && secondClientNumber.value!!.length != 8))
         "El número del cliente a recargar debe tener 8 dígitos"
-      else if (firstClientRecharge.value!!.isEmpty() || firstClientRecharge.value!!.toInt() !in 25..1250 ||
-        secondClientRecharge.value != null && secondClientRecharge.value!!.isEmpty() || secondClientRecharge.value!!.toInt() !in 25..1250
+      else if ((firstClientRecharge.value.isEmpty() || firstClientRecharge.value.toInt() !in 25..1250) ||
+        (secondClientNumber.value != null && (secondClientRecharge.value.isEmpty() || secondClientRecharge.value.toInt() !in 25..1250))
       )
         "El monto de la recarga debe estar entre $25 y $1205"
       else ""
@@ -377,6 +321,8 @@ class HomeScreenViewModel @Inject constructor(
 
     val errorMessage = if (!RootUtil.isDeviceRooted)
       "Acceso root es requerido para ejecutar el test automatizado"
+    else if (instrumentationAppVersion == null)
+      "Conexen Tool - Instrumentation App, parece no estar instalada"
     else if (transfermovilInstalledVersion == null)
       "Transfermóvil parece no estar instalado"
     else if (cardLast4Digits.value.length in 1..3)
@@ -398,6 +344,4 @@ class HomeScreenViewModel @Inject constructor(
     if (state.value == HomeScreenState(HomeScreenLoadingState.Success))
       saveUserPreferences()
   }
-
-
 }

@@ -30,18 +30,17 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.text.isDigitsOnly
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.moveFocusOnTabPressed
 import com.conexentools.presentation.components.common.CubanPhoneNumberTextField
 
 @Composable
 fun RechargeSlot(
-//  numberGetter: () -> String?,
-//  numberSetter: (String?) -> Unit,
-//  rechargeGetter: () -> String?,
-//  rechargeSetter: (String?) -> Unit,
-  number: MutableState<String?>,
-  recharge: MutableState<String?>,
+  number: String,
+  recharge: String,
+  onNumberChange: (String) -> Unit,
+  onRechargeChange: (String) -> Unit,
   showRemoveButton: Boolean,
   onDelete: () -> Unit
 ) {
@@ -57,8 +56,8 @@ fun RechargeSlot(
     // Number
     CubanPhoneNumberTextField(
       modifier = Modifier.weight(3.5f),
-      value = number.value ?: "",
-      onValueChange = { number.value = it },
+      value = number,
+      onValueChange = onNumberChange,
       isOutlinedTextField = false,
       focusDirection = FocusDirection.Right
     )
@@ -73,7 +72,7 @@ fun RechargeSlot(
       modifier = Modifier
         .weight(2.5f)
         .onFocusChanged { focusState ->
-          if (!focusState.isFocused && !recharge.value.isNullOrEmpty() && recharge.value != null && recharge.value!!.toInt() !in 25..1250) {
+          if (!focusState.isFocused && recharge.isNotEmpty() && recharge.toInt() !in 25..1250) {
             isInvalidRecharge = true
             rechargeSlotSupportingText = { Text("La recarga debe estar entre 25 y 1250") }
           } else {
@@ -84,14 +83,13 @@ fun RechargeSlot(
         .moveFocusOnTabPressed(FocusDirection.Down, focusManager),
       supportingText = rechargeSlotSupportingText,
       isError = isInvalidRecharge,
-      value = recharge.value ?: "",
+      value = recharge,
       prefix = { Text("$", color = MaterialTheme.colorScheme.primary) },
       suffix = { Text("CUP", color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)) },
       onValueChange = {
-        if (it.all { char -> char.isDigit() } && it.length <= 4)
-          recharge.value = it
+        if (it.isDigitsOnly() && it.length <= 4)
+          onRechargeChange(it)
       },
-//        placeholder = { Text("Efectivo") },
       keyboardOptions = KeyboardOptions.Default.copy(
         keyboardType = KeyboardType.Number,
         imeAction = ImeAction.Next

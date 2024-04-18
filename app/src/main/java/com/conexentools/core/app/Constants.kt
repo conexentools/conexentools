@@ -36,6 +36,7 @@ object Constants {
     val FIRST_CLIENT_RECHARGE = stringPreferencesKey("first_client_cash")
     val SECOND_CLIENT_RECHARGE = stringPreferencesKey("second_client_cash")
     val FETCH_DATA_FROM_WA = booleanPreferencesKey("fetch_data_from_wa")
+    val CLIENT_LIST_PAGE_HELP_DIALOGS_SHOWED = booleanPreferencesKey("client_list_help_dialog_showed")
     val CARD_LAST_4_DIGITS = stringPreferencesKey("card_last_4_digits")
     val RECHARGES_AVAILABILITY_DATE = stringPreferencesKey("recharges_availability_date")
     val IS_MANAGER = booleanPreferencesKey("is_manager")

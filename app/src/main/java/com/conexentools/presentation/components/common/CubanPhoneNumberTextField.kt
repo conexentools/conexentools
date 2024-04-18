@@ -48,7 +48,6 @@ fun String.cleanCubanMobileNumber(): String {
 fun CubanPhoneNumberTextField(
   modifier: Modifier = Modifier,
   value: String,
-//  valueGetter: () -> String = { "" },
   onValueChange: (String) -> Unit = {},
   isOutlinedTextField: Boolean,
   placeholder: @Composable (() -> Unit)? = { Text("Número") },
@@ -64,10 +63,7 @@ fun CubanPhoneNumberTextField(
   var supportingText: @Composable (() -> Unit)? by remember { mutableStateOf(null) }
   val _onValueChange: (String) -> Unit = {
     val v = it.cleanCubanMobileNumber()
-    log("value: $v")
     if (v.isDigitsOnly() && v.length <= 8) {
-      log("value setted")
-//      text = v
       onValueChange(v)
     }
     if (isInvalidNumber) {
@@ -85,7 +81,6 @@ fun CubanPhoneNumberTextField(
   }
 
   val mod: Modifier = Modifier
-//    .focusRequester(focusRequester)
     .onFocusChanged { focusState ->
       if (!focusState.isFocused && value.isNotEmpty() && value.length != 8) {
         isInvalidNumber = true
@@ -146,7 +141,6 @@ fun CubanPhoneNumberTextField(
       visualTransformation = { cubanMobileNumberFilter(it, darkTheme = darkTheme) }
     )
   }
-//  }
 }
 
 @Preview(showBackground = true, apiLevel = 33)

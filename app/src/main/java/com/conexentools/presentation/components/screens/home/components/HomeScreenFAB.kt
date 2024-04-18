@@ -35,13 +35,13 @@ import com.conexentools.presentation.components.screens.home.enums.HomeScreenPag
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreenFAB(
-  firstClientNumber: MutableState<String?>,
+  firstClientNumber: MutableState<String>,
   secondClientNumber: MutableState<String?>,
-  firstClientRecharge: MutableState<String?>,
-  secondClientRecharge: MutableState<String?>,
+  firstClientRecharge: MutableState<String>,
+  secondClientRecharge: MutableState<String>,
   fetchDataFromWA: MutableState<Boolean>,
   rechargesAvailabilityDateISOString: MutableState<String?>,
-  page: MutableState<HomeScreenPage>,
+  page: MutableState<HomeScreenPage?>,
   showAdbRunCommandDialog: MutableState<Boolean>,
   onRunInstrumentedTest: () -> Unit,
   onAddClient: () -> Unit,
@@ -58,12 +58,12 @@ fun HomeScreenFAB(
     ) {
 
       val showAdbCommandButtonXOffset by animateFloatAsState(
-        targetValue = if (page.value.isInstrumentedTestPage()) 0f else 62f,
+        targetValue = if (page.value!!.isInstrumentedTestPage()) 0f else 62f,
         animationSpec = tween(durationMillis = Constants.FAB_ANIMATION_DURATION),
         label = ""
       )
       val showAdbCommandButtonAlpha by animateFloatAsState(
-        targetValue = if (page.value.isInstrumentedTestPage()) 1f else 0f,
+        targetValue = if (page.value!!.isInstrumentedTestPage()) 1f else 0f,
         animationSpec = tween(durationMillis = Constants.FAB_ANIMATION_DURATION + 100),
         label = ""
       )
@@ -86,7 +86,7 @@ fun HomeScreenFAB(
     }
 
     fun canAddRecharge() =
-      page.value.isInstrumentedTestPage() && !fetchDataFromWA.value && secondClientNumber.value == null
+      page.value!!.isInstrumentedTestPage() && !fetchDataFromWA.value && secondClientNumber.value == null
 
     Column (
       modifier = Modifier.weight(1f),
@@ -111,7 +111,8 @@ fun HomeScreenFAB(
           onClick = {
             if (canAddRecharge()) {
               secondClientNumber.value = firstClientNumber.value
-              secondClientRecharge.value = firstClientRecharge.value
+              if (secondClientRecharge.value.isEmpty())
+                secondClientRecharge.value = firstClientRecharge.value
             }
           },
           modifier = Modifier
@@ -119,7 +120,7 @@ fun HomeScreenFAB(
             .alpha(addRechargeButtonAlpha)
         ) {
           Icon(
-            Icons.Rounded.Add, contentDescription = "Add target contact"
+            Icons.Rounded.Add, contentDescription = null
           )
         }
       }
@@ -130,11 +131,11 @@ fun HomeScreenFAB(
       ) {
         FloatingActionButton(
           modifier = Modifier
-            .alpha(if (page.value.isInstrumentedTestPage() && !rechargesAvailabilityDateISOString.value.isNullOrEmpty()) 0.25f else 1f),
+            .alpha(if (page.value!!.isInstrumentedTestPage() && !rechargesAvailabilityDateISOString.value.isNullOrEmpty()) 0.25f else 1f),
           onClick = { },
         ) {
           Icon(
-            imageVector = if (page.value.isInstrumentedTestPage()) Icons.Rounded.PlayArrow else Icons.Rounded.Add,
+            imageVector = if (page.value!!.isInstrumentedTestPage()) Icons.Rounded.PlayArrow else Icons.Rounded.Add,
             contentDescription = null
           )
           Box(
@@ -143,11 +144,11 @@ fun HomeScreenFAB(
               .clipToBounds()
               .combinedClickable(
                 onLongClick = {
-                  if (!page.value.isInstrumentedTestPage())
+                  if (!page.value!!.isInstrumentedTestPage())
                     onBatchAddClient()
                 },
                 onClick = {
-                  if (page.value.isInstrumentedTestPage())
+                  if (page.value!!.isInstrumentedTestPage())
                     onRunInstrumentedTest()
                   else
                     onAddClient()

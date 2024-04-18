@@ -30,6 +30,7 @@ fun RequestAppPermissions(
   var checkManageExternalStoragePermission by remember { mutableStateOf(false) }
   var checkWriteExternalStoragePermission by remember { mutableStateOf(false) }
   var checkDisplayOverOtherAppsPermission by remember { mutableStateOf(false) }
+  var showRestartAppDialog by remember { mutableStateOf(false) }
 
   val readSmsLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -44,12 +45,22 @@ fun RequestAppPermissions(
 
   val manageExternalStorageLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-      checkDisplayOverOtherAppsPermission = true
+      // If write permission is granted restart app to make Dagger Hilt create Database in primary external storage
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
+        showRestartAppDialog = true
+      } else {
+        checkDisplayOverOtherAppsPermission = true
+      }
     }
 
   val writeExternalStorageLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-      checkDisplayOverOtherAppsPermission = true
+      // If write permission is granted restart app to make Dagger Hilt create Database in primary external storage
+      if (au.isPermissionGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE)){
+        showRestartAppDialog = true
+      } else {
+        checkDisplayOverOtherAppsPermission = true
+      }
     }
 
   // READ_SMS -> (CALL_PHONE - READ_CONTACTS)
@@ -120,6 +131,9 @@ fun RequestAppPermissions(
 
   // Display over other apps
   if (checkDisplayOverOtherAppsPermission) {
+    if (!au.canDrawOverlays()){
+      au.openSettings(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+    }
     // TODO Implement
     checkDisplayOverOtherAppsPermission = false
     onPermissionsRequestComplete()
@@ -127,6 +141,15 @@ fun RequestAppPermissions(
 //      showDisplayOverOtherAppsPermissionDialog = false
 //      onPermissionsRequestComplete()
 //    }
+  }
+
+  if (showRestartAppDialog){
+    ScrollableAlertDialog(
+      text = "La aplicación necesita reiniciarse para crear la base de datos en el almacenamiento interno primario",
+      confirmButtonText = "Reiniciar"
+    ) {
+      au.restartApp()
+    }
   }
 
 

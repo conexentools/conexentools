@@ -2,8 +2,10 @@ package com.conexentools.data.local.model
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import com.conexentools.core.util.getRemainingTimeUntilDate
 import com.conexentools.core.util.RemainingTimeTextRepresentation
@@ -23,6 +25,9 @@ data class Client(
   var quickMessage: String? = null,
   var rechargesMade: Int? = 0,
 ) {
+
+  @Ignore
+  var visible = mutableStateOf(true)
 
   fun getRemainingTimeForNextRechargeToBeAvailable(): RemainingTimeTextRepresentation? {
     return latestRechargeDateISOString?.run {

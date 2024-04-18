@@ -22,10 +22,11 @@ fun ScrollableAlertDialog(
   text: String = "",
   isInfoDialog: Boolean? = true,
   title: String? = null,
+  confirmButtonText: String = "OK",
   yesNoDialog: Boolean = false,
   onDismiss: (() -> Unit)? = null,
   onDismissRequest: () -> Unit = {},
-  onConfirm: () -> Unit,
+  onConfirm: () -> Unit
 ) {
   AlertDialog(
     icon = isInfoDialog?.let {
@@ -50,7 +51,7 @@ fun ScrollableAlertDialog(
     onDismissRequest = onDismissRequest,
     confirmButton = {
       TextButton(onConfirm) {
-        Text(if (yesNoDialog) "Si" else "OK")
+        Text(if (yesNoDialog) "Si" else confirmButtonText)
       }
     },
     dismissButton = {

@@ -1,24 +1,46 @@
 package com.conexentools.presentation.components.screens.home
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.net.Uri
-import androidx.compose.foundation.ExperimentalFoundationApi
+import android.os.Build
+import android.os.Environment
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.ContactMail
+import androidx.compose.material.icons.rounded.QueuePlayNext
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -27,12 +49,10 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -42,9 +62,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -54,6 +74,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.conexentools.R
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
 import com.conexentools.core.util.navigate
@@ -62,8 +83,11 @@ import com.conexentools.core.util.truncate
 import com.conexentools.data.local.model.Client
 import com.conexentools.data.repository.AndroidUtilsImpl
 import com.conexentools.domain.repository.AndroidUtils
+import com.conexentools.presentation.components.common.ScreenSurface
+import com.conexentools.presentation.components.common.ScrollableAlertDialog
+import com.conexentools.presentation.components.common.SearchAppBar
+import com.conexentools.presentation.components.common.enums.ScreenSurfaceContentContainer
 import com.conexentools.presentation.components.screens.home.components.HomeScreenFAB
-import com.conexentools.presentation.components.screens.home.components.HomeTopBar
 import com.conexentools.presentation.components.screens.home.enums.HomeScreenPage
 import com.conexentools.presentation.components.screens.home.pages.client_list.ClientsListPage
 import com.conexentools.presentation.components.screens.home.pages.client_list.clientsForTesting
@@ -72,6 +96,7 @@ import com.conexentools.presentation.components.screens.home.state.HomeScreenLoa
 import com.conexentools.presentation.components.screens.home.state.HomeScreenState
 import com.conexentools.presentation.navigation.Screen
 import com.conexentools.presentation.theme.LocalTheme
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -81,17 +106,17 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
   homeScreenState: HomeScreenState,
   navController: NavController,
-  page: MutableState<HomeScreenPage>,
+  page: MutableState<HomeScreenPage?>,
+  appLaunchCount: Int,
+  clientListPageHelpDialogShowed: MutableState<Boolean>,
   au: AndroidUtils,
 
   // InstrumentationTest Page
-//  onPickContactButton: () -> Unit,
   adbInstrumentationRunCommandGetter: () -> String,
-//  updateRechargeAvailability: () -> Unit,
-  firstClientNumber: MutableState<String?>,
+  firstClientNumber: MutableState<String>,
   secondClientNumber: MutableState<String?>,
-  firstClientRecharge: MutableState<String?>,
-  secondClientRecharge: MutableState<String?>,
+  firstClientRecharge: MutableState<String>,
+  secondClientRecharge: MutableState<String>,
   fetchDataFromWA: MutableState<Boolean>,
   pin: MutableState<String>,
   bank: MutableState<String>,
@@ -130,10 +155,10 @@ fun HomeScreen(
         navController = navController,
         page = page,
         au = au,
+        appLaunchCount = appLaunchCount,
+        clientListPageHelpDialogsShowed = clientListPageHelpDialogShowed,
 
-//        onPickContactButton = onPickContactButton,
         adbInstrumentationRunCommandGetter = adbInstrumentationRunCommandGetter,
-//        updateRechargeAvailability = updateRechargeAvailability,
         firstClientNumber = firstClientNumber,
         secondClientNumber = secondClientNumber,
         firstClientRecharge = firstClientRecharge,
@@ -168,16 +193,12 @@ fun HomeScreen(
           text = "Un error inesperado ocurrió ☹️",
           textAlign = TextAlign.Center,
           style = MaterialTheme.typography.titleLarge,
-//        fontWeight = MaterialTheme.typography.titleMedium,
-//        fontStyle = MaterialTheme.typography.titleMedium,
           color = MaterialTheme.colorScheme.error,
         )
         Spacer(modifier = Modifier.height(10.dp))
         Text(
           text = homeScreenState.state.message ?: "Unknown",
           textAlign = TextAlign.Center,
-//        fontWeight = MaterialTheme.typography.titleMedium,
-//        fontStyle = MaterialTheme.typography.titleMedium,
           color = MaterialTheme.colorScheme.error,
         )
       }
@@ -185,23 +206,22 @@ fun HomeScreen(
   }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("PrivateResource")
 @Composable
 private fun DrawHome(
   navController: NavController,
-  page: MutableState<HomeScreenPage>,
+  page: MutableState<HomeScreenPage?>,
+  appLaunchCount: Int,
+  clientListPageHelpDialogsShowed: MutableState<Boolean>,
   au: AndroidUtils,
 
   // InstrumentationTest Page
-//  onPickContactButton: () -> Unit,
   adbInstrumentationRunCommandGetter: () -> String,
-//  runInstrumentationTest: () -> Unit,
-//  updateRechargeAvailability: () -> Unit,
-  firstClientNumber: MutableState<String?>,
+  firstClientNumber: MutableState<String>,
   secondClientNumber: MutableState<String?>,
-  firstClientRecharge: MutableState<String?>,
-  secondClientRecharge: MutableState<String?>,
+  firstClientRecharge: MutableState<String>,
+  secondClientRecharge: MutableState<String>,
   fetchDataFromWA: MutableState<Boolean>,
   pin: MutableState<String>,
   bank: MutableState<String>,
@@ -213,9 +233,7 @@ private fun DrawHome(
 
   // ClientList Page
   isManager: MutableState<Boolean>,
-//  onSearchBarValueChange: (String) -> Unit,
   clientPagingItems: LazyPagingItems<Client>,
-//  searchBarText: String = "",
   onClientCardEdit: (Client) -> Unit,
   onClientCardRecharge: (Client) -> Unit,
   onClientCardSendMessage: (String, String?) -> Unit,
@@ -226,7 +244,6 @@ private fun DrawHome(
 ) {
 
   val showAdbRunCommandDialog = remember { mutableStateOf(false) }
-  val searchBarText = remember { mutableStateOf("") }
 
   // ADB Command Dialog
   if (showAdbRunCommandDialog.value) {
@@ -235,7 +252,7 @@ private fun DrawHome(
         showAdbRunCommandDialog.value = false
       },
       title = {
-        Text(text = "ADB Instrumentation Run Command")
+        Text("ADB Instrumentation Run Command")
       },
       text = {
         Text(
@@ -279,28 +296,41 @@ private fun DrawHome(
     )
   }
 
-  val pagerState = rememberPagerState(
-    initialPage = page.value.ordinal,
-    pageCount = { HomeScreenPage.entries.count() }
-  )
+  val pagerState: PagerState? = page.value?.let {
+    rememberPagerState(
+      initialPage = it.ordinal,
+      pageCount = { HomeScreenPage.entries.count() }
+    )
+  }
 
   val coroutineScope = rememberCoroutineScope()
   val snackbarHostState = remember { SnackbarHostState() }
-  val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+  val isSearchingClients = remember { mutableStateOf(false) }
 
-  Scaffold(
-    topBar = {
-      HomeTopBar(
+  val searchBarText = remember { mutableStateOf("") }
+
+  val searchAppBar: @Composable () -> Unit = {
+    SearchAppBar(
+      text = searchBarText,
+      onNavigateBack = { isSearchingClients.value = false },
+    )
+  }
+
+  ScreenSurface(
+    title = stringResource(id = R.string.app_name),
+    titleTextAlign = TextAlign.Left,
+    customTopAppBar = if (isSearchingClients.value) searchAppBar else null,
+    scrollBehavior = null,
+    showTopAppBarHorizontalDivider = true,
+    onNavigateBack = null,
+    padding = PaddingValues(0.dp),
+    defaultTopAppBarActions = {
+      TopAppBarActions(
         page = page,
-        searchBarText = searchBarText,
-        onPageChange = { page ->
-          coroutineScope.launch {
-            pagerState.animateScrollToPage(page.ordinal)
-          }
-        },
-        onSettings = { navController.navigate(Screen.Settings) },
-        onAbout = { navController.navigate(Screen.About) },
-        onHelp = { navController.navigate(Screen.Help) },
+        pagerState = pagerState,
+        isSearchingClients = isSearchingClients,
+        coroutineScope = coroutineScope,
+        navController = navController,
         au = au
       )
     },
@@ -317,163 +347,299 @@ private fun DrawHome(
       }
     },
     floatingActionButton = {
-      HomeScreenFAB(
-//        runInstrumentationTest = runInstrumentationTest,
-//        updateRechargeAvailability = updateRechargeAvailability,
-//        savePreferencesAction = savePreferencesAction,
-        firstClientNumber = firstClientNumber,
-        secondClientNumber = secondClientNumber,
-        firstClientRecharge = firstClientRecharge,
-        secondClientRecharge = secondClientRecharge,
-        fetchDataFromWA = fetchDataFromWA,
-        rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
-        page = page,
-        showAdbRunCommandDialog = showAdbRunCommandDialog,
-        onAddClient = onAddClient,
-        onRunInstrumentedTest = onRunInstrumentedTest,
-        onBatchAddClient = onBatchAddClient,
-      )
+      if (page.value != null) {
+        HomeScreenFAB(
+          firstClientNumber = firstClientNumber,
+          secondClientNumber = secondClientNumber,
+          firstClientRecharge = firstClientRecharge,
+          secondClientRecharge = secondClientRecharge,
+          fetchDataFromWA = fetchDataFromWA,
+          rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
+          page = page,
+          showAdbRunCommandDialog = showAdbRunCommandDialog,
+          onAddClient = onAddClient,
+          onRunInstrumentedTest = onRunInstrumentedTest,
+          onBatchAddClient = onBatchAddClient,
+        )
+      }
     },
-    modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
-  ) { paddingValues ->
+    contentContainer = ScreenSurfaceContentContainer.Surface
+  ) {
 
-    HorizontalPager(
-      state = pagerState,
-      verticalAlignment = Alignment.CenterVertically,
-    ) { currentPageIndex ->
+    if (pagerState == null || page.value == null) {
+      Row(
+        modifier = Modifier.fillMaxSize(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        CircularProgressIndicator()
+      }
+    } else {
+      HorizontalPager(
+        state = pagerState,
+        verticalAlignment = Alignment.CenterVertically,
+      ) { currentPageIndex ->
 
-      var showManagerPasswordDialog by remember { mutableStateOf(false) }
+        var showManagerPasswordDialog by remember { mutableStateOf(false) }
 
-
-      if (showManagerPasswordDialog) {
-
-        Dialog(
-          onDismissRequest = {
-            showManagerPasswordDialog = false
-            coroutineScope.launch {
-              pagerState.scrollToPage(HomeScreenPage.INSTRUMENTED_TEST.ordinal)
-            }
-          }) {
-
-          val textFieldFocusRequester = remember { FocusRequester() }
-
-          Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-          ) {
-
-            var password by remember {
-              mutableStateOf("")
-            }
-
-            Text(
-              text = "Contraseña",
-              style = MaterialTheme.typography.headlineMedium
-            )
-
-            Spacer(modifier = Modifier.height(Constants.Dimens.Medium))
-
-            val dark = LocalTheme.current.isDark
-            TextField(
-//              placeholder = {Text("")},
-              value = password,
-              singleLine = true,
-              onValueChange = {
-                if (it.length < 13) {
-                  password = it
-                  if (password == "589058825519") {
-                    showManagerPasswordDialog = false
-                    isManager.value = true
-                    coroutineScope.launch {
-                      pagerState.scrollToPage(HomeScreenPage.CLIENT_LIST.ordinal)
-                    }
-                  }
-                }
-              },
-              modifier = Modifier.focusRequester(textFieldFocusRequester),
-              visualTransformation = {
-                textFilter(
-                  text = it,
-                  mask = "___0___2___9",
-                  darkTheme = dark,
-                )
+        // Manager Password Dialog
+        if (showManagerPasswordDialog) {
+          Dialog(
+            onDismissRequest = {
+              showManagerPasswordDialog = false
+              coroutineScope.launch {
+                pagerState.scrollToPage(HomeScreenPage.INSTRUMENTED_TEST.ordinal)
               }
-            )
-          }
+            }) {
 
-          var dialogWindowFocusChangeListenerRegistered by remember { mutableStateOf(false) }
-          if (!dialogWindowFocusChangeListenerRegistered) {
-            LocalView.current.viewTreeObserver.addOnWindowFocusChangeListener { hasFocus ->
-              if (hasFocus) textFieldFocusRequester.requestFocus()
-            }
-            dialogWindowFocusChangeListenerRegistered = true
-          }
-        }
-      }
+            val textFieldFocusRequester = remember { FocusRequester() }
 
-      LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }.distinctUntilChanged().collect {
-          page.value = HomeScreenPage.fromOrdinal(it)
-          if (page.value == HomeScreenPage.CLIENT_LIST && !isManager.value) {
-            coroutineScope.launch {
-              pagerState.scrollToPage(HomeScreenPage.INSTRUMENTED_TEST.ordinal)
-            }.invokeOnCompletion { showManagerPasswordDialog = true }
-          }
-        }
-      }
+            Column(
+              horizontalAlignment = Alignment.CenterHorizontally
+            ) {
 
-      when (HomeScreenPage.fromOrdinal(currentPageIndex)) {
-        HomeScreenPage.INSTRUMENTED_TEST -> {
-          InstrumentedTestPage(
-            paddingValues = paddingValues,
-            au = au,
-            firstClientNumber = firstClientNumber,
-            secondClientNumber = secondClientNumber,
-            firstClientRecharge = firstClientRecharge,
-            secondClientRecharge = secondClientRecharge,
-            fetchDataFromWA = fetchDataFromWA,
-            pin = pin,
-            bank = bank,
-            cardLast4Digits = cardLast4Digits,
-            waContactImageUri = waContactImageUri,
-            rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
-            waContact = waContact,
-          )
-        }
+              var password by remember {
+                mutableStateOf("")
+              }
 
-        HomeScreenPage.CLIENT_LIST -> {
-          if (isManager.value) {
-            ClientsListPage(
-              clientPagingItems = clientPagingItems,
-              searchBarText = searchBarText.value,
-              onClientEdit = onClientCardEdit,
-              onClientRecharge = onClientCardRecharge,
-              onClientSendMessage = onClientCardSendMessage,
-              onClientDelete = { client, onClientDeleteDismissed ->
-                coroutineScope.launch {
-                  val snackbarResult = snackbarHostState.showSnackbar(
-                    message = "${client.name.truncate(20)} eliminado",
-                    actionLabel = "Deshacer",
-                    duration = SnackbarDuration.Short,
-                  )
-                  when (snackbarResult) {
-                    SnackbarResult.Dismissed -> {
-                      onClientCardDelete(client)
-                    }
-//                  SnackbarResult.ActionPerformed -> {
-//                    showClient.value = true
-//                  }
-                    else -> {
-                      onClientDeleteDismissed()
+              Text(
+                text = "Contraseña",
+                style = MaterialTheme.typography.headlineMedium
+              )
+
+              Spacer(modifier = Modifier.height(Constants.Dimens.Medium))
+
+              val dark = LocalTheme.current.isDark
+              TextField(
+                value = password,
+                singleLine = true,
+                onValueChange = {
+                  if (it.length < 13) {
+                    password = it
+                    if (password == "589058825519") {
+                      showManagerPasswordDialog = false
+                      isManager.value = true
+                      coroutineScope.launch {
+                        pagerState.scrollToPage(HomeScreenPage.CLIENT_LIST.ordinal)
+                      }
                     }
                   }
+                },
+                modifier = Modifier.focusRequester(textFieldFocusRequester),
+                visualTransformation = {
+                  textFilter(
+                    text = it,
+                    mask = "___0___2___9",
+                    darkTheme = dark,
+                  )
                 }
-              },
-              paddingValues = paddingValues,
-              onClientRechargeCounterReset = onClientCardRechargeCounterReset,
-              au = au
-            )
+              )
+            }
+
+            var dialogWindowFocusChangeListenerRegistered by remember { mutableStateOf(false) }
+            if (!dialogWindowFocusChangeListenerRegistered) {
+              LocalView.current.viewTreeObserver.addOnWindowFocusChangeListener { hasFocus ->
+                if (hasFocus) textFieldFocusRequester.requestFocus()
+              }
+              dialogWindowFocusChangeListenerRegistered = true
+            }
           }
         }
+
+        LaunchedEffect(pagerState) {
+          snapshotFlow { pagerState.currentPage }.distinctUntilChanged().collect {
+            page.value = HomeScreenPage.fromOrdinal(it)
+            if (page.value == HomeScreenPage.CLIENT_LIST && !isManager.value) {
+              coroutineScope.launch {
+                pagerState.scrollToPage(HomeScreenPage.INSTRUMENTED_TEST.ordinal)
+              }.invokeOnCompletion { showManagerPasswordDialog = true }
+            } else if (page.value!!.isInstrumentedTestPage() && isSearchingClients.value) {
+              isSearchingClients.value = false
+            }
+          }
+        }
+
+        when (HomeScreenPage.fromOrdinal(currentPageIndex)) {
+          HomeScreenPage.INSTRUMENTED_TEST -> {
+            InstrumentedTestPage(
+              au = au,
+              firstClientNumber = firstClientNumber,
+              secondClientNumber = secondClientNumber,
+              firstClientRecharge = firstClientRecharge,
+              secondClientRecharge = secondClientRecharge,
+              fetchDataFromWA = fetchDataFromWA,
+              pin = pin,
+              bank = bank,
+              cardLast4Digits = cardLast4Digits,
+              waContactImageUri = waContactImageUri,
+              rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
+              waContact = waContact,
+            )
+          }
+
+          HomeScreenPage.CLIENT_LIST -> {
+            if (isManager.value) {
+
+              var showClientCardHelpDialog by remember { mutableStateOf(!clientListPageHelpDialogsShowed.value) }
+              var showAddClientButtonHelpDialog by remember { mutableStateOf(false) }
+
+              if (showClientCardHelpDialog) {
+                ScrollableAlertDialog(
+                  text = "Deslize la interfaz de un cliente a la izquierda o a la derecha para ejecutar las diferentes acciones:\n\nEnviar Mensaje\nRecargar\nEditar\nLlamar\nEliminar"
+                ) {
+                  showClientCardHelpDialog = false
+                  showAddClientButtonHelpDialog = true
+                }
+              }
+
+              if (showAddClientButtonHelpDialog) {
+                ScrollableAlertDialog(
+                  text = "Presione el botón 'Añadir Cliente' [➕] para... hacer aparecer un unicornio, manténgalo presionado para añadir varios clientes a la vez"
+                ) {
+                  showAddClientButtonHelpDialog = false
+                  clientListPageHelpDialogsShowed.value = true
+                }
+              }
+
+              ClientsListPage(
+                clientPagingItems = clientPagingItems,
+                searchBarText = searchBarText.value,
+                onClientEdit = onClientCardEdit,
+                onClientRecharge = onClientCardRecharge,
+                onClientSendMessage = onClientCardSendMessage,
+                onClientDelete = { client ->
+                  coroutineScope.launch {
+                    val snackbarResult = snackbarHostState.showSnackbar(
+                      message = "${client.name.truncate(20)} eliminado",
+                      actionLabel = "Deshacer",
+                      duration = SnackbarDuration.Short,
+                    )
+                    when (snackbarResult) {
+                      SnackbarResult.Dismissed -> { onClientCardDelete(client) }
+                      else -> { client.visible.value = true }
+                    }
+                  }
+                },
+                onClientRechargeCounterReset = onClientCardRechargeCounterReset,
+                au = au
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun TopAppBarActions(
+  page: MutableState<HomeScreenPage?>,
+  pagerState: PagerState?,
+  isSearchingClients: MutableState<Boolean>,
+  coroutineScope: CoroutineScope,
+  navController: NavController,
+  au: AndroidUtils,
+) {
+
+  var dropDownMenuExpanded by remember { mutableStateOf(false) }
+  val writeExternalStoragePermissionLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
+  Row(modifier = Modifier.animateContentSize()) {
+    // Page Switcher Button
+    IconButton(
+      onClick = {
+        if (page.value == null || pagerState == null) {
+          au.toast("Espere a que la aplicación termine de cargar", vibrate = true)
+        } else {
+          val targetPage = if (page.value!!.isInstrumentedTestPage()) {
+            HomeScreenPage.CLIENT_LIST
+          } else {
+            if (isSearchingClients.value)
+              isSearchingClients.value = false
+            HomeScreenPage.INSTRUMENTED_TEST
+          }
+          coroutineScope.launch {
+            pagerState.animateScrollToPage(targetPage.ordinal)
+          }
+        }
+      }) {
+      Icon(
+        imageVector = if (page.value == null || page.value!!.isInstrumentedTestPage()) Icons.Rounded.ContactMail else Icons.Rounded.QueuePlayNext,
+        contentDescription = null,
+      )
+    }
+
+    // Search Button
+    AnimatedVisibility(
+      visible = page.value == HomeScreenPage.CLIENT_LIST,
+      enter = fadeIn(animationSpec = tween(durationMillis = 200)),
+      exit = fadeOut(animationSpec = tween(durationMillis = 200))
+    ) {
+      IconButton(
+        onClick = {
+          isSearchingClients.value = true
+        }) {
+        Icon(
+          imageVector = Icons.Default.Search,
+          contentDescription = null,
+        )
+      }
+    }
+  }
+
+  // More Button
+  IconButton(
+    onClick = {
+      dropDownMenuExpanded = !dropDownMenuExpanded
+    }) {
+
+    Icon(
+      imageVector = Icons.Default.MoreVert,
+      contentDescription = null,
+    )
+
+    DropdownMenu(
+      expanded = dropDownMenuExpanded,
+      onDismissRequest = { dropDownMenuExpanded = false },
+      modifier = Modifier.defaultMinSize(minWidth = 80.dp)
+    ) {
+      DropdownMenuItem(
+        text = { Text("Configuración") },
+        onClick = {
+          dropDownMenuExpanded = false
+          navController.navigate(Screen.Settings)
+        }
+      )
+      DropdownMenuItem(
+        text = { Text("Ayuda") },
+        onClick = {
+          dropDownMenuExpanded = false
+          navController.navigate(Screen.Help)
+        }
+      )
+      DropdownMenuItem(
+        text = { Text("Acerca de") },
+        onClick = {
+          dropDownMenuExpanded = false
+          navController.navigate(Screen.About)
+        }
+      )
+      if (!au.hasExternalStorageWriteReadAccess()) {
+        DropdownMenuItem(
+          text = { Text("Solicitar permiso para escribir en el almacenamiento externo") },
+          onClick = {
+            dropDownMenuExpanded = false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
+              au.openSettings(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+            } else if (au.shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+              writeExternalStoragePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            } else {
+              // User has selected Deny and don't ask again
+              au.openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            }
+          }
+        )
       }
     }
   }
@@ -489,18 +655,13 @@ fun HomeScreenPreview() {
 
     HomeScreen(
       homeScreenState = HomeScreenState(HomeScreenLoadingState.Success),
-//      homeScreenState = HomeScreenState(HomeScreenLoadingState.Error("Some error occurred")),
       navController = rememberNavController(),
-//      onPickContactButton = {},
+      clientListPageHelpDialogShowed = remember { mutableStateOf(true) },
       adbInstrumentationRunCommandGetter = { "" },
-//      runInstrumentationTest = {},
-//      updateRechargeAvailability = {},
       firstClientNumber = remember { mutableStateOf("55797140") },
       secondClientNumber = remember { mutableStateOf("58469745") },
-//      secondClientNumber = remember { mutableStateOf(null) },
       firstClientRecharge = remember { mutableStateOf("1234") },
       secondClientRecharge = remember { mutableStateOf("2500") },
-//      secondClientRecharge = remember { mutableStateOf(null) },
       fetchDataFromWA = remember { mutableStateOf(false) },
       isManager = remember { mutableStateOf(false) },
       pin = remember { mutableStateOf("5555") },
@@ -519,6 +680,7 @@ fun HomeScreenPreview() {
       onClientCardRechargeCounterReset = {},
       onAddClient = {},
       onBatchAddClient = {},
+      appLaunchCount = 0,
       onRunInstrumentedTest = {}
     )
   }

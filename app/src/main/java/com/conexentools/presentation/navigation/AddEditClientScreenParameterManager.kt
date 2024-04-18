@@ -1,5 +1,8 @@
 package com.conexentools.presentation.navigation
 
+import android.widget.Toast
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import com.conexentools.core.util.log
 import com.conexentools.core.util.toClient
 import com.conexentools.data.local.model.Client
@@ -7,48 +10,53 @@ import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.HomeScreenViewModel
 import contacts.core.entities.Contact
 
-class AddEditClientScreenParameters {
+class AddEditClientScreenParameterManager {
   companion object {
     lateinit var hvm: HomeScreenViewModel
     lateinit var au: AndroidUtils
-    lateinit var navigateBack: () -> Boolean
-    var client: Client? = null
+    lateinit var navigateToHome: () -> Unit
+    var client: MutableState<Client>? = null
     var contactPickerSelectedContacts: List<Contact> = listOf()
-    var indexOfLatestClientAddedFromContactPicker = 0
+    var indexOfNextClientToAddFromContactPickerSelectedContacts = 0
 
     var isNewClient: Boolean = false
 
     var onSubmitClient: (Client) -> Unit = {}
+    var onOmitClient: (() -> Unit)? = null
+
     val onAddClientFromContactPicker: (client: Client) -> Unit = { client ->
       hvm.checkIfClientIsPresentInDatabase(client, onClientNotPresent = {
         hvm.insertClient(client)
         log("Client added from contact picker. $client")
-        au.toast("${client.name} añadid@")
+        au.toast("${client.name} añadid@", shortToast = true)
       })
+      updateNextClientToProcessFromContactPicker()
+    }
 
-      if (indexOfLatestClientAddedFromContactPicker < contactPickerSelectedContacts.count()) {
-        AddEditClientScreenParameters.client =
-          contactPickerSelectedContacts[++indexOfLatestClientAddedFromContactPicker].toClient()
-      } else {
+    val updateNextClientToProcessFromContactPicker = {
+      if (indexOfNextClientToAddFromContactPickerSelectedContacts < contactPickerSelectedContacts.count())
+        (client ?: mutableStateOf(Client())).value =
+          contactPickerSelectedContacts[indexOfNextClientToAddFromContactPickerSelectedContacts++].toClient()
+      else {
         contactPickerSelectedContacts = listOf()
-        indexOfLatestClientAddedFromContactPicker = 0
-        navigateBack()
+        indexOfNextClientToAddFromContactPickerSelectedContacts = 0
+        navigateToHome()
       }
     }
-//    var onClientAddedFromContactPicker: ((Client) -> Unit)? = null
 
     val onAddClient: (client: Client) -> Unit = { client ->
       hvm.checkIfClientIsPresentInDatabase(client, onClientNotPresent = {
         log("Client added. $client")
         hvm.insertClient(client)
-        navigateBack()
+        navigateToHome()
       })
     }
+
     val onEditClient: (client: Client) -> Unit = { client ->
       hvm.checkIfClientIsPresentInDatabase(client, onClientNotPresent = {
         log("Client edited. $client")
         hvm.updateClient(client)
-        navigateBack()
+        navigateToHome()
       })
     }
   }

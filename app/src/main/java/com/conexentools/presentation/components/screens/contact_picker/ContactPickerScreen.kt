@@ -1,11 +1,9 @@
 package com.conexentools.presentation.components.screens.contact_picker
 
-import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,82 +14,88 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.datastore.preferences.protobuf.ByteString
 import com.conexentools.core.app.Constants
-import com.conexentools.core.util.PreviewComposable
 import com.conexentools.core.util.log
+import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.components.common.Contact
 import com.conexentools.presentation.components.common.PrimaryIconButton
 import com.conexentools.presentation.components.common.ScreenSurface
 import com.conexentools.presentation.components.common.SearchAppBar
-import com.conexentools.presentation.components.common.cleanCubanMobileNumber
-import com.conexentools.presentation.components.common.enums.ScreenSurfaceContentWrapper
+import com.conexentools.presentation.components.common.enums.ScreenSurfaceContentContainer
 import contacts.core.Contacts
 import contacts.core.entities.Contact
-import contacts.core.entities.ContactEntity
-import contacts.core.util.phoneList
 import kotlinx.coroutines.launch
 import my.nanihadesuka.compose.LazyColumnScrollbar
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactPickerScreen(
   onNavigateBack: () -> Unit, onSelectionDone: (List<Contact>) -> Unit,
-  multiContactSelectionOnly: Boolean = false
+  multiContactSelectionOnly: Boolean = false,
+  au: AndroidUtils
 ) {
   var areContactsSelectable by remember { mutableStateOf(multiContactSelectionOnly) }
   var isLoadingClients by remember { mutableStateOf(true) }
 
   val context = LocalContext.current
-//  val searchTerm by remember { mutableStateOf("") }
-  val phoneContacts: SnapshotStateList<Contact> = remember { mutableStateListOf() }
+  val phoneContacts: SnapshotStateList<ContactPickerContact> = remember { mutableStateListOf() }
 
-  var searchTerm = remember { mutableStateOf("") }
+  val searchTerm = remember { mutableStateOf("") }
   val coroutineScope = rememberCoroutineScope()
 
-
-
-  fun filterContacts(query: String) {
+  fun filterContacts(query: String?) {
     isLoadingClients = true
-    phoneContacts.clear()
     coroutineScope.launch {
-      phoneContacts.addAll(Contacts(context).broadQuery().wherePartiallyMatches(query).find().sortedBy { contact -> contact.displayNamePrimary ?: contact.displayNameAlt ?: "" })
+      if (query == null) {
+        phoneContacts.addAll(
+          Contacts(context).query().find()
+            .sortedBy { contact ->
+              contact.displayNamePrimary ?: contact.displayNameAlt ?: ""
+            }.map { ContactPickerContact(it) }
+        )
+      } else {
+        for (contact in phoneContacts) {
+          with(searchTerm.value) {
+            contact.visible.value = contact.name.contains(this, ignoreCase = true) ||
+                contact.phone != null && contact.phone.contains(this, ignoreCase = true)
+          }
+        }
+      }
+    }.invokeOnCompletion {
       isLoadingClients = false
     }
   }
 
-
+  LaunchedEffect(true) {
+    phoneContacts.clear()
+    filterContacts(null)
+  }
 
   LaunchedEffect(searchTerm.value) {
     log("Querying all contacts")
     filterContacts(searchTerm.value)
-//    phoneContacts.addAll(Contacts(context).query().find().toList())
   }
 
-  var isSearchingContacts by remember { mutableStateOf(false) }
-  val selectedContacts = remember { mutableStateListOf<Contact>() }
   var showDoneButton by remember { mutableStateOf(false) }
-
-//  var isSelectAllContactsButtonIcon by remember { mutableStateOf(false) }
-//  var switchSelectionState by remember { mutableStateOf(false) }
-  var selectAll by remember { mutableStateOf(false) }
-  var deselectAll by remember { mutableStateOf(false) }
+  var isSearchingContacts by remember { mutableStateOf(false) }
 
   val customTopAppBar: @Composable () -> Unit = {
     SearchAppBar(
@@ -100,154 +104,101 @@ fun ContactPickerScreen(
     )
   }
 
+  fun selectedContact(): List<ContactPickerContact> {
+    return phoneContacts.filter { it.isSelected.value }
+  }
+
   ScreenSurface(
     title = "Contactos",
     titleTextAlign = TextAlign.Left,
     onNavigateBack = onNavigateBack,
     customTopAppBar = if (isSearchingContacts) customTopAppBar else null,
-    surfaceModifier = Modifier.widthIn(0.dp, 350.dp),
+    surfaceModifier = Modifier.widthIn(0.dp, 500.dp),
     defaultTopAppBarActions = {
+
+      // Select|Deselect All Button
+      AnimatedVisibility(visible = areContactsSelectable) {
+        phoneContacts.let {
+          val selectedContactsCount = selectedContact().count()
+          key(selectedContactsCount) {
+
+            showDoneButton = selectedContactsCount > 0
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                text = "$selectedContactsCount/${it.count()}",
+                style = MaterialTheme.typography.titleLarge
+              )
+
+              val selectAll = selectedContactsCount in 0..<it.count()
+              key(selectAll) {
+                Box {
+                  PrimaryIconButton(if (selectAll) Icons.Default.SelectAll else Icons.Default.Deselect) {
+                    for (contact in it) {
+                      contact.isSelected.value = selectAll
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
       // Search Button
       PrimaryIconButton(Icons.Default.Search) {
         isSearchingContacts = true
       }
 
-      // Select|Deselect All Button
-      AnimatedVisibility(visible = areContactsSelectable) {
-        phoneContacts.let {
-          Box {
-            if (deselectAll || selectedContacts.isNotEmpty() && selectedContacts.count() < it.count())
-              PrimaryIconButton(Icons.Default.SelectAll) {
-                selectAll = true
-                if (deselectAll)
-                  deselectAll = false
-              }
-
-            if (selectAll || selectedContacts.count() == it.count())
-              PrimaryIconButton(Icons.Default.Deselect) {
-                deselectAll = true
-                if (selectAll)
-                  selectAll = false
-              }
-          }
-        }
-      }
-
       // Submit Changes Button
       AnimatedVisibility(visible = showDoneButton) {
         PrimaryIconButton(Icons.Default.Done) {
-          onSelectionDone(selectedContacts.toList())
+          onSelectionDone(selectedContact().map { it.contact })
         }
       }
     },
-    screenSurfaceContentWrapper = ScreenSurfaceContentWrapper.Surface
+    contentContainer = ScreenSurfaceContentContainer.Surface
   ) {
 
     if (isLoadingClients) {
       CircularProgressIndicator()
     } else {
-
       val listState = rememberLazyListState()
-
       LazyColumnScrollbar(
         listState = listState,
-
       ) {
         LazyColumn(
           state = listState,
           verticalArrangement = Arrangement.spacedBy(Constants.Dimens.Small),
         ) {
-          items(phoneContacts) { contact ->
-            var isSelected by remember { mutableStateOf(false) }
-
-            val isContactSelected = remember {
-              derivedStateOf {
-                when (areContactsSelectable) {
-                  false -> null
-                  else -> isSelected
-                }
-              }
+          items(phoneContacts.filter { it.visible.value }) { contact ->
+            key(contact.isSelected.value) {
+              Contact(
+                name = contact.name,
+                imageUriString = contact.imageUriString,
+                showDivider = false,
+                subtitle = contact.phone,
+                onSelected = {
+                  if (!areContactsSelectable) {
+                    areContactsSelectable = true
+                    contact.isSelected.value = true
+                  }
+                },
+                onSubtitleLongClick = {
+                  if (it.isNotEmpty()) {
+                    au.setClipboard(it)
+                    au.toast("Número copiado al portapapeles")
+                  }
+                },
+                onClick = {
+                  if (areContactsSelectable) {
+                    contact.isSelected.value = !contact.isSelected.value
+                  }
+                },
+                extraContent = null,
+                isSelected = contact.isSelected.value,
+              )
             }
-
-            if (isSelected && !selectedContacts.contains(contact))
-              selectedContacts.add(contact)
-            else if (!isSelected && selectedContacts.contains(contact))
-              selectedContacts.remove(contact)
-
-//            val selectedContactsCount = selectedContacts.count()
-//            if (selectedContactsCount == phoneContacts.value!!.count() && isSelectAllContactsButtonIcon)
-//              isSelectAllContactsButtonIcon = false
-//            else if (selectedContactsCount > 0 && !isSelectAllContactsButtonIcon)
-//              isSelectAllContactsButtonIcon = true
-
-            showDoneButton = selectedContacts.isNotEmpty()
-
-            if (selectAll && !isSelected)
-              isSelected = true
-            else if (deselectAll && isSelected)
-              isSelected = false
-
-//            if (switchSelectionState) {
-//              isSelected = !isSelected
-//              if ((isSelected && selectedContactsCount == phoneContacts.value!!.count()) ||
-//                (!isSelected && selectedContactsCount == 0))
-//                switchSelectionState = false
-//            }
-
-//            key(isSelected, switchSelectionState) {
-//
-//              val selectedContactsCount = selectedContacts.count()
-//              if (selectedContactsCount == phoneContacts.value!!.count())
-//                isSelectAllContactsButtonIcon = false
-//              else if (selectedContactsCount > 0)
-//                isSelectAllContactsButtonIcon = true
-//
-//
-////              else if (areContactsSelectable && !isSelected)
-////                isSelected = true
-//              if (isSelected && !selectedContacts.contains(contact)) selectedContacts.add(contact)
-//              else if (!isSelected && selectedContacts.contains(contact)) selectedContacts.remove(
-//                contact
-//              )
-//              showDoneButton = selectedContacts.isNotEmpty()
-//
-//              if (switchSelectionState) {
-//                isSelected = !isSelected
-//                if ((isSelected && selectedContactsCount == phoneContacts.value!!.count()) ||
-//                  (!isSelected && selectedContactsCount == 0)
-//                )
-//                  switchSelectionState = false
-//              }
-////              if (!showDoneButton && !isSelectAllContactsButtonIcon){
-////                isSelectAllContactsButtonIcon = true
-////              } else
-//            }
-
-            Contact(
-              name = contact.displayNamePrimary ?: "?",
-              imageUriString = (contact.photoThumbnailUri ?: contact.photoUri)?.toString(),
-              showDivider = false,
-              subtitle = contact.phoneList()
-                .firstOrNull()?.normalizedNumber?.cleanCubanMobileNumber(),
-              onSelected = {
-                if (!areContactsSelectable) {
-                  isSelected = true
-                  areContactsSelectable = true
-                }
-              },
-              onSubtitleLongClick = null,
-              onClick = {
-                if (areContactsSelectable) {
-                  isSelected = !isSelected
-                  if (!isSelected && selectAll)
-                    selectAll = false
-                  if (isSelected && deselectAll)
-                    deselectAll = false
-                }
-              },
-              extraContent = null,
-              isSelected = isContactSelected.value,
-            )
           }
         }
       }

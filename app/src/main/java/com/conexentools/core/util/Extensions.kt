@@ -125,6 +125,15 @@ fun NavController.navigate(screen: Screen, builder: NavOptionsBuilder.() -> Unit
   navigate(screen.route, navOptions(builder))
 }
 
+fun NavController.navigateAndPopDestinationFromTheBackStack(screen: Screen) {
+  navigate(screen) {
+    popUpTo(screen) {
+      inclusive = true
+    }
+  }
+}
+
+
 fun NavOptionsBuilder.popUpTo(screen: Screen, popUpToBuilder: PopUpToBuilder.() -> Unit = {}) {
   popUpTo(
     route = screen.route,

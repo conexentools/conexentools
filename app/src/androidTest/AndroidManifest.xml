@@ -9,7 +9,7 @@
         android:targetPackage="com.conexentools"
         android:name="androidx.test.runner.AndroidJUnitRunner"/>
 
-    <application tools:replace="label" android:label="Conexen Tools - Instrumented Test" />
+    <application tools:replace="label" android:label="Conexen Tools - Instrumentation App" />
 
     <queries>
         <package android:name="com.whatsapp" />

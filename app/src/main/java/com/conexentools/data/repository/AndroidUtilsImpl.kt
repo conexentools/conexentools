@@ -1,6 +1,5 @@
 package com.conexentools.data.repository
 
-import android.Manifest
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -63,14 +62,14 @@ class AndroidUtilsImpl @Inject constructor(
   // TODO: Implement wait time when  SDK is lower than 11
   override fun toast(
     message: String?,
-    duration: Int,
+    shortToast: Boolean,
     vibrate: Boolean
   ) {
     if (message.isNullOrBlank() || isProcessingToast && latestToastMessage == message)
       return
     isProcessingToast = true
     latestToastMessage = message
-    val t = Toast.makeText(context, message, duration)
+    val t = Toast.makeText(context, message, if (shortToast) Toast.LENGTH_SHORT else Toast.LENGTH_LONG)
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) t.addCallback(object : Toast.Callback() {
       override fun onToastHidden() {
@@ -241,6 +240,24 @@ class AndroidUtilsImpl @Inject constructor(
 
   override fun shouldShowRequestPermissionRationale(permission: String): Boolean {
     return ActivityCompat.shouldShowRequestPermissionRationale(context as Activity, permission)
+  }
+
+  override fun restartApp() {
+    val pm: PackageManager = context.packageManager
+    val intent = pm.getLaunchIntentForPackage(context.packageName)
+    val mainIntent = Intent.makeRestartActivityTask(intent!!.component)
+    context.startActivity(mainIntent)
+    Runtime.getRuntime().exit(0)
+  }
+
+  override fun launchPackage(packageName: String, clearOutPreviousInstances: Boolean): Boolean {
+    val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return false
+
+    // Clear out any previous instances
+    if (clearOutPreviousInstances)
+      intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+    context.startActivity(intent)
+    return true
   }
 }
 

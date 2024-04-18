@@ -6,7 +6,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import com.conexentools.domain.repository.UserPreferences
 import com.conexentools.core.util.CoroutinesDispatchers
-import com.conexentools.core.util.log
 import com.conexentools.core.util.logError
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -22,7 +21,6 @@ class UserPreferencesImpl @Inject constructor(
 
   override suspend fun <T> save(key: Preferences.Key<T>, data: T?) {
     dataStore.edit { settings ->
-//      log("Saving $key = $data")
       if (data != null)
         settings[key] = data
       else if (settings.contains(key))
@@ -35,7 +33,6 @@ class UserPreferencesImpl @Inject constructor(
       exception.localizedMessage?.let { logError(it) }
       emit(emptyPreferences())
     }.map { preferences ->
-      //log("Loading $key = ${preferences[key]}")
       preferences[key]
     }.flowOn(context = coroutinesDispatchers.main)
 
@@ -52,6 +49,7 @@ class UserPreferencesImpl @Inject constructor(
   override suspend fun saveAppTheme(value: Int?) = save(PK.APP_THEME, value)
   override suspend fun saveAlwaysWaMessageByIntent(value: Boolean?) = save(PK.ALWAYS_WA_MESSAGE_BY_INTENT, value)
   override suspend fun saveAppLaunchCount(value: Int?) = save(PK.APP_LAUNCH_COUNT, value)
+  override suspend fun saveClientListPageHelpDialogsShowed(value: Boolean?) = save(PK.CLIENT_LIST_PAGE_HELP_DIALOGS_SHOWED, value)
 
   override val bank: Flow<String?>
     get() = load(PK.BANK)
@@ -79,6 +77,6 @@ class UserPreferencesImpl @Inject constructor(
     get() = load(PK.ALWAYS_WA_MESSAGE_BY_INTENT)
   override val appLaunchCount: Flow<Int?>
     get() = load(PK.APP_LAUNCH_COUNT)
+  override val clientListPageHelpDialogsShowed: Flow<Boolean?>
+    get() = load(PK.CLIENT_LIST_PAGE_HELP_DIALOGS_SHOWED)
 }
-
-//val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = Constants.APP_SETTINGS)

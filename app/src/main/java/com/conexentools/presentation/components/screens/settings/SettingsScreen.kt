@@ -5,10 +5,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,8 +29,10 @@ import com.conexentools.core.util.PreviewComposable
 import com.conexentools.presentation.components.common.LabelSwitch
 import com.conexentools.presentation.components.common.ScreenSurface
 import com.conexentools.presentation.components.common.enums.AppTheme
+import com.conexentools.presentation.components.common.enums.ScreenSurfaceContentContainer
 import com.conexentools.presentation.theme.LocalTheme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
   appTheme: MutableState<AppTheme>,
@@ -38,10 +42,9 @@ fun SettingsScreen(
 
   ScreenSurface(
     title = "Configuración",
-    lazyColumnModifier = Modifier
-      .fillMaxHeight()
-      .widthIn(0.dp, 350.dp),
+    surfaceModifier = Modifier.widthIn(0.dp, 350.dp),
     lazyColumnHorizontalAlignment = Alignment.Start,
+    contentContainer = ScreenSurfaceContentContainer.LazyColumn,
     onNavigateBack = onNavigateBack,
     ) {
     val themeItems by remember {

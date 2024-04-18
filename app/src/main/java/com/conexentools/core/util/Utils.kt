@@ -86,5 +86,5 @@ fun getRemainingTimeUntilDate(date: Instant?): RemainingTimeTextRepresentation? 
   )
 }
 
-fun log(message: String) = Log.i(BuildConfig.LOG_TAG, message)
-fun logError(message: String) = Log.e(BuildConfig.LOG_TAG, message)
+fun log(message: Any) = Log.i(BuildConfig.LOG_TAG, message.toString())
+fun logError(message: Any) = Log.e(BuildConfig.LOG_TAG, message.toString())

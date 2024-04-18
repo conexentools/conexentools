@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -89,14 +90,16 @@ fun Contact(
       verticalAlignment = Alignment.CenterVertically,
     ) {
 
-      if (isSelected != null) {
-        Checkbox(
-          modifier = Modifier.width(35.dp),
-          checked = isSelected,
-          onCheckedChange = {
-            onClick?.invoke()
-          }
-        )
+      key(isSelected) {
+        if (isSelected != null) {
+          Checkbox(
+            modifier = Modifier.width(35.dp),
+            checked = isSelected,
+            onCheckedChange = {
+              onClick?.invoke()
+            }
+          )
+        }
       }
 
       // Contact Image
@@ -169,7 +172,7 @@ fun Contact(
               overflow = TextOverflow.Ellipsis,
               modifier = if (onSubtitleLongClick == null) Modifier else Modifier.combinedClickable(
                 onLongClick = onSubtitleLongClick.let { { onSubtitleLongClick(subtitle) } },
-                onClick = {})
+                onClick = { onClick?.invoke() })
             )
           }
         }

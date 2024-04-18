@@ -8,7 +8,7 @@ import contacts.core.entities.Contact
 interface AndroidUtils {
   fun setClipboard(text: String, label: String = "")
   fun vibrate()
-  fun toast(message: String?, duration: Int = Toast.LENGTH_LONG, vibrate: Boolean = false)
+  fun toast(message: String?, shortToast: Boolean = false, vibrate: Boolean = false)
   fun openBrowser(url: String)
   fun fetchContactByUri(contactUri: Uri): Contact?
   fun call(number: String)
@@ -21,6 +21,9 @@ interface AndroidUtils {
   fun hasExternalStorageWriteReadAccess(): Boolean
   fun shouldShowRequestPermissionRationale(permission: String): Boolean
   fun getPackageVersion(packageName: String): Pair<Long, String>?
+  fun restartApp()
+  fun launchPackage(packageName: String, clearOutPreviousInstances: Boolean = true): Boolean
+
 
   companion object {
     fun create(): AndroidUtils {
@@ -33,7 +36,7 @@ interface AndroidUtils {
           TODO("Not yet implemented")
         }
 
-        override fun toast(message: String?, duration: Int, vibrate: Boolean) {
+        override fun toast(message: String?, shortToast: Boolean, vibrate: Boolean) {
           TODO("Not yet implemented")
         }
 
@@ -78,6 +81,17 @@ interface AndroidUtils {
         }
 
         override fun getPackageVersion(packageName: String): Pair<Long, String>? {
+          TODO("Not yet implemented")
+        }
+
+        override fun restartApp() {
+          TODO("Not yet implemented")
+        }
+
+        override fun launchPackage(
+          packageName: String,
+          clearOutPreviousInstances: Boolean
+        ): Boolean {
           TODO("Not yet implemented")
         }
 

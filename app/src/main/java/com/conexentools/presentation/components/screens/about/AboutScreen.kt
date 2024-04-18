@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +30,7 @@ import com.conexentools.core.util.PreviewComposable
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.components.common.ScreenSurface
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(
   onNavigateBack: () -> Unit,

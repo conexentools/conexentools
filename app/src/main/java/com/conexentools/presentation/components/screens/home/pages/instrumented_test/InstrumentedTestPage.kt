@@ -1,16 +1,15 @@
 package com.conexentools.presentation.components.screens.home.pages.instrumented_test
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -71,16 +70,16 @@ import com.conexentools.presentation.components.common.PrimaryIconButton
 import com.conexentools.presentation.components.common.ScrollableAlertDialog
 import contacts.core.util.phoneList
 
+@SuppressLint("PrivateResource")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun InstrumentedTestPage(
-  paddingValues: PaddingValues,
   au: AndroidUtils,
   // States
-  firstClientNumber: MutableState<String?>,
+  firstClientNumber: MutableState<String>,
   secondClientNumber: MutableState<String?>,
-  firstClientRecharge: MutableState<String?>,
-  secondClientRecharge: MutableState<String?>,
+  firstClientRecharge: MutableState<String>,
+  secondClientRecharge: MutableState<String>,
   fetchDataFromWA: MutableState<Boolean>,
   pin: MutableState<String>,
   bank: MutableState<String>,
@@ -115,16 +114,7 @@ fun InstrumentedTestPage(
   Column(
     modifier = Modifier
       .fillMaxSize()
-//          .verticalScroll(scrollState)
-      .padding(
-//        paddingValues
-        PaddingValues(
-          start = Constants.Dimens.Large,
-          top = paddingValues.calculateTopPadding() + Constants.Dimens.Small,
-          end = Constants.Dimens.Large,
-          bottom = Constants.Dimens.Large,
-        )
-      ),
+      .padding(Constants.Dimens.Small),
     verticalArrangement = Arrangement.spacedBy(4.dp),
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
@@ -288,36 +278,42 @@ fun InstrumentedTestPage(
           Text(
             text = "Recargas",
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(0.dp, 2.dp),
+            modifier = Modifier.padding(0.dp, Constants.Dimens.MegaSmall),
             fontWeight = FontWeight.Bold
           )
         }
 
-        fun showSecondClientSlot() = secondClientNumber.value != null
+//        fun showSecondClientSlot() = secondClientNumber.value != null
 
         item {
           RechargeSlot(
-            number = firstClientNumber,
-            recharge = firstClientRecharge,
-            showRemoveButton = showSecondClientSlot(),
+            number = firstClientNumber.value,
+            recharge = firstClientRecharge.value,
+            showRemoveButton = secondClientNumber.value != null,
+            onNumberChange = { firstClientNumber.value = it },
+            onRechargeChange = { firstClientRecharge.value = it },
             onDelete = {
-              firstClientNumber.value = secondClientNumber.value
-              firstClientRecharge.value = secondClientRecharge.value
-              secondClientNumber.value = null
-              secondClientRecharge.value = null
+              if (secondClientNumber.value != null) {
+                firstClientNumber.value = secondClientNumber.value!!
+                firstClientRecharge.value = secondClientRecharge.value
+                secondClientNumber.value = null
+                secondClientRecharge.value = ""
+              }
             }
           )
         }
 
         item {
-          AnimatedVisibility(visible = showSecondClientSlot()) {
+          AnimatedVisibility(visible = secondClientNumber.value != null) {//showSecondClientSlot()) {
             RechargeSlot(
-              number = secondClientNumber,
-              recharge = secondClientRecharge,
+              number = secondClientNumber.value ?: "",
+              recharge = secondClientRecharge.value,
+              onNumberChange = { secondClientNumber.value = it },
+              onRechargeChange = { secondClientRecharge.value = it },
               showRemoveButton = true,
               onDelete = {
                 secondClientNumber.value = null
-                secondClientRecharge.value = null
+                secondClientRecharge.value = ""
               }
             )
           }
