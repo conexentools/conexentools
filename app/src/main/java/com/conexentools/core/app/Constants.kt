@@ -30,6 +30,8 @@ object Constants {
   }
 
   object PreferencesKey {
+    val PIN = stringPreferencesKey("pin")
+    val SAVE_PIN = booleanPreferencesKey("save_pin")
     val APP_THEME = intPreferencesKey("app_theme")
     val BANK = stringPreferencesKey("bank")
     val WA_CONTACT = stringPreferencesKey("wa_contact")

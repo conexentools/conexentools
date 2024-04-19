@@ -14,12 +14,12 @@ import java.util.regex.Pattern
 class DeviceManager(private val device: UiDevice) {
 
   fun findObject(resourceID: String?, text: String? = null): UiObject2 {
-    val selector: BySelector = getSelector(resourceID, text)
+    val selector: BySelector = makeSelector(resourceID, text)
     return device.findObject(selector)
   }
 
   fun findObjects(resourceID: String?, text: String? = null): MutableList<UiObject2> {
-    val selector: BySelector = getSelector(resourceID, text)
+    val selector: BySelector = makeSelector(resourceID, text)
     return device.findObjects(selector)
   }
 
@@ -29,7 +29,7 @@ class DeviceManager(private val device: UiDevice) {
   }
 
   fun click(resourceID: String?, text: String? = null, timeout: Int = MEDIUM_TIMEOUT) {
-    val selector: BySelector = getSelector(resourceID, text)
+    val selector: BySelector = makeSelector(resourceID, text)
     click(selector, timeout)
   }
 
@@ -38,7 +38,7 @@ class DeviceManager(private val device: UiDevice) {
   }
 
   fun selectDropDownMenuChoice(resourceID: String?, text: String? = null, timeout: Int = MEDIUM_TIMEOUT, choice: Int, isMenuBelow: Boolean = true){
-    val selector: BySelector = getSelector(resourceID, text)
+    val selector: BySelector = makeSelector(resourceID, text)
     selectDropDownMenuChoice(
       selector = selector,
       timeout = timeout,
@@ -61,7 +61,7 @@ class DeviceManager(private val device: UiDevice) {
 
 
   fun waitForObject(resourceID: String?, text: String? = null, timeout: Int = MEDIUM_TIMEOUT): UiObject2? {
-    val selector: BySelector = getSelector(resourceID, text)
+    val selector: BySelector = makeSelector(resourceID, text)
     return waitForObject(selector, timeout)
   }
 
@@ -76,16 +76,13 @@ class DeviceManager(private val device: UiDevice) {
     device.wait(Until.hasObject(By.pkg(packageName).depth(0)), timeout.toLong())
   }
 
-  private fun getSelector(resourceID: String?, text: String?): BySelector {
+  private fun makeSelector(resourceID: String?, text: String?): BySelector {
     var selector: BySelector? = null
     if (resourceID != null) {
       selector = By.res(getPatternForResourceID(resourceID))
     }
     if (text != null) {
-      selector = if (selector == null) { By.text(text)
-      } else {
-        selector.text(text)
-      }
+      selector = selector?.text(text) ?: By.text(text)
     }
     assert(selector != null)
     return selector!!

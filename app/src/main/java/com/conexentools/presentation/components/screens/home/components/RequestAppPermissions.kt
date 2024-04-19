@@ -29,8 +29,9 @@ fun RequestAppPermissions(
   var checkCallAndReadContactsPermission by remember { mutableStateOf(false) }
   var checkManageExternalStoragePermission by remember { mutableStateOf(false) }
   var checkWriteExternalStoragePermission by remember { mutableStateOf(false) }
-  var checkDisplayOverOtherAppsPermission by remember { mutableStateOf(false) }
+  var checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission by remember { mutableStateOf(false) }
   var showRestartAppDialog by remember { mutableStateOf(false) }
+  var allPermissionDialogsShowed by remember { mutableStateOf(false) }
 
   val readSmsLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -46,21 +47,22 @@ fun RequestAppPermissions(
   val manageExternalStorageLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
       // If write permission is granted restart app to make Dagger Hilt create Database in primary external storage
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager())
         showRestartAppDialog = true
-      } else {
-        checkDisplayOverOtherAppsPermission = true
-      }
+      checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission = true
     }
 
   val writeExternalStorageLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
       // If write permission is granted restart app to make Dagger Hilt create Database in primary external storage
-      if (au.isPermissionGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE)){
+      if (au.isPermissionGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE))
         showRestartAppDialog = true
-      } else {
-        checkDisplayOverOtherAppsPermission = true
-      }
+      checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission = true
+    }
+
+  val xiaomiOtherPermissionAppSettingsWindowLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+      allPermissionDialogsShowed = true
     }
 
   // READ_SMS -> (CALL_PHONE - READ_CONTACTS)
@@ -100,7 +102,7 @@ fun RequestAppPermissions(
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
       checkManageExternalStoragePermission = false
       checkWriteExternalStoragePermission = true
-    } else if (!Environment.isExternalStorageManager() && appLaunchCount == 1) {
+    } else if (appLaunchCount == 1 && !Environment.isExternalStorageManager()) {
       ScrollableAlertDialog(stringResource(R.string.MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE)) {
         manageExternalStorageLauncher.launch(
           au.openSettings(
@@ -112,15 +114,15 @@ fun RequestAppPermissions(
       }
     } else {
       checkManageExternalStoragePermission = false
-      checkDisplayOverOtherAppsPermission = true
+      checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission = true
     }
   }
 
-  // WRITE_EXTERNAL_STORAGE -> Display over other apps
+  // WRITE_EXTERNAL_STORAGE -> Xiaomi display in background
   if (checkWriteExternalStoragePermission) {
     if (isGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
       checkWriteExternalStoragePermission = false
-      checkDisplayOverOtherAppsPermission = true
+      checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission = true
     } else if (appLaunchCount == 1) {
       ScrollableAlertDialog(stringResource(R.string.MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE)) {
         writeExternalStorageLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -129,30 +131,27 @@ fun RequestAppPermissions(
     }
   }
 
-  // Display over other apps
-  if (checkDisplayOverOtherAppsPermission) {
-//    if ()
-//    if (!au.canDrawOverlays()){
-//      ScrollableAlertDialog("A continuación conceda el permiso 'Mostrar sobre otras aplicaciones' para ") {
-//        au.openSettings(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-//        checkWriteExternalStoragePermission = false
-//      }
-//    }
-    // TODO Implement
-    checkDisplayOverOtherAppsPermission = false
-    onPermissionsRequestComplete()
-//    if (au.canDrawOverlays()){
-//      showDisplayOverOtherAppsPermissionDialog = false
-//      onPermissionsRequestComplete()
-//    }
+  if (checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission) {
+    if (appLaunchCount == 1 && au.isMiuiWithApi28OrMore()) {
+      ScrollableAlertDialog("Para ejecutar las pruebas automatizadas desde una computadora usando ADB cuando lo aplicación no se esté ejecutando en un primer plano, es necesario otorgar el permiso 'Mostrar ventanas emergente mientras se ejecuta en segundo plano'. A continuación si lo desea concédalo manualmente") {
+        xiaomiOtherPermissionAppSettingsWindowLauncher.launch(au.openXiaomiOtherPermissionAppSettingsWindow(onlyReturnIntent = true))
+        checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission = false
+      }
+    } else {
+      allPermissionDialogsShowed = true
+    }
   }
 
-  if (showRestartAppDialog){
-    ScrollableAlertDialog(
-      text = "La aplicación necesita reiniciarse para crear/leer la base de datos en el almacenamiento interno primario",
-      confirmButtonText = "Reiniciar"
-    ) {
-      au.restartApp()
+  if (allPermissionDialogsShowed){
+    if (showRestartAppDialog){
+      ScrollableAlertDialog(
+        text = "La aplicación necesita reiniciarse para crear/leer la base de datos en el almacenamiento interno primario",
+        confirmButtonText = "Reiniciar"
+      ) {
+        au.restartApp()
+      }
+    } else {
+      onPermissionsRequestComplete()
     }
   }
 }

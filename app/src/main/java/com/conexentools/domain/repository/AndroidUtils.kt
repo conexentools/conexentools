@@ -1,5 +1,6 @@
 package com.conexentools.domain.repository
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -23,7 +24,9 @@ interface AndroidUtils {
   fun getPackageVersion(packageName: String): Pair<Long, String>?
   fun restartApp()
   fun launchPackage(packageName: String, clearOutPreviousInstances: Boolean = true): Boolean
-
+  fun openXiaomiOtherPermissionAppSettingsWindow(onlyReturnIntent: Boolean = false): Intent
+  fun isMiuiWithApi28OrMore(): Boolean
+  fun getSystemProperty(propName: String): String?
 
   companion object {
     fun create(): AndroidUtils {
@@ -95,11 +98,22 @@ interface AndroidUtils {
           TODO("Not yet implemented")
         }
 
+        override fun openXiaomiOtherPermissionAppSettingsWindow(onlyReturnIntent: Boolean): Intent {
+          TODO("Not yet implemented")
+        }
+
+        override fun isMiuiWithApi28OrMore(): Boolean {
+          TODO("Not yet implemented")
+        }
+
+        override fun getSystemProperty(propName: String): String? {
+          TODO("Not yet implemented")
+        }
+
         override fun sendWaMessage(number: String, message: String?) {
           TODO("Not yet implemented")
         }
       }
     }
   }
-
 }

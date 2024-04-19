@@ -7,11 +7,13 @@ import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import com.conexentools.DeviceManager.Companion.LONG_TIMEOUT
+import com.conexentools.DeviceManager.Companion.MEDIUM_TIMEOUT
+import com.conexentools.DeviceManager.Companion.SHORT_TIMEOUT
 import com.conexentools.DeviceManager.Companion.getPatternForResourceID
 import com.conexentools.InstrumentedTest.Companion.SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE
 import com.conexentools.Utils.Companion.log
 
-class TransfermovilHelper(device: UiDevice) {
+class TransfermovilHelper(val device: UiDevice) {
 
   val installedVersion = Utils.getPackageVersion(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME)
   val testedVersion = Pair(BuildConfig.TESTED_TM_VERSION_CODE.toLong(), BuildConfig.TESTED_TM_VERSION_NAME)
@@ -50,15 +52,24 @@ class TransfermovilHelper(device: UiDevice) {
     dm.click(By.clazz(ImageButton::class.java).descContains("Transfermóvil"), LONG_TIMEOUT)
   }
 
-  fun clickWelcomeMessageIfPresent() {
+  fun bypassStartUpDialogs() {
+    log("Waiting for rate dialog")
+    val isRateDialogPresent =
+      dm.waitForObject(null, "ENVIAR", timeout = MEDIUM_TIMEOUT) != null
+    if (isRateDialogPresent){
+      device.pressBack()
+      log("Rate dialog clicked")
+    }
+    else
+      log("Rate dialog not present")
+
     val isWelcomeMessagePresent =
       dm.waitForObject(null, "Bienvenido a Transfermóvil") != null
     if (isWelcomeMessagePresent) {
       dm.click("button1", null, DeviceManager.MEDIUM_TIMEOUT)
       log("Welcome message clicked")
-    } else {
-      log("Welcome message not present", true)
-    }
+    } else
+      log("Welcome message not present")
   }
 
   fun launch(clearOutPreviousInstances: Boolean = true) = dm.launchPackage(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME, clearOutPreviousInstances = clearOutPreviousInstances)

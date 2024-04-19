@@ -79,6 +79,7 @@ class HomeScreenViewModel @Inject constructor(
   var alwaysWaMessageByIntent = mutableStateOf(!RootUtil.isDeviceRooted)
   var appLaunchCount = mutableIntStateOf(0)
   var clientListPageHelpDialogsShowed = mutableStateOf(false)
+  var savePin = mutableStateOf(false)
 
   private val whatsAppInstalledVersion = au.getPackageVersion(BuildConfig.WHATSAPP_PACKAGE_NAME)
   private val instrumentationAppVersion = au.getPackageVersion(BuildConfig.TEST_NAMESPACE)
@@ -141,6 +142,9 @@ class HomeScreenViewModel @Inject constructor(
       appLaunchCount.intValue = (up.appLaunchCount.first() ?: 0) + 1
       clientListPageHelpDialogsShowed.value = up.clientListPageHelpDialogsShowed.first() ?: false
       initialHomeScreenPage.value = HomeScreenPage.fromOrdinal(up.initialHomeScreenPage.first())
+      savePin.value = up.savePin.first() ?: false
+      if (savePin.value)
+        pin.value = up.pin.first() ?: ""
       log("Preferences loaded")
     } catch (exc: Exception) {
       au.toast("Error al cargar las preferencias de usuario")
@@ -164,6 +168,8 @@ class HomeScreenViewModel @Inject constructor(
     up.saveAlwaysWaMessageByIntent(alwaysWaMessageByIntent.value)
     up.saveAppLaunchCount(appLaunchCount.intValue)
     up.saveClientListPageHelpDialogsShowed(clientListPageHelpDialogsShowed.value)
+    up.saveSavePin(savePin.value)
+    up.savePin(if (savePin.value) pin.value else null)
   }
 
   private suspend fun getClients() =
@@ -269,12 +275,13 @@ class HomeScreenViewModel @Inject constructor(
       if (secondClientNumber.value != null)
         command += "@${secondClientNumber.value},${secondClientRecharge.value}"
     } else
-      command += " -e contactoWA \"${waContact.value}\""
+      command += " -e contactoWA '${waContact.value}'"
     if (cardLast4Digits.value.isNotEmpty())
       command += " -e digitosTarjeta ${cardLast4Digits.value}"
-    if (bank.value == "Metropolitano")
-      bank.value = "metro"
-    command += " -e pin ${pin.value} -e banco ${bank.value.lowercase()} ${BuildConfig.TEST_NAMESPACE}/${BuildConfig.TEST_INSTRUMENTATION_RUNNER} --no-window-animation --no-hidden-api-checks"
+    var bank_ = bank.value
+    if (bank_ == "Metropolitano")
+      bank_ = "metro"
+    command += " -e pin ${pin.value} -e banco ${bank_.lowercase()} ${BuildConfig.TEST_NAMESPACE}/${BuildConfig.TEST_INSTRUMENTATION_RUNNER} --no-window-animation --no-hidden-api-checks"
     return command
   }
 

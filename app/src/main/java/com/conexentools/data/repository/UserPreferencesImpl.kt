@@ -50,6 +50,8 @@ class UserPreferencesImpl @Inject constructor(
   override suspend fun saveAlwaysWaMessageByIntent(value: Boolean?) = save(PK.ALWAYS_WA_MESSAGE_BY_INTENT, value)
   override suspend fun saveAppLaunchCount(value: Int?) = save(PK.APP_LAUNCH_COUNT, value)
   override suspend fun saveClientListPageHelpDialogsShowed(value: Boolean?) = save(PK.CLIENT_LIST_PAGE_HELP_DIALOGS_SHOWED, value)
+  override suspend fun saveSavePin(value: Boolean?) = save(PK.SAVE_PIN, value)
+  override suspend fun savePin(value: String?) = save(PK.PIN, value)
 
   override val bank: Flow<String?>
     get() = load(PK.BANK)
@@ -79,4 +81,8 @@ class UserPreferencesImpl @Inject constructor(
     get() = load(PK.APP_LAUNCH_COUNT)
   override val clientListPageHelpDialogsShowed: Flow<Boolean?>
     get() = load(PK.CLIENT_LIST_PAGE_HELP_DIALOGS_SHOWED)
+  override val savePin: Flow<Boolean?>
+    get() = load(PK.SAVE_PIN)
+  override val pin: Flow<String?>
+    get() = load(PK.PIN)
 }

@@ -18,15 +18,13 @@ import org.junit.runner.RunWith
  *
  * @see [Testing documentation](http://d.android.com/tools/testing)
  */
+@Suppress("TestFunctionName")
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = 18) //@androidx.annotation.UiThread
 
 
 class InstrumentedTest {
 
-  //  private val WA_PN = "com.whatsapp"
-//  private val WABusiness_PN = "com.whatsapp.w4b"
-//  private val WAPlus_PN = "com.aero"
   private lateinit var device: UiDevice
   private lateinit var dm: DeviceManager
   private lateinit var th: TransfermovilHelper
@@ -42,8 +40,6 @@ class InstrumentedTest {
   @Before
   fun InitializeClass() {
 
-    // TODO handle errors informing the user with toasts
-    // TODO test with my number
     // TODO val chats = wh.getLatestChatsInConversation(getYourChats = true) to false
     // select SESION only if it is not already selected
     // Tipo de cuenta a operar is not workin, text inseertion is not workin, how to handle Drop Down menus in UiAutomator2
@@ -76,8 +72,7 @@ class InstrumentedTest {
         toast("Por favor instale Transfermóvil", vibrate = true, waitForToastToHide = true)
         assert(false)
       }
-//?.map { Pair(it.split(',')[0], it.split(',')[1]) }
-//          ?.toMutableList()
+
       toast("Iniciando el proceso de automatización", Toast.LENGTH_SHORT)
 
       var recharges = cliArguments.getString("recargas")?.split("@")?.map { Pair(it.split(',')[0], it.split(',')[1]) }?.toMutableList()
@@ -140,7 +135,7 @@ class InstrumentedTest {
       th.launch()
 
       // Confirm Welcome Message if present
-      th.clickWelcomeMessageIfPresent()
+      th.bypassStartUpDialogs()
 
       // Open lateral panel
       th.openLateralPanel()

@@ -115,7 +115,7 @@ fun InstrumentedTestPage(
     modifier = Modifier
       .fillMaxSize()
       .padding(Constants.Dimens.Small),
-    verticalArrangement = Arrangement.spacedBy(4.dp),
+    verticalArrangement = Arrangement.spacedBy(Constants.Dimens.ExtraSmall),
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
 

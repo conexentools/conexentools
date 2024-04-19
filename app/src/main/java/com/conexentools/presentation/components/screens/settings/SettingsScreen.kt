@@ -28,6 +28,7 @@ import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
 import com.conexentools.presentation.components.common.LabelSwitch
 import com.conexentools.presentation.components.common.ScreenSurface
+import com.conexentools.presentation.components.common.ScrollableAlertDialog
 import com.conexentools.presentation.components.common.enums.AppTheme
 import com.conexentools.presentation.components.common.enums.ScreenSurfaceContentContainer
 import com.conexentools.presentation.theme.LocalTheme
@@ -37,6 +38,7 @@ import com.conexentools.presentation.theme.LocalTheme
 fun SettingsScreen(
   appTheme: MutableState<AppTheme>,
   alwaysWaMessageByIntent: MutableState<Boolean>,
+  savePin: MutableState<Boolean>,
   onNavigateBack: () -> Unit
 ) {
 
@@ -73,6 +75,8 @@ fun SettingsScreen(
     Spacer(modifier = Modifier.height(Constants.Dimens.Large))
 
     var showThemeSelectorDialog by remember { mutableStateOf(false) }
+    var showPinAlertDialog by remember { mutableStateOf(false) }
+    var wasPinAlertDialogShowed by remember { mutableStateOf(false) }
 
     if (showThemeSelectorDialog) {
       AlertDialog(
@@ -99,6 +103,17 @@ fun SettingsScreen(
       )
     }
 
+    if (showPinAlertDialog){
+      ScrollableAlertDialog(
+        text = "Tenga en cuenta que guardar el PIN de su tarjeta Telebanca puede ser muy peligroso pues este estará siempre expuesto en la aplicación",
+        isInfoDialog = false
+      ) {
+        showPinAlertDialog = false
+        wasPinAlertDialogShowed = true
+      }
+    }
+
+    // Theme
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -120,6 +135,14 @@ fun SettingsScreen(
       label = "Siempre API WA Message",
       checked = alwaysWaMessageByIntent,
     )
+
+    LabelSwitch(
+      label = "Guardar PIN",
+      checked = savePin,
+    ) {
+      if (it && !wasPinAlertDialogShowed)
+        showPinAlertDialog = true
+    }
   }
 }
 
@@ -131,6 +154,7 @@ fun PreviewSettingsScreen() {
     SettingsScreen(
       appTheme = LocalTheme.current.isDark.let { remember { mutableStateOf(if (it) AppTheme.MODE_NIGHT else AppTheme.MODE_DAY) } },
       alwaysWaMessageByIntent = remember { mutableStateOf(true) },
+      savePin = remember { mutableStateOf(false) },
       onNavigateBack = {},
     )
   }

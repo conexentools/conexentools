@@ -20,12 +20,13 @@ fun LabelSwitch(
   onCheckedChange: ((Boolean) -> Unit)? = null,
 ) {
 
-//  var isChecked by remember{ mutableStateOf (checked)}
-
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clickable(onClick = { checked.value = !checked.value }),
+      .clickable(onClick = {
+        checked.value = !checked.value
+        onCheckedChange?.invoke(checked.value)
+      }),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.SpaceBetween
   ) {

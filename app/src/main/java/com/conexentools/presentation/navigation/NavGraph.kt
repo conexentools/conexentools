@@ -161,6 +161,7 @@ fun SetUpNavGraph(
       SettingsScreen(
         appTheme = hvm.appTheme,
         alwaysWaMessageByIntent = hvm.alwaysWaMessageByIntent,
+        savePin = hvm.savePin,
         onNavigateBack = ::popBackStack
       )
     }

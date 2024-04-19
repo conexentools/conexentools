@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.net.toUri
 import com.conexentools.BuildConfig
+import com.conexentools.MainActivity
 import com.conexentools.core.util.log
 import com.conexentools.core.util.logError
 import com.conexentools.domain.repository.AndroidUtils
@@ -135,9 +136,8 @@ class AndroidUtilsImpl @Inject constructor(
   override fun executeCommand(command: String, su: Boolean) {
     var c = command
     try {
-      if (su) {
+      if (su)
         c = "su -c $c"
-      }
 
       log(c)
       val process = Runtime.getRuntime().exec(c)
@@ -159,9 +159,7 @@ class AndroidUtilsImpl @Inject constructor(
       // Check the exit value (0 for success)
       val exitValue = process.exitValue()
       println("Process exited with value: $exitValue")
-    } catch (e: IOException) {
-      e.printStackTrace()
-    } catch (e: InterruptedException) {
+    } catch (e: Exception) {
       e.printStackTrace()
     }
   }
@@ -222,10 +220,8 @@ class AndroidUtilsImpl @Inject constructor(
       addFlags(FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
     }
 
-    if (onlyReturnIntent)
-      return intent
-
-    context.startActivity(intent)
+    if (!onlyReturnIntent)
+      context.startActivity(intent)
     return intent
   }
 
@@ -245,7 +241,7 @@ class AndroidUtilsImpl @Inject constructor(
   }
 
   override fun shouldShowRequestPermissionRationale(permission: String): Boolean {
-    return ActivityCompat.shouldShowRequestPermissionRationale(context as Activity, permission)
+    return ActivityCompat.shouldShowRequestPermissionRationale(context as MainActivity, permission)
   }
 
   override fun restartApp() {
@@ -264,6 +260,43 @@ class AndroidUtilsImpl @Inject constructor(
       intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
     context.startActivity(intent)
     return true
+  }
+
+  override fun openXiaomiOtherPermissionAppSettingsWindow(onlyReturnIntent: Boolean): Intent {
+    val intent = Intent("miui.intent.action.APP_PERM_EDITOR")
+    intent.setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")
+    intent.putExtra("extra_pkgname", context.packageName)
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    if (!onlyReturnIntent)
+      context.startActivity(intent)
+    return intent
+  }
+
+  override fun isMiuiWithApi28OrMore(): Boolean {
+    val isMiUi = getSystemProperty("ro.miui.ui.version.name")?.isNotBlank() == true
+    return isMiUi && Build.VERSION.SDK_INT >= 28
+  }
+
+  override fun getSystemProperty(propName: String): String? {
+    val line: String
+    var input: BufferedReader? = null
+    try {
+      val p = Runtime.getRuntime().exec("getprop $propName")
+      input = BufferedReader(InputStreamReader(p.inputStream), 1024)
+      line = input.readLine()
+      input.close()
+    } catch (ex: IOException) {
+      return null
+    } finally {
+      if (input != null) {
+        try {
+          input.close()
+        } catch (e: IOException) {
+          e.printStackTrace()
+        }
+      }
+    }
+    return line
   }
 }
 
