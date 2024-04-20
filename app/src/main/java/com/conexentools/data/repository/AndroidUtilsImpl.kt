@@ -1,6 +1,7 @@
 package com.conexentools.data.repository
 
 import android.app.Activity
+import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -29,6 +30,7 @@ import com.conexentools.domain.repository.AndroidUtils
 import contacts.core.Contacts
 import contacts.core.entities.Contact
 import contacts.core.equalTo
+import dagger.hilt.android.qualifiers.ActivityContext
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.BufferedReader
 import java.io.IOException
@@ -38,7 +40,7 @@ import javax.inject.Inject
 
 
 class AndroidUtilsImpl @Inject constructor(
-  @ApplicationContext private val context: Context
+  @ApplicationContext private val context: Context,
 ) : AndroidUtils {
 
   private var isProcessingToast = false
@@ -58,7 +60,7 @@ class AndroidUtilsImpl @Inject constructor(
           500,
           VibrationEffect.DEFAULT_AMPLITUDE
         )
-      ) // New vibrate method for API Level 26 or higher
+      )
     }
   }
 
@@ -210,9 +212,9 @@ class AndroidUtilsImpl @Inject constructor(
     }
   }
 
-  override fun openSettings(settingsMenuAction: String, onlyReturnIntent: Boolean): Intent {
+  override fun openSettings(settingsMenuWindow: String, onlyReturnIntent: Boolean): Intent {
     val intent = Intent(
-      settingsMenuAction,
+      settingsMenuWindow,
       "package:${BuildConfig.APPLICATION_ID}".toUri()
     ).apply {
       addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -238,10 +240,6 @@ class AndroidUtilsImpl @Inject constructor(
     } catch (e: Exception){
       null
     }
-  }
-
-  override fun shouldShowRequestPermissionRationale(permission: String): Boolean {
-    return ActivityCompat.shouldShowRequestPermissionRationale(context as MainActivity, permission)
   }
 
   override fun restartApp() {

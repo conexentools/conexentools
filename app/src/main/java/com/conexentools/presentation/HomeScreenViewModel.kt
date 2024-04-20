@@ -38,7 +38,6 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
-import javax.xml.transform.TransformerFactory
 
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
@@ -81,10 +80,10 @@ class HomeScreenViewModel @Inject constructor(
   var clientListPageHelpDialogsShowed = mutableStateOf(false)
   var savePin = mutableStateOf(false)
 
-  private val whatsAppInstalledVersion = au.getPackageVersion(BuildConfig.WHATSAPP_PACKAGE_NAME)
-  private val instrumentationAppVersion = au.getPackageVersion(BuildConfig.TEST_NAMESPACE)
-  private val transfermovilInstalledVersion =
+  val whatsAppInstalledVersion = au.getPackageVersion(BuildConfig.WHATSAPP_PACKAGE_NAME)
+  val transfermovilInstalledVersion =
     au.getPackageVersion(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME)
+  val instrumentationAppInstalledVersion = au.getPackageVersion(BuildConfig.TEST_NAMESPACE)
 
   private val _clients: MutableStateFlow<PagingData<Client>> =
     MutableStateFlow(value = PagingData.empty())
@@ -328,7 +327,7 @@ class HomeScreenViewModel @Inject constructor(
 
     val errorMessage = if (!RootUtil.isDeviceRooted)
       "Acceso root es requerido para ejecutar el test automatizado"
-    else if (instrumentationAppVersion == null)
+    else if (instrumentationAppInstalledVersion == null)
       "Conexen Tool - Instrumentation App, parece no estar instalada"
     else if (transfermovilInstalledVersion == null)
       "Transfermóvil parece no estar instalado"

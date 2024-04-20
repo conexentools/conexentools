@@ -31,15 +31,6 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-
-
-  override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-    EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
-  }
-
-
-
   @Inject
   lateinit var au: AndroidUtils
 
@@ -73,142 +64,9 @@ class MainActivity : ComponentActivity() {
               startDestination = Screen.Home,
               au = au
             )
-//          val state by hvm.state.collectAsState()
-
-
-//          ClientListTestingComposable()
-
-//          homeViewModel.state.collect{
-
           }
-//        val state: HomeState = homeViewModel.state.collect()
-//        var state: HomeState = HomeState(HomeLoadingState.Loading)
-//        LaunchedEffect(homeViewModel.state) {
-//          homeViewModel.viewModelScope.launch {
-//            homeViewModel.state.collect { state = it }
-//          }
-//        }
-
-
-//          }
-//        }
-//        homeViewModel.state.collectAsState()
-//        homeViewModel.viewModelScope.launch {
-//
-//        }
-
-//          CheckPermissions(popUpWindowPermissionActivityLauncher)
         }
       }
     }
   }
 }
-
-
-//  @Composable
-//  private fun CheckPermissions(
-//    popUpWindowPermissionActivityLauncher: ActivityResultLauncher<Intent>,
-//    permissionsRequester: (() -> Unit)?
-//  ) {
-////    permissionsRequester?.let { it() }
-//    val permissionRequesterLauncher = rememberLauncherForActivityResult(
-//      contract = ActivityResultContracts.PickContact()
-//    ) {
-//      val contact: Contact? = it?.let(au::fetchContactByUri)
-//      onResult(contact)
-//    }
-//
-////    val permissionsRequester = Permission.requestPermissions(
-////      Permission(Manifest.permission.READ_CONTACTS, this, au = au),
-////      Permission(Manifest.permission.CALL_PHONE, this, au = au),
-////      Permission(
-////        Manifest.permission.READ_SMS, this,
-////        permissionDeniedMessage = "Debe conceder el permiso a leer mensajes para poder iniciar el proceso de automatización",
-////        au = au
-////      ),
-////      Permission(Manifest.permission.SYSTEM_ALERT_WINDOW, this, au = au),
-////      Permission(
-////        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-////        this,
-////        maxSdkVersion = Build.VERSION_CODES.Q,
-////        au = au
-////      ),
-////      componentActivityInstance = this,
-////      requestPermissionsImmediately = false
-////    )
-//
-////    var showDisplayPopUpInBackgroundPermissionAlertDialog by remember { mutableStateOf(true) }
-//
-//    if (!Settings.canDrawOverlays(this)) {
-//
-//      val xiaomiPopUpWindowPermissionActivityLauncher =
-//        GetStartActivityForResultLauncher {
-//          GetStartActivityForResultLauncher
-//        }
-////        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-//////          log("xiaomiPopUpWindowPermissionActivityLauncher result: $it")
-////          if ("xiaomi" == Build.MANUFACTURER.lowercase(Locale.ROOT)) { //TODO && Android SDK < 11
-////            val intent = Intent("miui.intent.action.APP_PERM_EDITOR")
-////            intent.setClassName(
-////              "com.miui.securitycenter",
-////              "com.miui.permcenter.permissions.PermissionsEditorActivity"
-////            )
-////            intent.putExtra("extra_pkgname", packageName)
-////            startActivity(intent)
-//////      specialPermissionsAppMenuActivityLauncher.launch(intent)
-////          }
-////        }
-//
-//      var showDisplayPopUpPermissionAlertDialog by remember { mutableStateOf(true) }
-//      if (showDisplayPopUpPermissionAlertDialog) {
-//        AlertDialog(
-//          onDismissRequest = { },
-//          text = { Text(text = "A continuación acepte el permiso 'Mostrar sobre otras aplicaciones' o relacionado y posteriormente el permiso 'Mostrar sobre otras aplicaciones mientras se ejecuta en segundo plano' o relacionado.") },
-//          confirmButton = {
-//            TextButton(onClick = {
-//              showDisplayPopUpPermissionAlertDialog = false
-//              val intent =
-//                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri())
-//
-//              val permissionRequester = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-//
-//                // Launching xiaomi app special permissions form
-//                if ("xiaomi" == Build.MANUFACTURER.lowercase(Locale.ROOT)) { //TODO && Android SDK < 11
-//                  val intent = Intent("miui.intent.action.APP_PERM_EDITOR")
-//                  intent.setClassName(
-//                    "com.miui.securitycenter",
-//                    "com.miui.permcenter.permissions.PermissionsEditorActivity"
-//                  )
-//                  intent.putExtra("extra_pkgname", packageName)
-//
-//                  registerForActivityResult(ActivityResultContracts.StartActivityForResult()){
-//
-//                    // Requesting all file access permission
-//                  }
-//                  startActivity(intent)
-////      specialPermissionsAppMenuActivityLauncher.launch(intent)
-//                }
-//              }
-//              xiaomiPopUpWindowPermissionActivityLauncher.launch(intent)
-//              rememberLauncherForActivityResult(
-//                ActivityResultContracts.StartActivityForResult(),
-//                {})
-//              popUpWindowPermissionActivityLauncher.launch()
-//
-//            }) {
-//              Text("OK")
-//            }
-//          },
-//        )
-//      }
-//    }
-//  }
-//}
-
-//@Composable
-//fun GetStartActivityForResultLauncher(onResult: (ActivityResult) -> Unit): ManagedActivityResultLauncher<Intent, ActivityResult> {
-//  return rememberLauncherForActivityResult(
-//    contract = ActivityResultContracts.StartActivityForResult(),
-//    onResult = onResult
-//  )
-//}

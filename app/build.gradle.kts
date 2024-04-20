@@ -80,10 +80,12 @@ android {
     addToBuildConfig("logTag")
     addToBuildConfig("whatsappPackageName")
     addToBuildConfig("transfermovilPackageName")
-    addToBuildConfig("testedTmVersionName")
     addToBuildConfig("testedTmVersionCode")
-    addToBuildConfig("testedWaVersionName")
+    addToBuildConfig("testedTmVersionName")
     addToBuildConfig("testedWaVersionCode")
+    addToBuildConfig("testedWaVersionName")
+    addToBuildConfig("iaVersionCode", addToRes = true)
+    addToBuildConfig("iaVersionName", addToRes = true)
   }
 
   /**
@@ -277,10 +279,15 @@ dependencies {
 //  correctErrorTypes = true
 //}
 
-fun ApplicationDefaultConfig.addToBuildConfig(name: String, value: String? = null) {
-  buildConfigField("String", name.toUpperSnakeCase(),
-    "\"${value ?: providers.gradleProperty(name).get()}\""
-  )
+fun ApplicationDefaultConfig.addToBuildConfig(
+  name: String,
+  value: String? = null,
+  addToRes: Boolean = false
+) {
+  val value_ = value ?: providers.gradleProperty(name).get()
+  buildConfigField("String", name.toUpperSnakeCase(), "\"$value\"")
+  if (addToRes)
+    resValue("string", name, value_)
 }
 
 fun String.toUpperSnakeCase(): String {

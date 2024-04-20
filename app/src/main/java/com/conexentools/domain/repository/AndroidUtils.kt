@@ -18,9 +18,8 @@ interface AndroidUtils {
   fun sendWaMessage(number: String, message: String?)
   fun executeCommand(command: String, su: Boolean)
   fun composeEmail(recipientAddress: String, subject: String = "")
-  fun openSettings(settingsMenu: String, onlyReturnIntent: Boolean = false): Intent
+  fun openSettings(settingsMenuWindow: String, onlyReturnIntent: Boolean = false): Intent
   fun hasExternalStorageWriteReadAccess(): Boolean
-  fun shouldShowRequestPermissionRationale(permission: String): Boolean
   fun getPackageVersion(packageName: String): Pair<Long, String>?
   fun restartApp()
   fun launchPackage(packageName: String, clearOutPreviousInstances: Boolean = true): Boolean
@@ -71,15 +70,11 @@ interface AndroidUtils {
           TODO("Not yet implemented")
         }
 
-        override fun openSettings(settingsMenu: String, onlyReturnIntent: Boolean): Intent {
+        override fun openSettings(settingsMenuWindow: String, onlyReturnIntent: Boolean): Intent {
           TODO("Not yet implemented")
         }
 
         override fun hasExternalStorageWriteReadAccess(): Boolean {
-          TODO("Not yet implemented")
-        }
-
-        override fun shouldShowRequestPermissionRationale(permission: String): Boolean {
           TODO("Not yet implemented")
         }
 

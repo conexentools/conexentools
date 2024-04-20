@@ -77,6 +77,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.conexentools.R
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
+import com.conexentools.core.util.getActivity
 import com.conexentools.core.util.navigate
 import com.conexentools.core.util.textFilter
 import com.conexentools.core.util.truncate
@@ -124,6 +125,9 @@ fun HomeScreen(
   rechargesAvailabilityDateISOString: MutableState<String?>,
   waContact: MutableState<String>,
   onRunInstrumentedTest: () -> Unit,
+  whatsAppInstalledVersion: Pair<Long, String>?,
+  transfermovilInstalledVersion: Pair<Long, String>?,
+  instrumentationAppInstalledVersion: Pair<Long, String>?,
 
   // ClientList Page
   isManager: MutableState<Boolean>,
@@ -169,6 +173,9 @@ fun HomeScreen(
         rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
         waContact = waContact,
         onRunInstrumentedTest = onRunInstrumentedTest,
+        whatsAppInstalledVersion = whatsAppInstalledVersion,
+        transfermovilInstalledVersion = transfermovilInstalledVersion,
+        instrumentationAppInstalledVersion = instrumentationAppInstalledVersion,
 
         isManager = isManager,
         clientPagingItems = clientPagingItems,
@@ -227,6 +234,9 @@ private fun DrawHome(
   rechargesAvailabilityDateISOString: MutableState<String?>,
   waContact: MutableState<String>,
   onRunInstrumentedTest: () -> Unit,
+  whatsAppInstalledVersion: Pair<Long, String>?,
+  transfermovilInstalledVersion: Pair<Long, String>?,
+  instrumentationAppInstalledVersion: Pair<Long, String>?,
 
   // ClientList Page
   isManager: MutableState<Boolean>,
@@ -471,6 +481,9 @@ private fun DrawHome(
               waContactImageUri = waContactImageUri,
               rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
               waContact = waContact,
+              whatsAppInstalledVersion = whatsAppInstalledVersion,
+              transfermovilInstalledVersion = transfermovilInstalledVersion,
+              instrumentationAppInstalledVersion = instrumentationAppInstalledVersion,
             )
           }
 
@@ -512,8 +525,13 @@ private fun DrawHome(
                       duration = SnackbarDuration.Short,
                     )
                     when (snackbarResult) {
-                      SnackbarResult.Dismissed -> { onClientCardDelete(client) }
-                      else -> { client.visible.value = true }
+                      SnackbarResult.Dismissed -> {
+                        onClientCardDelete(client)
+                      }
+
+                      else -> {
+                        client.visible.value = true
+                      }
                     }
                   }
                 },
@@ -623,13 +641,14 @@ private fun TopAppBarActions(
         }
       )
       if (!au.hasExternalStorageWriteReadAccess()) {
+        val activityContext = LocalContext.current.getActivity()!!
         DropdownMenuItem(
           text = { Text("Solicitar permiso para escribir en el almacenamiento externo") },
           onClick = {
             dropDownMenuExpanded = false
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
               au.openSettings(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-            } else if (au.shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            } else if (activityContext.shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
               writeExternalStoragePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             } else {
               // User has selected Deny and don't ask again
@@ -677,6 +696,9 @@ fun HomeScreenPreview() {
       onClientCardRechargeCounterReset = {},
       onAddClient = {},
       onBatchAddClient = {},
+      whatsAppInstalledVersion = Pair(23, "123.124.51"),
+      transfermovilInstalledVersion = Pair(23, "123.124.51"),
+      instrumentationAppInstalledVersion = Pair(23, "123.124.51"),
       onRunInstrumentedTest = {}
     )
   }

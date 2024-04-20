@@ -2,13 +2,16 @@ package com.conexentools.presentation.components.screens.home.pages.instrumented
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.res.Configuration
 import android.net.Uri
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,8 +26,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -55,11 +61,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.conexentools.BuildConfig
 import com.conexentools.R
 import com.conexentools.core.app.Constants
+import com.conexentools.core.util.PreviewComposable
 import com.conexentools.core.util.moveFocusOnTabPressed
 import com.conexentools.core.util.pickContact
 import com.conexentools.core.util.toFormattedDate
@@ -75,6 +84,9 @@ import contacts.core.util.phoneList
 @Composable
 fun InstrumentedTestPage(
   au: AndroidUtils,
+  whatsAppInstalledVersion: Pair<Long, String>?,
+  transfermovilInstalledVersion: Pair<Long, String>?,
+  instrumentationAppInstalledVersion: Pair<Long, String>?,
   // States
   firstClientNumber: MutableState<String>,
   secondClientNumber: MutableState<String?>,
@@ -357,5 +369,113 @@ fun InstrumentedTestPage(
         )
       }
     }
+
+    Spacer(modifier = Modifier.weight(1f))
+
+    InstrumentedTestRequiredAppsVersionTable(
+      waVersion = whatsAppInstalledVersion,
+      transfermovilVersion = transfermovilInstalledVersion,
+      conexenToolsInstA = instrumentationAppInstalledVersion,
+    )
+    Spacer(modifier = Modifier.height(Constants.Dimens.Medium))
+  }
+}
+
+@Composable
+fun InstrumentedTestRequiredAppsVersionTable(
+  waVersion: Pair<Long, String>?,
+  transfermovilVersion: Pair<Long, String>?,
+  conexenToolsInstA: Pair<Long, String>?,
+) {
+
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.Center
+  ) {
+    Column {
+      Box(modifier = Modifier.size(50.dp))
+      Text("Instalado")
+      Text("Probado")
+    }
+
+    Spacer(modifier = Modifier.width(Constants.Dimens.Medium))
+
+    // WhatsApp
+    RequiredAppColumn(
+      version = waVersion,
+      drawableRes = R.drawable.whatsapp,
+      testedVersionCode = BuildConfig.TESTED_WA_VERSION_CODE,
+      testedVersionName = BuildConfig.TESTED_WA_VERSION_NAME
+    )
+
+    // Transfermóvil
+    RequiredAppColumn(
+      version = transfermovilVersion,
+      drawableRes = R.drawable.transfermovil,
+      testedVersionCode = BuildConfig.TESTED_TM_VERSION_CODE,
+      testedVersionName = BuildConfig.TESTED_TM_VERSION_NAME
+    )
+
+    // Conexen Tools - Instrumentation App
+    RequiredAppColumn(
+      version = conexenToolsInstA,
+      drawableRes = R.drawable.conexen_tools_ia,
+      testedVersionCode = stringResource(id = R.string.iaVersionCode),
+      testedVersionName = stringResource(id = R.string.iaVersionName),
+    )
+  }
+}
+
+@Composable
+private fun RequiredAppColumn(
+  version: Pair<Long, String>?,
+  @DrawableRes drawableRes: Int,
+  testedVersionCode: String,
+  testedVersionName: String
+) {
+  Column(
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
+    Icon(
+      modifier = Modifier.size(50.dp),
+      painter = painterResource(drawableRes),
+      contentDescription = null
+    )
+    VersionText(version)
+    Text(testedVersionName)
+
+    val isRedWarning = version == null
+    val isWarning = !isRedWarning && (version!!.first != testedVersionCode.toLong())
+    val isAllGood = !isRedWarning && !isWarning
+
+    Icon(
+      imageVector = with (Icons.Rounded) { if (isAllGood) CheckCircle else Warning },
+      tint = if (isRedWarning) Color.Red else if (isWarning) Color.Yellow else Color.Green,
+      contentDescription = null
+    )
+  }
+}
+
+@Composable
+private fun VersionText(version: Pair<Long, String>?) {
+  Text(
+    text = version?.second ?: "NO",
+    color = if (version == null) Color.Red else MaterialTheme.colorScheme.onBackground
+  )
+}
+
+@Preview(showBackground = true, apiLevel = 33)
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, apiLevel = 33)
+@Composable
+fun PreviewInstrumentedTestRequiredAppsVersionTable() {
+  val waVersion: Pair<Long, String>? = Pair(12, "12.2.6")
+  val transfermovilVersion: Pair<Long, String>? = null
+  val conexenToolsInstA: Pair<Long, String>? = Pair(12, "156.2.6")
+  PreviewComposable {
+    InstrumentedTestRequiredAppsVersionTable(
+      waVersion = waVersion,
+      transfermovilVersion = transfermovilVersion,
+      conexenToolsInstA = conexenToolsInstA
+    )
   }
 }

@@ -14,6 +14,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.conexentools.BuildConfig
 import com.conexentools.core.util.ObserveLifecycleEvents
 import com.conexentools.core.util.composable
 import com.conexentools.core.util.log
@@ -90,6 +91,9 @@ fun SetUpNavGraph(
         rechargesAvailabilityDateISOString = hvm.rechargesAvailabilityDateISOString,
         waContact = hvm.waContact,
         onRunInstrumentedTest = hvm::runInstrumentedTest,
+        whatsAppInstalledVersion = hvm.whatsAppInstalledVersion,
+        transfermovilInstalledVersion = hvm.transfermovilInstalledVersion,
+        instrumentationAppInstalledVersion = hvm.instrumentationAppInstalledVersion,
 
         // ClientList Page
         isManager = hvm.isManager,

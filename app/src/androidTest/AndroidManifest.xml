@@ -1,20 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:versionCode="1"
-    android:versionName="1.0">
+    android:versionName="1.0"
+    >
+    <!--    android:versionCode="@string/iaVersionCode"-->
+    <!--    android:versionName="@string/iaVersionName"-->
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
+    <!--suppress AndroidDomInspection -->
     <instrumentation
         android:targetPackage="com.conexentools"
-        android:name="androidx.test.runner.AndroidJUnitRunner"/>
-<!--        android:icon="@mipmap/i" />-->
+        android:name="androidx.test.runner.AndroidJUnitRunner">
+    </instrumentation>
 
-<!--    <application tools:replace="label" android:label="Conexen Tools - Instrumentation App" />-->
+    <!--suppress AndroidDomInspection -->
     <application
         android:label="Conexen Tools - Instrumentation App"
-        android:icon="@mipmap/ia_icon"
-        >
+        android:icon="@mipmap/ia_icon">
     </application>
 
     <queries>

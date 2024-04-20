@@ -1,7 +1,10 @@
 package com.conexentools.core.util
 
+import android.content.Context
+import android.content.ContextWrapper
 import android.icu.text.DateFormat
 import android.view.KeyEvent
+import androidx.activity.ComponentActivity
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
@@ -153,3 +156,10 @@ fun Contact.toClient() = Client(
 )
 
 fun Int.toUnicodeString() =  String(Character.toChars(this))
+
+fun Context.getActivity(): ComponentActivity? = when (this) {
+  is ComponentActivity -> this
+  // As ContextWrappers can't possibly wrap each other significant number of times, recursion is fine here
+  is ContextWrapper -> baseContext.getActivity()
+  else -> null
+}
