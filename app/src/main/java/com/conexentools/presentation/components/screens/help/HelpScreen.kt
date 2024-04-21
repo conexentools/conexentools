@@ -29,7 +29,7 @@ fun HelpScreen(
 @Preview(apiLevel = 33)
 @Preview(apiLevel = 33, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun PreviewHelpScreen() {
+private fun PreviewHelpScreen() {
   PreviewComposable {
     HelpScreen { }
   }

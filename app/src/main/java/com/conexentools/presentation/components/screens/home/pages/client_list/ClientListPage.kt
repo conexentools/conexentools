@@ -69,7 +69,6 @@ fun ClientsListPage(
         var isVisibleByFilters by remember { mutableStateOf(true) }
         if (client != null) {
           LaunchedEffect(client, searchBarText) {
-            log("Updating visibility")
             isVisibleByFilters = searchBarText.isBlank() ||
                 client.name.contains(searchBarText, ignoreCase = true) ||
                 client.cardNumber != null && client.cardNumber!!.contains(
@@ -140,7 +139,7 @@ fun ClientsListPage(
 @Preview(showBackground = true, apiLevel = 33)
 @Preview(showBackground = true, uiMode = UI_MODE_NIGHT_YES, apiLevel = 33)
 @Composable
-fun PreviewClientsListPage() {
+private fun PreviewClientsListPage() {
   PreviewComposable {
     ClientsListPage(
       clientPagingItems = flowOf(PagingData.from(clientsForTesting)).collectAsLazyPagingItems(),

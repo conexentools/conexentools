@@ -192,7 +192,7 @@ fun Contact(
 @Preview(showBackground = true, apiLevel = 33)
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, apiLevel = 33)
 @Composable
-fun PreviewClientView() {
+private fun PreviewClientView() {
   PreviewComposable(fillMaxSize = false) {
     var areContactsSelectable by remember { mutableStateOf(true) }
 

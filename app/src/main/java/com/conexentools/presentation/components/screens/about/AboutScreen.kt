@@ -108,7 +108,7 @@ fun AboutScreen(
 @Preview(apiLevel = 33)
 @Preview(apiLevel = 33, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun PreviewAboutScreen() {
+private fun PreviewAboutScreen() {
   PreviewComposable {
     AboutScreen(
       onNavigateBack = {},

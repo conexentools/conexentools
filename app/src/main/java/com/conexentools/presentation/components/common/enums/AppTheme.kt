@@ -7,7 +7,7 @@ enum class AppTheme {
 
   companion object {
     fun fromOrdinal(ordinal: Int?): AppTheme {
-      return entries[ordinal?.coerceIn(0..entries.count()) ?: 1]
+      return entries[ordinal?.coerceIn(0..entries.count()) ?: MODE_AUTO.ordinal]
     }
   }
 }

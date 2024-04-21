@@ -105,7 +105,6 @@ class HomeScreenViewModel @Inject constructor(
         _state.value = HomeScreenState(HomeScreenLoadingState.Error(it.localizedMessage))
       } else {
         _state.value = HomeScreenState(HomeScreenLoadingState.Success)
-        log("Preferences Loaded")
       }
     }
   }
@@ -113,8 +112,7 @@ class HomeScreenViewModel @Inject constructor(
   fun initialClientsLoad() = viewModelScope.launch(coroutinesDispatchers.unconfined) {
     log("Running first client load")
     _state.value = HomeScreenState(HomeScreenLoadingState.ScreenLoading)
-    val lodClientsDeferredJob = async { getClients() }
-    lodClientsDeferredJob.await()
+    getClients()
   }.invokeOnCompletion {
     if (it != null) {
       logError("Fail at initialization. Cause ${it.localizedMessage}")

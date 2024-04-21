@@ -114,7 +114,7 @@ fun DrawScope.indicator(
 @Preview(showBackground = true, apiLevel = 33)
 @Preview(showBackground = true, apiLevel = 33, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun PreviewRadialProgressBar() {
+private fun PreviewRadialProgressBar() {
   PreviewComposable(fillMaxSize = false) {
     Row(
       modifier = Modifier

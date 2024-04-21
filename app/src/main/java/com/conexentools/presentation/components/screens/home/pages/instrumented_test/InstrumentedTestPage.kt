@@ -9,6 +9,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,12 +31,15 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -46,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
@@ -55,6 +60,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -69,6 +75,7 @@ import com.conexentools.BuildConfig
 import com.conexentools.R
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
+import com.conexentools.core.util.RootUtil
 import com.conexentools.core.util.moveFocusOnTabPressed
 import com.conexentools.core.util.pickContact
 import com.conexentools.core.util.toFormattedDate
@@ -215,23 +222,27 @@ fun InstrumentedTestPage(
       value = cardLast4Digits.value,
       isFourDigitsCard = true,
       trailingIcon = {
-        IconButton(onClick = {
-          showCardLast4DigitsInfoDialog = true
-        }) {
-          Icon(
-            imageVector = Icons.Rounded.Info,
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-            contentDescription = null
-          )
-        }
+        PrimaryIconButton(
+          imageVector = Icons.Rounded.Info,
+          modifier = Modifier
+            .padding(Constants.Dimens.Small)
+            .alpha(0.5f),
+          onClick = { showCardLast4DigitsInfoDialog = true }
+        )
       })
 
     // Fetch Data from WA Switch
     LabelSwitch(
       label = stringResource(R.string.data_from_wa_switch_label),
+      infoText = "Si tiene acceso root y la aplicación de instrumentación (Conexen Tools - Instrumentation App) está instalada active esta opción para obtener los datos de recarga desde un contacto de WhatsApp. Los datos se buscarán en los últimos chats enviados por el contacto especificado, los cuales deben estar en el siguiente formato <numero_a_recargar>,<recarga>. Por ejemplo: \n\n55123456,1000\n55654321,500\n\nEl contacto debe ser el primer resultado en aparecer en la lista de contactos de WhatsApp cuando se introduzca en la barra de búsqueda el texto especificado como contacto, así que asegúrese de eso, de lo contrario la prueba automatizada fallará",
       checked = fetchDataFromWA,
+      onCheckedChange = {
+        if (it && !RootUtil.isDeviceRooted){
+          au.toast("Acceso root requerido", vibrate = true)
+          fetchDataFromWA.value = false
+        }
+      }
     )
-
     AnimatedVisibility(visible = fetchDataFromWA.value) {
       var leadingIcon: @Composable (() -> Unit)? by remember {
         mutableStateOf(
@@ -294,8 +305,6 @@ fun InstrumentedTestPage(
             fontWeight = FontWeight.Bold
           )
         }
-
-//        fun showSecondClientSlot() = secondClientNumber.value != null
 
         item {
           RechargeSlot(
@@ -372,26 +381,66 @@ fun InstrumentedTestPage(
 
     Spacer(modifier = Modifier.weight(1f))
 
-    InstrumentedTestRequiredAppsVersionTable(
-      waVersion = whatsAppInstalledVersion,
-      transfermovilVersion = transfermovilInstalledVersion,
-      conexenToolsInstA = instrumentationAppInstalledVersion,
-    )
-    Spacer(modifier = Modifier.height(Constants.Dimens.Medium))
+    var showInstrumentedTestExtraInfoDialog by remember { mutableStateOf(false) }
+
+    Row(
+      horizontalArrangement = Arrangement.Start,
+      modifier = Modifier.fillMaxWidth()
+    ) {
+      PrimaryIconButton(
+        imageVector = Icons.Rounded.Info,
+        modifier = Modifier.size(30.dp).alpha(0.5f)
+      ) { showInstrumentedTestExtraInfoDialog = true }
+    }
+
+    if (showInstrumentedTestExtraInfoDialog) {
+      AlertDialog(
+        onDismissRequest = { showInstrumentedTestExtraInfoDialog = false },
+        confirmButton = {
+          TextButton(
+            content = { Text("Cerrar") },
+            onClick = { showInstrumentedTestExtraInfoDialog = false }
+          )
+        },
+        text = {
+          Column (horizontalAlignment = Alignment.CenterHorizontally) {
+            InstrumentedTestRequiredAppsVersionTable(
+              waVersion = whatsAppInstalledVersion,
+              transfermovilVersion = transfermovilInstalledVersion,
+              conexenToolsInstA = instrumentationAppInstalledVersion,
+            )
+
+            Row(
+              modifier = Modifier.padding(Constants.Dimens.Medium),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Text("Dispositivo Rooteado: ")
+              Text(
+                text = if (RootUtil.isDeviceRooted) "SI" else "NO",
+                style = TextStyle.Default.copy(fontWeight = FontWeight.Bold),
+                color = if (RootUtil.isDeviceRooted) Color.Green else Constants.Colors.ERROR
+              )
+            }
+          }
+        }
+      )
+    }
   }
 }
 
 @Composable
-fun InstrumentedTestRequiredAppsVersionTable(
+private fun InstrumentedTestRequiredAppsVersionTable(
   waVersion: Pair<Long, String>?,
   transfermovilVersion: Pair<Long, String>?,
   conexenToolsInstA: Pair<Long, String>?,
 ) {
 
   Row(
-    verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.Center
+    verticalAlignment = Alignment.Top,
+    horizontalArrangement = Arrangement.Center,
+    modifier = Modifier.height(130.dp)
   ) {
+
     Column {
       Box(modifier = Modifier.size(50.dp))
       Text("Instalado")
@@ -399,6 +448,8 @@ fun InstrumentedTestRequiredAppsVersionTable(
     }
 
     Spacer(modifier = Modifier.width(Constants.Dimens.Medium))
+
+    VerticalDivider(modifier = Modifier.padding(vertical = Constants.Dimens.Medium))
 
     // WhatsApp
     RequiredAppColumn(
@@ -408,6 +459,8 @@ fun InstrumentedTestRequiredAppsVersionTable(
       testedVersionName = BuildConfig.TESTED_WA_VERSION_NAME
     )
 
+    VerticalDivider(modifier = Modifier.padding(vertical = Constants.Dimens.Medium))
+
     // Transfermóvil
     RequiredAppColumn(
       version = transfermovilVersion,
@@ -415,6 +468,8 @@ fun InstrumentedTestRequiredAppsVersionTable(
       testedVersionCode = BuildConfig.TESTED_TM_VERSION_CODE,
       testedVersionName = BuildConfig.TESTED_TM_VERSION_NAME
     )
+
+    VerticalDivider(modifier = Modifier.padding(vertical = Constants.Dimens.Medium))
 
     // Conexen Tools - Instrumentation App
     RequiredAppColumn(
@@ -434,9 +489,10 @@ private fun RequiredAppColumn(
   testedVersionName: String
 ) {
   Column(
-    horizontalAlignment = Alignment.CenterHorizontally
+    horizontalAlignment = Alignment.CenterHorizontally,
+    modifier = Modifier.padding(horizontal = Constants.Dimens.Small)
   ) {
-    Icon(
+    Image(
       modifier = Modifier.size(50.dp),
       painter = painterResource(drawableRes),
       contentDescription = null
@@ -449,8 +505,8 @@ private fun RequiredAppColumn(
     val isAllGood = !isRedWarning && !isWarning
 
     Icon(
-      imageVector = with (Icons.Rounded) { if (isAllGood) CheckCircle else Warning },
-      tint = if (isRedWarning) Color.Red else if (isWarning) Color.Yellow else Color.Green,
+      imageVector = with(Icons.Rounded) { if (isAllGood) CheckCircle else Warning },
+      tint = if (isRedWarning) Constants.Colors.ERROR else if (isWarning) Constants.Colors.WARNING else Color.Green,
       contentDescription = null
     )
   }
@@ -464,14 +520,17 @@ private fun VersionText(version: Pair<Long, String>?) {
   )
 }
 
+@Suppress("RedundantNullableReturnType")
 @Preview(showBackground = true, apiLevel = 33)
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, apiLevel = 33)
 @Composable
-fun PreviewInstrumentedTestRequiredAppsVersionTable() {
+private fun PreviewInstrumentedTestRequiredAppsVersionTable() {
   val waVersion: Pair<Long, String>? = Pair(12, "12.2.6")
   val transfermovilVersion: Pair<Long, String>? = null
   val conexenToolsInstA: Pair<Long, String>? = Pair(12, "156.2.6")
-  PreviewComposable {
+  PreviewComposable(
+    fillMaxSize = false
+  ) {
     InstrumentedTestRequiredAppsVersionTable(
       waVersion = waVersion,
       transfermovilVersion = transfermovilVersion,

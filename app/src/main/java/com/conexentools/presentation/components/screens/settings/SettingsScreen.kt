@@ -133,6 +133,7 @@ fun SettingsScreen(
 
     LabelSwitch(
       label = "Siempre API WA Message",
+      infoText = "Por defecto si el dispositivo está rooteado y la aplicación de instrumentación (Conexen Tools - Instrumentation App) está instalada el mensaje se tratará de enviar a través de esta, si las previas condiciones no se cumplen el mensaje se escribirá en la entrada de texto del chat haciendo uso de la API de WhatsApp, la cual requiere conexión a Internet. Active esta opción para user siempre la API de WhatsApp",
       checked = alwaysWaMessageByIntent,
     )
 
@@ -149,7 +150,7 @@ fun SettingsScreen(
 @Preview(apiLevel = 33)
 @Preview(apiLevel = 33, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun PreviewSettingsScreen() {
+private fun PreviewSettingsScreen() {
   PreviewComposable {
     SettingsScreen(
       appTheme = LocalTheme.current.isDark.let { remember { mutableStateOf(if (it) AppTheme.MODE_NIGHT else AppTheme.MODE_DAY) } },

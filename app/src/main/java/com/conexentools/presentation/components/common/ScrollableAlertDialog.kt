@@ -40,14 +40,6 @@ fun ScrollableAlertDialog(
       }
     },
     title = title?.let { { Text(it) } },
-//    title = {
-//      Row(
-//        horizontalArrangement = Arrangement.Center,
-//        modifier = Modifier.fillMaxWidth()
-//      ) {
-//
-//      }
-//    },
     onDismissRequest = onDismissRequest,
     confirmButton = {
       TextButton(onConfirm) {
@@ -77,7 +69,7 @@ fun ScrollableAlertDialog(
 @Preview(showBackground = true, apiLevel = 33)
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, apiLevel = 33)
 @Composable
-fun PreviewPermissionsInfoDialog() {
+private fun PreviewPermissionsInfoDialog() {
   PreviewComposable(fillMaxSize = true) {
     ScrollableAlertDialog(
       text = "How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.How gutless. You taste like a wind.",

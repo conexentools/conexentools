@@ -1,5 +1,4 @@
 import com.android.build.api.dsl.ApplicationDefaultConfig
-
 /**
  * The first section in the build configuration applies the Android Gradle plugin
  * to this build and makes the android block available to specify
@@ -65,6 +64,7 @@ android {
     // Specifies the API level used to test the app.
     targetSdk = 34
     // Defines the version number of your app.
+
     versionCode = 1
     // Defines a user-friendly version name for your app.
     versionName = "1.0"
@@ -84,8 +84,22 @@ android {
     addToBuildConfig("testedTmVersionName")
     addToBuildConfig("testedWaVersionCode")
     addToBuildConfig("testedWaVersionName")
-    addToBuildConfig("iaVersionCode", addToRes = true)
     addToBuildConfig("iaVersionName", addToRes = true)
+    val iaVersionCode = addToBuildConfig("iaVersionCode", addToRes = true)
+    resValue("integer", "iaVersionCode", iaVersionCode)
+
+    task("fixAndroidTestManifestVersionCode") {
+      group = "other"
+      doLast {
+        var manifestContent = File(androidTestManifestFile).readText(Charsets.UTF_8)
+        manifestContent = manifestContent.replace(androidTestVersionCodeRE, "android:versionCode=\"$iaVersionCode\"")
+        File(androidTestManifestFile).writeText(manifestContent, Charsets.UTF_8)
+        if (File(androidTestManifestFile).readText(Charsets.UTF_8) != manifestContent)
+          throw Exception("versionCode attribute of androidTest/AndroidManifest.xml was not set to $iaVersionCode")
+        println("versionCode attribute of androidTest/AndroidManifest.xml set to $iaVersionCode")
+      }
+    }
+    tasks.named("preBuild") { finalizedBy("fixAndroidTestManifestVersionCode") }
   }
 
   /**
@@ -114,7 +128,6 @@ android {
     debug {
       isMinifyEnabled = false // Enables code shrinking for the release build type.
     }
-//        debug { signingConfig = null }
   }
 
   /**
@@ -125,13 +138,6 @@ android {
    * remove these blocks.
    */
 
-//  compileOptions {
-//    sourceCompatibility = JavaVersion.VERSION_1_8
-//    targetCompatibility = JavaVersion.VERSION_1_8
-//  }
-//  kotlinOptions {
-//    jvmTarget = "19" //"1.8"
-//  }
   composeOptions {
     kotlinCompilerExtensionVersion = "1.5.10"
   }
@@ -279,18 +285,19 @@ dependencies {
 //  correctErrorTypes = true
 //}
 
-fun ApplicationDefaultConfig.addToBuildConfig(
+private fun ApplicationDefaultConfig.addToBuildConfig(
   name: String,
   value: String? = null,
   addToRes: Boolean = false
-) {
+): String {
   val value_ = value ?: providers.gradleProperty(name).get()
-  buildConfigField("String", name.toUpperSnakeCase(), "\"$value\"")
+  buildConfigField("String", name.toScreamingSnakeCase(), "\"$value_\"")
   if (addToRes)
     resValue("string", name, value_)
+  return value_
 }
 
-fun String.toUpperSnakeCase(): String {
+private fun String.toScreamingSnakeCase(): String {
   val string = this
   return StringBuilder().apply {
     string.forEach {
@@ -300,3 +307,6 @@ fun String.toUpperSnakeCase(): String {
     }
   }.toString()
 }
+
+private val androidTestManifestFile = "app/src/androidTest/AndroidManifest.xml"
+private val androidTestVersionCodeRE = Regex("android:versionCode=\"\\d+\"")

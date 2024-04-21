@@ -182,7 +182,7 @@ fun ClientCard(
 @Preview(showBackground = true, apiLevel = 33)
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, apiLevel = 33)
 @Composable
-fun PreviewClientCard() {
+private fun PreviewClientCard() {
   PreviewComposable(fillMaxSize = false) {
     LazyColumn {
       items(clientsForTesting) {

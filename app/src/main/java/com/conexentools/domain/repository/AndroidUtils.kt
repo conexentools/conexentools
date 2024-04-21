@@ -1,9 +1,7 @@
 package com.conexentools.domain.repository
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import contacts.core.entities.Contact
 
 interface AndroidUtils {
@@ -18,12 +16,12 @@ interface AndroidUtils {
   fun sendWaMessage(number: String, message: String?)
   fun executeCommand(command: String, su: Boolean)
   fun composeEmail(recipientAddress: String, subject: String = "")
-  fun openSettings(settingsMenuWindow: String, onlyReturnIntent: Boolean = false): Intent
-  fun hasExternalStorageWriteReadAccess(): Boolean
+  fun openSettings(settingsMenuWindow: String, flagActivityNewTask: Boolean, onlyReturnIntent: Boolean = false): Intent
+  fun hasExternalStorageReadWriteAccess(): Boolean
   fun getPackageVersion(packageName: String): Pair<Long, String>?
   fun restartApp()
   fun launchPackage(packageName: String, clearOutPreviousInstances: Boolean = true): Boolean
-  fun openXiaomiOtherPermissionAppSettingsWindow(onlyReturnIntent: Boolean = false): Intent
+  fun openXiaomiOtherPermissionAppSettingsWindow(flagActivityNewTask: Boolean, onlyReturnIntent: Boolean = false): Intent
   fun isMiuiWithApi28OrMore(): Boolean
   fun getSystemProperty(propName: String): String?
 
@@ -70,11 +68,15 @@ interface AndroidUtils {
           TODO("Not yet implemented")
         }
 
-        override fun openSettings(settingsMenuWindow: String, onlyReturnIntent: Boolean): Intent {
+        override fun openSettings(
+          settingsMenuWindow: String,
+          flagActivityNewTask: Boolean,
+          onlyReturnIntent: Boolean
+        ): Intent {
           TODO("Not yet implemented")
         }
 
-        override fun hasExternalStorageWriteReadAccess(): Boolean {
+        override fun hasExternalStorageReadWriteAccess(): Boolean {
           TODO("Not yet implemented")
         }
 
@@ -93,7 +95,7 @@ interface AndroidUtils {
           TODO("Not yet implemented")
         }
 
-        override fun openXiaomiOtherPermissionAppSettingsWindow(onlyReturnIntent: Boolean): Intent {
+        override fun openXiaomiOtherPermissionAppSettingsWindow(flagActivityNewTask: Boolean, onlyReturnIntent: Boolean): Intent {
           TODO("Not yet implemented")
         }
 

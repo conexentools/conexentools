@@ -102,7 +102,7 @@ fun SearchAppBar(
 @Preview(showBackground = true, apiLevel = 33)
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, apiLevel = 33)
 @Composable
-fun PreviewSearchAppBar() {
+private fun PreviewSearchAppBar() {
   PreviewComposable(fillMaxSize = false) {
     Box(
       modifier = Modifier

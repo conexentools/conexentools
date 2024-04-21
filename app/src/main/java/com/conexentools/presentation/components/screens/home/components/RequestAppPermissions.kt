@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.conexentools.R
+import com.conexentools.core.util.log
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.components.common.ScrollableAlertDialog
 
@@ -29,7 +30,11 @@ fun RequestAppPermissions(
   var checkCallAndReadContactsPermission by remember { mutableStateOf(false) }
   var checkManageExternalStoragePermission by remember { mutableStateOf(false) }
   var checkWriteExternalStoragePermission by remember { mutableStateOf(false) }
-  var checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission by remember { mutableStateOf(false) }
+  var checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission by remember {
+    mutableStateOf(
+      false
+    )
+  }
   var showRestartAppDialog by remember { mutableStateOf(false) }
   var allPermissionDialogsShowed by remember { mutableStateOf(false) }
 
@@ -78,7 +83,7 @@ fun RequestAppPermissions(
     }
   }
 
-  // (CALL_PHONE - READ_CONTACTS) -> MANAGE_EXTERNAL_STORAGE | WRITE_EXTERNAL_STORAGE
+  // (CALL_PHONE - READ_CONTACTS) -> MANAGE_EXTERNAL_STORAGE
   if (checkCallAndReadContactsPermission) {
 
     if (isGranted(Manifest.permission.CALL_PHONE) && isGranted(Manifest.permission.READ_CONTACTS)) {
@@ -104,12 +109,12 @@ fun RequestAppPermissions(
       checkWriteExternalStoragePermission = true
     } else if (appLaunchCount == 1 && !Environment.isExternalStorageManager()) {
       ScrollableAlertDialog(stringResource(R.string.MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE)) {
-        manageExternalStorageLauncher.launch(
-          au.openSettings(
-            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-            onlyReturnIntent = true
-          )
+        val intent = au.openSettings(
+          settingsMenuWindow =  Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+          flagActivityNewTask = false,
+          onlyReturnIntent = true
         )
+        manageExternalStorageLauncher.launch(intent)
         checkManageExternalStoragePermission = false
       }
     } else {
@@ -120,10 +125,10 @@ fun RequestAppPermissions(
 
   // WRITE_EXTERNAL_STORAGE -> Xiaomi display in background
   if (checkWriteExternalStoragePermission) {
-    if (isGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+    if (isGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE) || appLaunchCount != 1) {
       checkWriteExternalStoragePermission = false
       checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission = true
-    } else if (appLaunchCount == 1) {
+    } else {
       ScrollableAlertDialog(stringResource(R.string.MANAGE_EXTERNAL_STORAGE_PERMISSION_MESSAGE)) {
         writeExternalStorageLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         checkWriteExternalStoragePermission = false
@@ -131,21 +136,28 @@ fun RequestAppPermissions(
     }
   }
 
+  // Display pop-up while running in the background -> allPermissionDialogsShowed
   if (checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission) {
     if (appLaunchCount == 1 && au.isMiuiWithApi28OrMore()) {
       ScrollableAlertDialog("Para ejecutar las pruebas automatizadas desde una computadora usando ADB cuando lo aplicación no se esté ejecutando en un primer plano, es necesario otorgar el permiso 'Mostrar ventanas emergente mientras se ejecuta en segundo plano'. A continuación si lo desea concédalo manualmente") {
-        xiaomiOtherPermissionAppSettingsWindowLauncher.launch(au.openXiaomiOtherPermissionAppSettingsWindow(onlyReturnIntent = true))
+        val intent = au.openXiaomiOtherPermissionAppSettingsWindow(flagActivityNewTask = false, onlyReturnIntent = true)
+        xiaomiOtherPermissionAppSettingsWindowLauncher.launch(intent)
         checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission = false
       }
     } else {
+      checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission = false
       allPermissionDialogsShowed = true
     }
   }
 
-  if (allPermissionDialogsShowed){
-    if (showRestartAppDialog){
+  if (allPermissionDialogsShowed) {
+    if (showRestartAppDialog) {
       ScrollableAlertDialog(
-        text = "La aplicación necesita reiniciarse para crear/leer la base de datos en el almacenamiento interno primario",
+        text = "Reinicia la aplicación ahora para cargar la base de datos desde la carpeta '${
+          stringResource(
+            R.string.app_name
+          )
+        }' en el almacenamiento interno",
         confirmButtonText = "Reiniciar"
       ) {
         au.restartApp()

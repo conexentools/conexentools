@@ -116,7 +116,7 @@ fun cubanCardNumberFilter(
 @Preview(showBackground = true, apiLevel = 33)
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, apiLevel = 33)
 @Composable
-fun PreviewTextField() {
+private fun PreviewTextField() {
   PreviewComposable(fillMaxSize = true) {
     var text by remember { mutableStateOf("123") }
     val isDark = LocalTheme.current.isDark

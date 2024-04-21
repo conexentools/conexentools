@@ -38,7 +38,7 @@ object RoomModule {
 
     val databasePath = if (isExternalStorageWritable) {
       // Trying to locate database on external storage shared folder
-      if (au.hasExternalStorageWriteReadAccess()) {
+      if (au.hasExternalStorageReadWriteAccess()) {
         val externalStorage = Environment.getExternalStorageDirectory()
         log("Locating database in external storage shared folder")
 //      val downloadsDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -52,9 +52,9 @@ object RoomModule {
         val externalFilesDir = context.getExternalFilesDir("")
         if (externalFilesDir != null) {
           log("Locating database on app private external storage")
-          File(externalFilesDir.parent, "database").toString()
-          // Falling back to app private internal storage ~/data/data/com.conexentools/database
+          File(externalFilesDir.parent, "database/${Constants.DATABASE_NAME}").toString()
         } else {
+          // Falling back to app private internal storage ~/data/data/com.conexentools/database
           log("App External files directory couldn't be retrieved. Locating database on app private internal storage")
           Constants.DATABASE_NAME
         }

@@ -1,23 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     android:versionCode="1"
-    android:versionName="1.0"
-    >
-    <!--    android:versionCode="@string/iaVersionCode"-->
-    <!--    android:versionName="@string/iaVersionName"-->
-    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
+    android:versionName="@string/iaVersionName">
+
+    <!-- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     Do not edit android:versionCode because it is automatically set on build by
+     a custom gradle task, instead change its value through iaVersionCode property
+     of gradle.properties
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! -->
+
+    <!-- Neither of these two lines work, do you know why? Can you solve it? -->
+    <!-- android:versionCode="@string/iaVersionCode" -->
+    <!-- android:versionCode="@integer/iaVersionCode" -->
+
+    <uses-sdk
+        android:minSdkVersion="26"
+        android:targetSdkVersion="33" />
 
     <!--suppress AndroidDomInspection -->
     <instrumentation
-        android:targetPackage="com.conexentools"
-        android:name="androidx.test.runner.AndroidJUnitRunner">
-    </instrumentation>
+        android:name="androidx.test.runner.AndroidJUnitRunner"
+        android:targetPackage="com.conexentools" />
 
     <!--suppress AndroidDomInspection -->
     <application
-        android:label="Conexen Tools - Instrumentation App"
-        android:icon="@mipmap/ia_icon">
-    </application>
+        android:icon="@mipmap/ia_icon"
+        android:label="Conexen Tools - Instrumentation App" />
 
     <queries>
         <package android:name="com.whatsapp" />

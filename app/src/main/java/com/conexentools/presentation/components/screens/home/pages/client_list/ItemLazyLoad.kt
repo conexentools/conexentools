@@ -89,7 +89,7 @@ fun ErrorMessage(
 @Preview(apiLevel = 33)
 @Preview(apiLevel = 33, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun PreviewErrorMessage() {
+private fun PreviewErrorMessage() {
   PreviewComposable(fillMaxSize = false) {
     ErrorMessage(
       message = "Mensa de superbus brodium, tractare ventus!Sources, winds, and eternal individuals will always protect them. ",

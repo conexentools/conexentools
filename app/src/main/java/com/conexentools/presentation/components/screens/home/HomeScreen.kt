@@ -78,6 +78,7 @@ import com.conexentools.R
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
 import com.conexentools.core.util.getActivity
+import com.conexentools.core.util.log
 import com.conexentools.core.util.navigate
 import com.conexentools.core.util.textFilter
 import com.conexentools.core.util.truncate
@@ -504,7 +505,7 @@ private fun DrawHome(
 
               if (showAddClientButtonHelpDialog) {
                 ScrollableAlertDialog(
-                  text = "Presione el botón 'Añadir Cliente' [➕] para... hacer aparecer un unicornio, manténgalo presionado para añadir varios clientes a la vez"
+                  text = "Presione el botón 'Añadir Cliente' [➕] para eso mismo y manténgalo presionado para añadir varios clientes a la vez"
                 ) {
                   showAddClientButtonHelpDialog = false
                   clientListPageHelpDialogsShowed.value = true
@@ -557,8 +558,29 @@ private fun TopAppBarActions(
 ) {
 
   var dropDownMenuExpanded by remember { mutableStateOf(false) }
+  var showRebootAppDialogToLoadDatabaseFromPrimaryExternalStorage by remember { mutableStateOf(false) }
   val writeExternalStoragePermissionLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+      // If write permission is granted restart app to make Dagger Hilt create Database in primary external storage
+      if (au.isPermissionGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE))
+        showRebootAppDialogToLoadDatabaseFromPrimaryExternalStorage = true
+    }
+  val actionToGrantReadWritePermissionLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+      log("actionToGrantReadWritePermissionLauncher")
+      // If write permission is granted restart app to make Dagger Hilt create Database in primary external storage
+      if (au.hasExternalStorageReadWriteAccess())
+        showRebootAppDialogToLoadDatabaseFromPrimaryExternalStorage = true
+    }
+
+  if (showRebootAppDialogToLoadDatabaseFromPrimaryExternalStorage) {
+    ScrollableAlertDialog (
+      yesNoDialog = true,
+      onDismiss = { showRebootAppDialogToLoadDatabaseFromPrimaryExternalStorage = false },
+      text = "Reiniciar la aplicación ahora para cargar la base de datos desde la carpeta '${stringResource(R.string.app_name)}' en el almacenamiento interno?",
+      onConfirm = { au.restartApp() }
+    )
+  }
 
   Row(modifier = Modifier.animateContentSize()) {
     // Page Switcher Button
@@ -640,19 +662,29 @@ private fun TopAppBarActions(
           navController.navigate(Screen.About)
         }
       )
-      if (!au.hasExternalStorageWriteReadAccess()) {
+      if (!au.hasExternalStorageReadWriteAccess()) {
         val activityContext = LocalContext.current.getActivity()!!
         DropdownMenuItem(
-          text = { Text("Solicitar permiso para escribir en el almacenamiento externo") },
+          text = { Text("Solicitar permiso para escribir en el almacenamiento interno") },
           onClick = {
             dropDownMenuExpanded = false
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
-              au.openSettings(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+              val intent = au.openSettings(
+                settingsMenuWindow =  Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                flagActivityNewTask = false,
+                onlyReturnIntent = true
+              )
+              actionToGrantReadWritePermissionLauncher.launch(intent)
             } else if (activityContext.shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
               writeExternalStoragePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             } else {
               // User has selected Deny and don't ask again
-              au.openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+              val intent = au.openSettings(
+                settingsMenuWindow =  Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                flagActivityNewTask = false,
+                onlyReturnIntent = true
+              )
+              actionToGrantReadWritePermissionLauncher.launch(intent)
             }
           }
         )
@@ -686,7 +718,7 @@ fun HomeScreenPreview() {
       waContactImageUri = remember { mutableStateOf(null) },
       rechargesAvailabilityDateISOString = remember { mutableStateOf(null) },
       waContact = remember { mutableStateOf("Jeans MR") },
-      page = remember { mutableStateOf(HomeScreenPage.CLIENT_LIST) },
+      page = remember { mutableStateOf(HomeScreenPage.INSTRUMENTED_TEST) },
       au = AndroidUtilsImpl(context = context),
       clientPagingItems = clientPagingItems,
       onClientCardEdit = {},

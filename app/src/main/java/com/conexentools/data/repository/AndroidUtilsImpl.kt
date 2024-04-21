@@ -7,6 +7,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
 import android.content.Intent.FLAG_ACTIVITY_NO_HISTORY
 import android.content.pm.PackageManager
 import android.database.Cursor
@@ -126,7 +127,11 @@ class AndroidUtilsImpl @Inject constructor(
   override fun call(number: String) {
     try {
       val callIntent = Intent(Intent.ACTION_CALL, "tel:$number".toUri())
-      callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        .apply {
+          addFlags(FLAG_ACTIVITY_NEW_TASK)
+          addFlags(FLAG_ACTIVITY_NO_HISTORY)
+          addFlags(FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+        }
       context.startActivity(callIntent)
     } catch (ex: Exception) {
       toast("Unable to make the call to number: $number", vibrate = true)
@@ -192,7 +197,7 @@ class AndroidUtilsImpl @Inject constructor(
     }
   }
 
-  override fun hasExternalStorageWriteReadAccess(): Boolean {
+  override fun hasExternalStorageReadWriteAccess(): Boolean {
     return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager() ||
         Build.VERSION.SDK_INT < Build.VERSION_CODES.R &&
         isPermissionGranted(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) &&
@@ -200,26 +205,34 @@ class AndroidUtilsImpl @Inject constructor(
   }
 
   override fun composeEmail(recipientAddress: String, subject: String) {
-    val intent = Intent(Intent.ACTION_SENDTO)
-    intent.data = Uri.parse("mailto:$recipientAddress")
-    intent.putExtra(Intent.EXTRA_SUBJECT, subject)
-    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    val intent = Intent(Intent.ACTION_SENDTO).apply {
+      data = Uri.parse("mailto:$recipientAddress")
+      putExtra(Intent.EXTRA_SUBJECT, subject)
+      addFlags(FLAG_ACTIVITY_NEW_TASK)
+      addFlags(FLAG_ACTIVITY_NO_HISTORY)
+      addFlags(FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+    }
 
     if (intent.resolveActivity(context.packageManager) != null) {
       context.startActivity(intent)
     } else {
-      toast("Al parecer no tiene instalado ningun cliente de correo electrónico", vibrate = true)
+      toast("Al parecer no tiene instalado ningún cliente de correo electrónico", vibrate = true)
     }
   }
 
-  override fun openSettings(settingsMenuWindow: String, onlyReturnIntent: Boolean): Intent {
+  override fun openSettings(
+    settingsMenuWindow: String,
+    flagActivityNewTask: Boolean,
+    onlyReturnIntent: Boolean
+  ): Intent {
     val intent = Intent(
       settingsMenuWindow,
       "package:${BuildConfig.APPLICATION_ID}".toUri()
     ).apply {
-      addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       addFlags(FLAG_ACTIVITY_NO_HISTORY)
       addFlags(FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+      if (flagActivityNewTask)
+        addFlags(FLAG_ACTIVITY_NEW_TASK)
     }
 
     if (!onlyReturnIntent)
@@ -260,11 +273,18 @@ class AndroidUtilsImpl @Inject constructor(
     return true
   }
 
-  override fun openXiaomiOtherPermissionAppSettingsWindow(onlyReturnIntent: Boolean): Intent {
+  override fun openXiaomiOtherPermissionAppSettingsWindow(
+    flagActivityNewTask: Boolean,
+    onlyReturnIntent: Boolean
+    ): Intent {
     val intent = Intent("miui.intent.action.APP_PERM_EDITOR")
     intent.setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")
-    intent.putExtra("extra_pkgname", context.packageName)
-    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    intent.putExtra("extra_pkgname", context.packageName).apply {
+      addFlags(FLAG_ACTIVITY_NO_HISTORY)
+      addFlags(FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+      if (flagActivityNewTask)
+        addFlags(FLAG_ACTIVITY_NEW_TASK)
+    }
     if (!onlyReturnIntent)
       context.startActivity(intent)
     return intent

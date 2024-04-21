@@ -1,5 +1,6 @@
 package com.conexentools.core.app
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -27,6 +28,11 @@ object Constants {
     val Medium = 10.dp
     val Large = 15.dp
     val ExtraLarge = 20.dp
+  }
+
+  object Colors {
+    val WARNING = Color(0xFFBE9117)
+    val ERROR = Color(0xFF9E2927)
   }
 
   object PreferencesKey {
