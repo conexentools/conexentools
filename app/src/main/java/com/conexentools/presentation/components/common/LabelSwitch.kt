@@ -25,7 +25,7 @@ import com.conexentools.core.app.Constants
 @Composable
 fun LabelSwitch(
   label: String,
-  infoText: String? = null,
+  info: String? = null,
   checked: MutableState<Boolean>,
   onCheckedChange: ((Boolean) -> Unit)? = null,
 ) {
@@ -36,7 +36,7 @@ fun LabelSwitch(
 
   if (showInfoText) {
     ScrollableAlertDialog (
-      text = infoText!!,
+      text = info!!,
       onDismissRequest = { showInfoText = false },
       onConfirm = { showInfoText = false }
     )
@@ -60,7 +60,7 @@ fun LabelSwitch(
         text = label,
         style = MaterialTheme.typography.titleMedium
       )
-      if (!infoText.isNullOrEmpty()){
+      if (!info.isNullOrEmpty()){
         PrimaryIconButton(
           imageVector = Icons.Rounded.Info,
           modifier = Modifier

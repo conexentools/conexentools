@@ -1,9 +1,7 @@
 package com.conexentools
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.os.Bundle
-import android.provider.ContactsContract
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -11,10 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.conexentools.core.util.log
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.HomeScreenViewModel
 import com.conexentools.presentation.components.common.enums.AppTheme
@@ -23,7 +25,6 @@ import com.conexentools.presentation.navigation.SetUpNavGraph
 import com.conexentools.presentation.theme.ConexenToolsTheme
 import com.conexentools.presentation.theme.DarkTheme
 import com.conexentools.presentation.theme.LocalTheme
-import com.vmadalin.easypermissions.EasyPermissions
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -44,10 +45,16 @@ class MainActivity : ComponentActivity() {
 
       val hvm: HomeScreenViewModel = hiltViewModel()
 
-      val darkTheme = when (hvm.appTheme.value) {
-        AppTheme.MODE_AUTO -> DarkTheme(isSystemInDarkTheme())
-        AppTheme.MODE_DAY -> DarkTheme(false)
-        AppTheme.MODE_NIGHT -> DarkTheme(true)
+      val isSystemInDarkTheme = isSystemInDarkTheme()
+      val darkTheme by remember {
+        derivedStateOf {
+//          if(AppTheme.MODE_AUTO && )
+          when (hvm.appTheme.value) {
+            AppTheme.MODE_AUTO -> DarkTheme(isSystemInDarkTheme)
+            AppTheme.MODE_DAY -> DarkTheme(false)
+            AppTheme.MODE_NIGHT -> DarkTheme(true)
+          }
+        }
       }
 
       CompositionLocalProvider(LocalTheme provides darkTheme) {

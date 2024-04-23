@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -65,6 +66,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -72,8 +74,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import androidx.paging.PagingData
-import androidx.paging.compose.LazyPagingItems
-import androidx.paging.compose.collectAsLazyPagingItems
 import com.conexentools.R
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
@@ -99,8 +99,9 @@ import com.conexentools.presentation.components.screens.home.state.HomeScreenSta
 import com.conexentools.presentation.navigation.Screen
 import com.conexentools.presentation.theme.LocalTheme
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -113,7 +114,7 @@ fun HomeScreen(
   au: AndroidUtils,
 
   // InstrumentationTest Page
-  adbInstrumentationRunCommandGetter: () -> String,
+  adbCommandToRunInstrumentedTestGetter: () -> String,
   firstClientNumber: MutableState<String>,
   secondClientNumber: MutableState<String?>,
   firstClientRecharge: MutableState<String>,
@@ -132,14 +133,16 @@ fun HomeScreen(
 
   // ClientList Page
   isManager: MutableState<Boolean>,
-  clientPagingItems: LazyPagingItems<Client>,
+  clients: StateFlow<PagingData<Client>>,
   onClientCardEdit: (Client) -> Unit,
-  onClientCardRecharge: (Client) -> Unit,
-  onClientCardDelete: (Client) -> Unit,
+  onClientCardRecharge: (Client, () -> Unit) -> Unit,
+  onSubmitClientForDeletion: (Client) -> Unit,
+  onDeleteClient: (Client) -> Unit,
+  onClientRestoredFromDeletion: (Client) -> Unit,
   onClientCardSendMessage: (String, String?) -> Unit,
+  onClientCardCounterReset: (Client) -> Unit,
   onAddClient: () -> Unit,
   onBatchAddClient: () -> Unit,
-  onClientCardRechargeCounterReset: (Client) -> Unit,
 ) {
 
   when (homeScreenState.state) {
@@ -161,7 +164,7 @@ fun HomeScreen(
         au = au,
         clientListPageHelpDialogsShowed = clientListPageHelpDialogShowed,
 
-        adbInstrumentationRunCommandGetter = adbInstrumentationRunCommandGetter,
+        adbInstrumentationRunCommandGetter = adbCommandToRunInstrumentedTestGetter,
         firstClientNumber = firstClientNumber,
         secondClientNumber = secondClientNumber,
         firstClientRecharge = firstClientRecharge,
@@ -179,14 +182,16 @@ fun HomeScreen(
         instrumentationAppInstalledVersion = instrumentationAppInstalledVersion,
 
         isManager = isManager,
-        clientPagingItems = clientPagingItems,
+        clients = clients,
         onClientCardEdit = onClientCardEdit,
         onClientCardRecharge = onClientCardRecharge,
-        onClientCardDelete = onClientCardDelete,
+        onSubmitClientForDeletion = onSubmitClientForDeletion,
+        onDeleteClient = onDeleteClient,
+        onClientRestoredFromDeletion = onClientRestoredFromDeletion,
         onClientCardSendMessage = onClientCardSendMessage,
         onAddClient = onAddClient,
+        onClientCardCounterReset = onClientCardCounterReset,
         onBatchAddClient = onBatchAddClient,
-        onClientCardRechargeCounterReset = onClientCardRechargeCounterReset
       )
     }
 
@@ -241,14 +246,16 @@ private fun DrawHome(
 
   // ClientList Page
   isManager: MutableState<Boolean>,
-  clientPagingItems: LazyPagingItems<Client>,
+  clients: StateFlow<PagingData<Client>>,
   onClientCardEdit: (Client) -> Unit,
-  onClientCardRecharge: (Client) -> Unit,
+  onClientCardRecharge: (Client, () -> Unit) -> Unit,
   onClientCardSendMessage: (String, String?) -> Unit,
-  onClientCardDelete: (Client) -> Unit,
+  onSubmitClientForDeletion: (Client) -> Unit,
+  onDeleteClient: (Client) -> Unit,
+  onClientRestoredFromDeletion: (Client) -> Unit,
+  onClientCardCounterReset: (Client) -> Unit,
   onAddClient: () -> Unit,
   onBatchAddClient: () -> Unit,
-  onClientCardRechargeCounterReset: (Client) -> Unit,
 ) {
 
   val showAdbRunCommandDialog = remember { mutableStateOf(false) }
@@ -440,7 +447,8 @@ private fun DrawHome(
                     mask = "___0___2___9",
                     darkTheme = dark,
                   )
-                }
+                },
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
               )
             }
 
@@ -513,13 +521,14 @@ private fun DrawHome(
               }
 
               ClientsListPage(
-                clientPagingItems = clientPagingItems,
+                clients = clients,
                 searchBarText = searchBarText.value,
                 onClientEdit = onClientCardEdit,
                 onClientRecharge = onClientCardRecharge,
                 onClientSendMessage = onClientCardSendMessage,
                 onClientDelete = { client ->
                   coroutineScope.launch {
+                    onSubmitClientForDeletion(client)
                     val snackbarResult = snackbarHostState.showSnackbar(
                       message = "${client.name.truncate(20)} eliminado",
                       actionLabel = "Deshacer",
@@ -527,16 +536,15 @@ private fun DrawHome(
                     )
                     when (snackbarResult) {
                       SnackbarResult.Dismissed -> {
-                        onClientCardDelete(client)
+                        onDeleteClient(client)
                       }
-
                       else -> {
-                        client.visible.value = true
+                        onClientRestoredFromDeletion(client)
                       }
                     }
                   }
                 },
-                onClientRechargeCounterReset = onClientCardRechargeCounterReset,
+                onClientCardCounterReset = onClientCardCounterReset,
                 au = au
               )
             }
@@ -699,13 +707,11 @@ private fun TopAppBarActions(
 fun HomeScreenPreview() {
   val context = LocalContext.current
   PreviewComposable {
-    val clientPagingItems = flowOf(PagingData.from(clientsForTesting)).collectAsLazyPagingItems()
-
     HomeScreen(
       homeScreenState = HomeScreenState(HomeScreenLoadingState.Success),
       navController = rememberNavController(),
       clientListPageHelpDialogShowed = remember { mutableStateOf(true) },
-      adbInstrumentationRunCommandGetter = { "" },
+      adbCommandToRunInstrumentedTestGetter = { "" },
       firstClientNumber = remember { mutableStateOf("55797140") },
       secondClientNumber = remember { mutableStateOf("58469745") },
       firstClientRecharge = remember { mutableStateOf("1234") },
@@ -718,20 +724,22 @@ fun HomeScreenPreview() {
       waContactImageUri = remember { mutableStateOf(null) },
       rechargesAvailabilityDateISOString = remember { mutableStateOf(null) },
       waContact = remember { mutableStateOf("Jeans MR") },
-      page = remember { mutableStateOf(HomeScreenPage.INSTRUMENTED_TEST) },
+      page = remember { mutableStateOf(HomeScreenPage.CLIENT_LIST) },
       au = AndroidUtilsImpl(context = context),
-      clientPagingItems = clientPagingItems,
+      clients = MutableStateFlow(PagingData.from(clientsForTesting)),
       onClientCardEdit = {},
-      onClientCardRecharge = {},
-      onClientCardDelete = {},
+      onClientCardRecharge = { _, _ ->},
+      onSubmitClientForDeletion = {},
+      onDeleteClient = {},
+      onClientRestoredFromDeletion = {},
       onClientCardSendMessage = { _, _ -> },
-      onClientCardRechargeCounterReset = {},
+      onClientCardCounterReset = {},
       onAddClient = {},
       onBatchAddClient = {},
       whatsAppInstalledVersion = Pair(23, "123.124.51"),
       transfermovilInstalledVersion = Pair(23, "123.124.51"),
       instrumentationAppInstalledVersion = Pair(23, "123.124.51"),
-      onRunInstrumentedTest = {}
+      onRunInstrumentedTest = {},
     )
   }
 }

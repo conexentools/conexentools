@@ -36,6 +36,7 @@ object Constants {
   }
 
   object PreferencesKey {
+    val JOIN_MESSAGES = booleanPreferencesKey("join_messages")
     val PIN = stringPreferencesKey("pin")
     val SAVE_PIN = booleanPreferencesKey("save_pin")
     val APP_THEME = intPreferencesKey("app_theme")

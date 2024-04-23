@@ -77,7 +77,7 @@ fun CreditCardTextField(
     value = value,
 //    placeholder = { Text("XXXX-XXXX-XXXX-XXXX") },
     onValueChange = {
-      var v = it.cleanNumberString()
+      var v = it.sanitizeNumberString()
       if (v.isDigitsOnly()) {
         if (v.length > digits)
           v = v.take(digits)

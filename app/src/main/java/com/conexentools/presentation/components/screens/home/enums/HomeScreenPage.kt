@@ -4,7 +4,8 @@ enum class HomeScreenPage {
   INSTRUMENTED_TEST,
   CLIENT_LIST;
 
-  fun isInstrumentedTestPage() = this.ordinal == INSTRUMENTED_TEST.ordinal
+  fun isInstrumentedTestPage() = this == INSTRUMENTED_TEST
+  fun isClientListPage() = this == CLIENT_LIST
 
   companion object {
     fun fromOrdinal(ordinal: Int?): HomeScreenPage {

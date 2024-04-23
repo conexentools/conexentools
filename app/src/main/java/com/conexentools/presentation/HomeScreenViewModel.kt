@@ -18,12 +18,14 @@ import com.conexentools.core.util.logError
 import com.conexentools.data.local.model.Client
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.domain.repository.UserPreferences
+import com.conexentools.domain.use_cases.room.CleanDatabaseUseCase
 import com.conexentools.domain.use_cases.room.CountClientMatchesUseCase
 import com.conexentools.domain.use_cases.room.DeleteClientUseCase
 import com.conexentools.domain.use_cases.room.GetAllClientsUseCase
 import com.conexentools.domain.use_cases.room.InsertClientUseCase
 import com.conexentools.domain.use_cases.room.UpdateClientUseCase
 import com.conexentools.presentation.components.common.enums.AppTheme
+import com.conexentools.presentation.components.common.enums.InstrumentedTest
 import com.conexentools.presentation.components.screens.home.enums.HomeScreenPage
 import com.conexentools.presentation.components.screens.home.state.HomeScreenLoadingState
 import com.conexentools.presentation.components.screens.home.state.HomeScreenState
@@ -48,6 +50,7 @@ class HomeScreenViewModel @Inject constructor(
   private val insertClientUseCase: InsertClientUseCase,
   private val updateClientUseCase: UpdateClientUseCase,
   private val countClientMatchesUseCase: CountClientMatchesUseCase,
+  private val cleanDatabaseUseCase: CleanDatabaseUseCase,
   private val au: AndroidUtils
 ) : ViewModel(), DefaultLifecycleObserver {
 
@@ -79,15 +82,15 @@ class HomeScreenViewModel @Inject constructor(
   var appLaunchCount = mutableIntStateOf(0)
   var clientListPageHelpDialogsShowed = mutableStateOf(false)
   var savePin = mutableStateOf(false)
+  var joinMessages = mutableStateOf(true)
 
   val whatsAppInstalledVersion = au.getPackageVersion(BuildConfig.WHATSAPP_PACKAGE_NAME)
   val transfermovilInstalledVersion =
     au.getPackageVersion(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME)
   val instrumentationAppInstalledVersion = au.getPackageVersion(BuildConfig.TEST_NAMESPACE)
 
-  private val _clients: MutableStateFlow<PagingData<Client>> =
-    MutableStateFlow(value = PagingData.empty())
-  val clients: MutableStateFlow<PagingData<Client>> get() = _clients
+  private val _clients = MutableStateFlow(value = PagingData.empty<Client>())
+  val clients: StateFlow<PagingData<Client>> get() = _clients
 
   init {
     log("Home View Model initialization")
@@ -97,6 +100,7 @@ class HomeScreenViewModel @Inject constructor(
   private fun initialize() {
 
     viewModelScope.launch {
+      cleanDatabaseUseCase()
       val loadUserPreferencesDeferredJob = async { loadUserPreferences() }
       loadUserPreferencesDeferredJob.await()
     }.invokeOnCompletion {
@@ -115,7 +119,7 @@ class HomeScreenViewModel @Inject constructor(
     getClients()
   }.invokeOnCompletion {
     if (it != null) {
-      logError("Fail at initialization. Cause ${it.localizedMessage}")
+      logError("Fail at initial clients load. Cause ${it.localizedMessage}")
       _state.value = HomeScreenState(HomeScreenLoadingState.Error(it.localizedMessage))
     } else {
       _state.value = HomeScreenState(HomeScreenLoadingState.Success)
@@ -138,10 +142,13 @@ class HomeScreenViewModel @Inject constructor(
       alwaysWaMessageByIntent.value = up.alwaysWaMessageByIntent.first() ?: false
       appLaunchCount.intValue = (up.appLaunchCount.first() ?: 0) + 1
       clientListPageHelpDialogsShowed.value = up.clientListPageHelpDialogsShowed.first() ?: false
-      initialHomeScreenPage.value = HomeScreenPage.fromOrdinal(up.initialHomeScreenPage.first())
+      joinMessages.value = up.joinMessages.first() ?: true
       savePin.value = up.savePin.first() ?: false
       if (savePin.value)
         pin.value = up.pin.first() ?: ""
+
+      // Keep initialHomeScreenPage as latest preference to load
+      initialHomeScreenPage.value = HomeScreenPage.fromOrdinal(up.initialHomeScreenPage.first())
       log("Preferences loaded")
     } catch (exc: Exception) {
       au.toast("Error al cargar las preferencias de usuario")
@@ -165,36 +172,38 @@ class HomeScreenViewModel @Inject constructor(
     up.saveAlwaysWaMessageByIntent(alwaysWaMessageByIntent.value)
     up.saveAppLaunchCount(appLaunchCount.intValue)
     up.saveClientListPageHelpDialogsShowed(clientListPageHelpDialogsShowed.value)
+    up.saveJoinMessages(joinMessages.value)
     up.saveSavePin(savePin.value)
     up.savePin(if (savePin.value) pin.value else null)
   }
 
   private suspend fun getClients() =
     viewModelScope.launch(context = coroutinesDispatchers.unconfined) {
+      log("getting clients")
       getAllClientsUseCase()
         .distinctUntilChanged()
         .cachedIn(viewModelScope)
         .collect {
           _clients.value = it
+          log("Clients updated")
         }
     }
 
   fun updateClient(client: Client) = viewModelScope.launch(coroutinesDispatchers.unconfined) {
+    log("Updating client: $client")
     updateClientUseCase(client)
-    getClients()
   }
 
   fun deleteClient(clientId: Long) = viewModelScope.launch(coroutinesDispatchers.unconfined) {
     deleteClientUseCase(clientId)
-    getClients()
   }
 
   fun insertClient(client: Client) = viewModelScope.launch(coroutinesDispatchers.unconfined) {
     insertClientUseCase(client)
-    getClients()
   }
 
-  fun rechargeClient(client: Client) {
+  fun rechargeClient(client: Client, onClientUpdated: () -> Unit) {
+    log("Recharging client: $client")
     val areMainConditionsToRunInstrumentedTestMet = areMainConditionsToRunInstrumentedTestMet()
 
     if (transfermovilInstalledVersion == null)
@@ -202,7 +211,11 @@ class HomeScreenViewModel @Inject constructor(
 
     client.latestRechargeDateISOString = Instant.now().plus(15, ChronoUnit.MINUTES).toString()
     client.rechargesMade = (client.rechargesMade ?: 0) + 1
-    updateClient(client)
+
+    updateClient(client).invokeOnCompletion {
+      if (it == null)
+        onClientUpdated()
+    }
 
     if (areMainConditionsToRunInstrumentedTestMet) {
       // TODO Launch recharge instrumented test
@@ -213,7 +226,7 @@ class HomeScreenViewModel @Inject constructor(
   }
 
   fun sendWAMessage(number: String, message: String?) {
-    log("Sending message to number: $number, Message: $message")
+    log("Sending WhatsApp message to :$number, Message: $message")
     log("alwaysWaMessageByIntent: ${alwaysWaMessageByIntent.value}")
     if (whatsAppInstalledVersion == null) {
       au.toast(
@@ -226,17 +239,10 @@ class HomeScreenViewModel @Inject constructor(
     if (alwaysWaMessageByIntent.value || !RootUtil.isDeviceRooted) {
       au.sendWaMessage(number, message)
     } else {
-      if (!RootUtil.isDeviceRooted) {
-        au.toast(
-          "Acceso root requerido para poder enviar el mensaje a través de WhatsApp",
-          vibrate = true
-        )
-        au.toast("Active la opción en configuraciones 'Siempre API WA Message' para escribir el mensaje")
-        au.toast("en la entrada de texto del chat. Esta opción no requiere acceso root")
-        au.toast("pero el mensaje deberá ser enviado manualmente y es necesario tener una conexión de Internet activa")
-      }
-
-      // TODO send message through instrumented test
+      var args = "-e waContact $number"
+      if (message != null)
+        args += " -e message ${message.replace(" ", "\\ ")}"
+      au.executeCommand(getTestCommand(InstrumentedTest.SendWhatsAppMessage, args), su = true)
     }
   }
 
@@ -263,23 +269,56 @@ class HomeScreenViewModel @Inject constructor(
     }
   }
 
-  fun getAdbInstrumentationRunCommand(): String {
+  private fun getTestCommand(
+    test: InstrumentedTest,
+    args: String
+  ): String {
+    return StringBuilder().apply {
+      append("am instrument -w -e class ${BuildConfig.APPLICATION_ID}.InstrumentedTest#$test")
+      append(" ${args.trim()} ${BuildConfig.TEST_NAMESPACE}/${BuildConfig.TEST_INSTRUMENTATION_RUNNER} --no-window-animation --no-hidden-api-checks")
+    }.toString()
+  }
 
-    var command =
-      "adb shell am instrument -w -e class ${BuildConfig.APPLICATION_ID}.InstrumentedTest#MakeMobileRecharge"
-    if (!fetchDataFromWA.value) {
-      command += " -e recargas ${firstClientNumber.value},${firstClientRecharge.value}"
-      if (secondClientNumber.value != null)
-        command += "@${secondClientNumber.value},${secondClientRecharge.value}"
-    } else
-      command += " -e contactoWA '${waContact.value}'"
-    if (cardLast4Digits.value.isNotEmpty())
-      command += " -e digitosTarjeta ${cardLast4Digits.value}"
-    var bank_ = bank.value
-    if (bank_ == "Metropolitano")
-      bank_ = "metro"
-    command += " -e pin ${pin.value} -e banco ${bank_.lowercase()} ${BuildConfig.TEST_NAMESPACE}/${BuildConfig.TEST_INSTRUMENTATION_RUNNER} --no-window-animation --no-hidden-api-checks"
-    return command
+//  private fun runTest(
+//    command: String,
+//  ) {
+//    au.executeCommand(command, su = true)
+//  }
+
+//  private fun getCommandToRunTransferCashInstrumentedTest(): String {
+//return ""
+//  }
+
+  fun getCommandToRunRechargeMobileInstrumentedTest(): String {
+
+    val arguments = StringBuilder().apply {
+      // Recharges
+      if (!fetchDataFromWA.value) {
+        append("-e recharges ${firstClientNumber.value},${firstClientRecharge.value}")
+        if (secondClientNumber.value != null)
+          append("@${secondClientNumber.value},${secondClientRecharge.value}")
+      } else
+      // WA Contact
+        append(" -e waContact ${waContact.value.replace(" ", "\\ ")}")
+
+      if (!joinMessages.value)
+        append(" -e joinMessages false")
+
+      // Card last 4 digits
+      if (cardLast4Digits.value.isNotEmpty())
+        append(" -e cardLast4Digits ${cardLast4Digits.value}")
+
+      // Bank
+      var bank_ = bank.value
+      if (bank_ == "Metropolitano")
+        bank_ = "metro"
+      append(" -e pin ${pin.value} -e bank ${bank_.lowercase()}")
+    }.toString()
+
+    return getTestCommand(
+      test = InstrumentedTest.RechargeMobile,
+      args = arguments
+    )
   }
 
   private fun updateRechargeAvailability() {
@@ -291,7 +330,11 @@ class HomeScreenViewModel @Inject constructor(
     }
   }
 
-  fun runInstrumentedTest() {
+  fun runTransferCashInstrumentedTest() {
+    TODO()
+  }
+
+  fun runRechargeMobileInstrumentedTest() {
 
     if (!areMainConditionsToRunInstrumentedTestMet())
       return
@@ -314,7 +357,7 @@ class HomeScreenViewModel @Inject constructor(
 
     if (errorMessage.isEmpty()) {
       log("Running instrumented test")
-      au.executeCommand(getAdbInstrumentationRunCommand().removePrefix("adb shell "), true)
+      au.executeCommand(getCommandToRunRechargeMobileInstrumentedTest(), su = true)
       updateRechargeAvailability()
     } else
       au.toast(errorMessage, vibrate = true)

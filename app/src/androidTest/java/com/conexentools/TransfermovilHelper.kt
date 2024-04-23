@@ -8,17 +8,19 @@ import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import com.conexentools.DeviceManager.Companion.LONG_TIMEOUT
 import com.conexentools.DeviceManager.Companion.MEDIUM_TIMEOUT
-import com.conexentools.DeviceManager.Companion.SHORT_TIMEOUT
 import com.conexentools.DeviceManager.Companion.getPatternForResourceID
 import com.conexentools.InstrumentedTest.Companion.SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE
 import com.conexentools.Utils.Companion.log
 
-class TransfermovilHelper(val device: UiDevice) {
-
-  val installedVersion = Utils.getPackageVersion(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME)
-  val testedVersion = Pair(BuildConfig.TESTED_TM_VERSION_CODE.toLong(), BuildConfig.TESTED_TM_VERSION_NAME)
-
-  val dm: DeviceManager = DeviceManager(device)
+class TransfermovilHelper(
+  device: UiDevice
+) : TargetAppHelper(
+  device = device,
+  name = "Transfermóvil",
+  packageName = BuildConfig.TRANSFERMOVIL_PACKAGE_NAME,
+  testedVersionCode = BuildConfig.TESTED_TM_VERSION_CODE,
+  testedVersionName = BuildConfig.TESTED_TM_VERSION_NAME,
+) {
 
   fun accept(){
     dm.click("btn_aceptar")
@@ -49,7 +51,7 @@ class TransfermovilHelper(val device: UiDevice) {
   }
 
   fun openLateralPanel(){
-    dm.click(By.clazz(ImageButton::class.java).descContains("Transfermóvil"), LONG_TIMEOUT)
+    dm.click(By.clazz(ImageButton::class.java).descContains(name), LONG_TIMEOUT)
   }
 
   fun bypassStartUpDialogs() {
@@ -72,8 +74,6 @@ class TransfermovilHelper(val device: UiDevice) {
       log("Welcome message not present")
   }
 
-  fun launch(clearOutPreviousInstances: Boolean = true) = dm.launchPackage(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME, clearOutPreviousInstances = clearOutPreviousInstances)
-
   fun authenticate(pin: String): Boolean {
     selectBankTab("Sesión")
     dm.click(null, "Autenticarse")
@@ -91,7 +91,7 @@ class TransfermovilHelper(val device: UiDevice) {
       currentMessage = getMessages().entries.last()
     } while (currentMessage == lastMessage && ++count < SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE)
 
-    return count < SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE && currentMessage.value.contains("Usted se ha autenticado en la plataforma de pagos moviles")
+    return count < SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE && currentMessage.value.contains("Usted se ha autenticado")
   }
 
   fun getMessages(): Map<Int, String>{

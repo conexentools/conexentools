@@ -50,4 +50,6 @@ class ClientRepositoryImpl @Inject constructor(
       rechargesMade = client.rechargesMade,
     )
   }
+
+  override suspend fun cleanDatabase() = clientDao.cleanDatabase()
 }

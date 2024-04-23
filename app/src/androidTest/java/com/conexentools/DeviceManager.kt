@@ -51,10 +51,10 @@ class DeviceManager(private val device: UiDevice) {
     val element = waitForObject(selector, timeout)!!
     element.click()
 //    click(selector, timeout)
-    var heightDistanceToChoiceCenter = element.visibleBounds.height() * choice
+    var distanceToChoiceCenter = element.visibleBounds.height() * choice
     if (!isMenuBelow)
-      heightDistanceToChoiceCenter *= -1
-    val point = Point(element.visibleCenter.x, element.visibleCenter.y + heightDistanceToChoiceCenter)
+      distanceToChoiceCenter *= -1
+    val point = Point(element.visibleCenter.x, element.visibleCenter.y + distanceToChoiceCenter)
     Thread.sleep(700)
     device.click(point.x, point.y)
   }
@@ -73,6 +73,7 @@ class DeviceManager(private val device: UiDevice) {
     if (clearOutPreviousInstances)
       intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
     context.startActivity(intent)
+    device.waitForIdle()
     device.wait(Until.hasObject(By.pkg(packageName).depth(0)), timeout.toLong())
   }
 

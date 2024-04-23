@@ -28,17 +28,16 @@ import androidx.compose.ui.unit.dp
 import androidx.core.text.isDigitsOnly
 import com.conexentools.core.util.PreviewComposable
 import com.conexentools.core.util.cubanMobileNumberFilter
-import com.conexentools.core.util.log
 import com.conexentools.core.util.moveFocusOnTabPressed
 import com.conexentools.presentation.theme.LocalTheme
 
-fun String.cleanNumberString(): String = this
+fun String.sanitizeNumberString(): String = this
   .replace(" ", "")
   .replace("-", "")
   .removePrefix("+")
 
-fun String.cleanCubanMobileNumber(): String {
-  var number = this.cleanNumberString()
+fun String.sanitizeCubanMobileNumber(): String {
+  var number = this.sanitizeNumberString()
   if (number.isDigitsOnly() && number.length == 10)
     number = number.removePrefix("53")
   return number
@@ -62,7 +61,7 @@ fun CubanPhoneNumberTextField(
   var isInvalidNumber by remember { mutableStateOf(false) }
   var supportingText: @Composable (() -> Unit)? by remember { mutableStateOf(null) }
   val _onValueChange: (String) -> Unit = {
-    val v = it.cleanCubanMobileNumber()
+    val v = it.sanitizeCubanMobileNumber()
     if (v.isDigitsOnly() && v.length <= 8) {
       onValueChange(v)
     }

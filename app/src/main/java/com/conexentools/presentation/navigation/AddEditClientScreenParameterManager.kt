@@ -1,6 +1,5 @@
 package com.conexentools.presentation.navigation
 
-import android.widget.Toast
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import com.conexentools.core.util.log
@@ -34,10 +33,21 @@ class AddEditClientScreenParameterManager {
     }
 
     val updateNextClientToProcessFromContactPicker = {
-      if (indexOfNextClientToAddFromContactPickerSelectedContacts < contactPickerSelectedContacts.count())
-        (client ?: mutableStateOf(Client())).value =
+      if (indexOfNextClientToAddFromContactPickerSelectedContacts < contactPickerSelectedContacts.count()) {
+        val nextClient =
           contactPickerSelectedContacts[indexOfNextClientToAddFromContactPickerSelectedContacts++].toClient()
-      else {
+        if (nextClient.phoneNumber != null && nextClient.phoneNumber!!.length != 8) {
+          au.toast(
+            "El número del contacto '${nextClient.name}' parece no ser un número cubano",
+            vibrate = true
+          )
+          nextClient.phoneNumber = ""
+        }
+        if (client == null)
+          client = mutableStateOf(nextClient)
+        else
+          client!!.value = nextClient
+      } else {
         contactPickerSelectedContacts = listOf()
         indexOfNextClientToAddFromContactPickerSelectedContacts = 0
         navigateToHome()

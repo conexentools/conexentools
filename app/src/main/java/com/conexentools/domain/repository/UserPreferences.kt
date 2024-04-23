@@ -23,6 +23,7 @@ interface UserPreferences {
   suspend fun saveClientListPageHelpDialogsShowed(value: Boolean?)
   suspend fun saveSavePin(value: Boolean?)
   suspend fun savePin(value: String?)
+  suspend fun saveJoinMessages(value: Boolean?)
 
   val bank: Flow<String?>
   val waContact: Flow<String?>
@@ -40,4 +41,5 @@ interface UserPreferences {
   val clientListPageHelpDialogsShowed: Flow<Boolean?>
   val savePin: Flow<Boolean?>
   val pin: Flow<String?>
+  val joinMessages: Flow<Boolean?>
 }

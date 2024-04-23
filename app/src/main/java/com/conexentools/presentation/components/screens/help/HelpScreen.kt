@@ -8,7 +8,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.conexentools.R
 import com.conexentools.core.util.PreviewComposable
 import com.conexentools.presentation.components.common.ScreenSurface
 
@@ -22,7 +24,8 @@ fun HelpScreen(
     lazyColumnModifier = Modifier.fillMaxHeight(),
     onNavigateBack = onNavigateBack
   ) {
-    Text(text = "Aquí se supone que iba algún material explicando minuciosamente el funcionamiento de cada parte de la aplicación pero me dio mucho pereza la verdad ponerme a hacer todo eso, cosas que pasan")
+    Text(text = stringResource(R.string.help_screen_text)
+    )
   }
 }
 

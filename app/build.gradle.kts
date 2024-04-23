@@ -91,12 +91,17 @@ android {
     task("fixAndroidTestManifestVersionCode") {
       group = "other"
       doLast {
-        var manifestContent = File(androidTestManifestFile).readText(Charsets.UTF_8)
-        manifestContent = manifestContent.replace(androidTestVersionCodeRE, "android:versionCode=\"$iaVersionCode\"")
-        File(androidTestManifestFile).writeText(manifestContent, Charsets.UTF_8)
-        if (File(androidTestManifestFile).readText(Charsets.UTF_8) != manifestContent)
-          throw Exception("versionCode attribute of androidTest/AndroidManifest.xml was not set to $iaVersionCode")
-        println("versionCode attribute of androidTest/AndroidManifest.xml set to $iaVersionCode")
+        val mf = File(androidTestManifestFile)
+        var manifestContent = mf.readText(Charsets.UTF_8)
+        val match = androidTestVersionCodeRE.find(manifestContent)!!
+        val vc = match.groups["vc"]!!.value
+        if (vc != iaVersionCode) {
+          manifestContent = manifestContent.replace(androidTestVersionCodeRE, "android:versionCode=\"$iaVersionCode\"")
+          mf.writeText(manifestContent, Charsets.UTF_8)
+          if (mf.readText(Charsets.UTF_8) != manifestContent)
+            throw Exception("versionCode attribute of androidTest/AndroidManifest.xml was not set to $iaVersionCode")
+          println("versionCode attribute of androidTest/AndroidManifest.xml set to $iaVersionCode")
+        }
       }
     }
     tasks.named("preBuild") { finalizedBy("fixAndroidTestManifestVersionCode") }
@@ -309,4 +314,4 @@ private fun String.toScreamingSnakeCase(): String {
 }
 
 private val androidTestManifestFile = "app/src/androidTest/AndroidManifest.xml"
-private val androidTestVersionCodeRE = Regex("android:versionCode=\"\\d+\"")
+private val androidTestVersionCodeRE = Regex("android:versionCode=\"(?<vc>\\d+)\"")

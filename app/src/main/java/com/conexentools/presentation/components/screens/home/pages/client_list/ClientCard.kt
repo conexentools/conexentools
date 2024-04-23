@@ -23,18 +23,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.conexentools.MainActivity
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
 import com.conexentools.data.local.model.Client
@@ -43,7 +42,7 @@ import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.components.common.Contact
 import com.conexentools.presentation.components.common.RadialProgressTimeIndicator
 import com.conexentools.presentation.components.common.ScrollableAlertDialog
-import com.conexentools.presentation.components.common.cleanNumberString
+import com.conexentools.presentation.components.common.sanitizeNumberString
 import me.saket.swipe.SwipeAction
 import me.saket.swipe.SwipeableActionsBox
 
@@ -52,13 +51,15 @@ import me.saket.swipe.SwipeableActionsBox
 fun ClientCard(
   client: Client,
   onEdit: (Client) -> Unit,
-  onRecharge: (Client) -> Unit,
+  onRecharge: (Client, () -> Unit) -> Unit,
   onSendMessage: (String, String?) -> Unit,
   onDelete: (Client) -> Unit,
-  onClientRechargeCounterReset: (Client) -> Unit,
+  onClientCardCounterReset: (Client) -> Unit,
   showDivider: Boolean = true,
   au: AndroidUtils
 ) {
+
+  var counterToForceRecomposition by remember { mutableIntStateOf(0) }
 
   // Actions
   val edit = SwipeAction(icon = rememberVectorPainter(Icons.TwoTone.Edit),
@@ -71,20 +72,28 @@ fun ClientCard(
   val recharge = SwipeAction(icon = rememberVectorPainter(Icons.TwoTone.AttachMoney),
     background = Color.Yellow,
     onSwipe = {
-      onRecharge(client)
+      onRecharge(client) { counterToForceRecomposition++ }
     }
   )
 
   val sendMessage = SwipeAction(icon = rememberVectorPainter(Icons.AutoMirrored.TwoTone.Message),
     background = Color.Magenta,
     onSwipe = {
-      if (client.phoneNumber.isNullOrEmpty()) {
+      val errorMessage = if (client.phoneNumber.isNullOrEmpty()) {
+        "Adjunte un número de teléfono a este cliente para poder enviarle un mensaje por WhatsApp"
+      } else if (client.quickMessage.isNullOrEmpty()) {
+        "Agregue un mensaje rápido para este cliente"
+      } else {
+        ""
+      }
+
+      if (errorMessage.isEmpty()) {
+        onSendMessage(client.phoneNumber!!.sanitizeNumberString(), client.quickMessage)
+      } else {
         au.toast(
-          "Adjunte un número de teléfono a este cliente para poder enviarle un mensaje por WA",
+          errorMessage,
           vibrate = true
         )
-      } else {
-        onSendMessage(client.phoneNumber!!.cleanNumberString(), client.quickMessage)
       }
     }
   )
@@ -103,12 +112,12 @@ fun ClientCard(
     }
   )
 
+
   SwipeableActionsBox(
     startActions = listOf(edit, recharge, sendMessage),
     endActions = listOf(call, delete),
     modifier = Modifier.background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.02f))
   ) {
-
     Contact(
       name = client.name,
       subtitle = client.cardNumber?.run {
@@ -128,28 +137,27 @@ fun ClientCard(
 
       var showResetRechargeTimerDialog by remember { mutableStateOf(false) }
 
-      val remainingTimeForNextRechargeToBeAvailable =
-        client.getRemainingTimeForNextRechargeToBeAvailable()
-
       // Recharge Availability Remaining Time Indicator
-      key(remainingTimeForNextRechargeToBeAvailable) {
-        if (remainingTimeForNextRechargeToBeAvailable != null) {
-          Surface(modifier = Modifier.size(55.dp)) {
-            RadialProgressTimeIndicator(
-              value = remainingTimeForNextRechargeToBeAvailable.seconds.toFloat(),
-              maxValue = 60 * 60 * 24f, //24h
-              timeNumericTextRepresentation = remainingTimeForNextRechargeToBeAvailable.numericRepresentationPart,
-              timeUnit = remainingTimeForNextRechargeToBeAvailable.unit,
-              strokeWidthRatio = 0.3f,
-              modifier = Modifier
-                .clip(CircleShape)
-                .combinedClickable(
-                  onClick = { },
-                  onLongClick = {
-                    showResetRechargeTimerDialog = true
-                  },
-                )
-            )
+      with(client.getRemainingTimeForNextRechargeToBeAvailable()) {
+        key(this, counterToForceRecomposition) {
+          if (this != null) {
+            Surface(modifier = Modifier.size(55.dp)) {
+              RadialProgressTimeIndicator(
+                value = this.seconds.toFloat(),
+                maxValue = 60 * 60 * 24f, //24h
+                timeNumericTextRepresentation = this.numericRepresentationPart,
+                timeUnit = this.unit,
+                strokeWidthRatio = 0.3f,
+                modifier = Modifier
+                  .clip(CircleShape)
+                  .combinedClickable(
+                    onClick = { },
+                    onLongClick = {
+                      showResetRechargeTimerDialog = true
+                    },
+                  )
+              )
+            }
           }
         }
       }
@@ -162,7 +170,7 @@ fun ClientCard(
           onConfirm = {
             client.latestRechargeDateISOString = null
             showResetRechargeTimerDialog = false
-            onClientRechargeCounterReset(client)
+            onClientCardCounterReset(client)
           },
           onDismiss = { showResetRechargeTimerDialog = false },
           onDismissRequest = { showResetRechargeTimerDialog = false }
@@ -170,12 +178,17 @@ fun ClientCard(
       }
     }
 
-    Text(
-      text = (client.rechargesMade ?: 0).toString(),
-      color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f),
-      style = MaterialTheme.typography.labelMedium,
-      modifier = Modifier.padding(Constants.Dimens.MegaSmall)
-    )
+
+    with(client.rechargesMade) {
+      key(this, counterToForceRecomposition) {
+        Text(
+          text = (this ?: 0).toString(),
+          color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f),
+          style = MaterialTheme.typography.labelMedium,
+          modifier = Modifier.padding(Constants.Dimens.MegaSmall)
+        )
+      }
+    }
   }
 }
 
@@ -190,10 +203,11 @@ private fun PreviewClientCard() {
           client = it,
           onEdit = {},
           onSendMessage = { _, _ -> },
-          onRecharge = {},
+          onRecharge = { _, _ -> },
           onDelete = {},
-          onClientRechargeCounterReset = {},
           au = AndroidUtilsImpl(LocalContext.current),
+          onClientCardCounterReset = {},
+          showDivider = false,
         )
       }
     }

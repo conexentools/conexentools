@@ -5,8 +5,8 @@
 
     <!-- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
      Do not edit android:versionCode because it is automatically set on build by
-     a custom gradle task, instead change its value through iaVersionCode property
-     of gradle.properties
+     the custom gradle task fixAndroidTestManifestVersionCode, instead change
+     its value through iaVersionCode property of gradle.properties
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! -->
 
     <!-- Neither of these two lines work, do you know why? Can you solve it? -->
@@ -14,8 +14,7 @@
     <!-- android:versionCode="@integer/iaVersionCode" -->
 
     <uses-sdk
-        android:minSdkVersion="26"
-        android:targetSdkVersion="33" />
+        android:minSdkVersion="26" />
 
     <!--suppress AndroidDomInspection -->
     <instrumentation

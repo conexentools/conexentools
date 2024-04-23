@@ -2,13 +2,13 @@ package com.conexentools
 
 import android.Manifest
 import android.os.Bundle
-import android.widget.Toast
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.conexentools.Utils.Companion.setClipboard
 import com.conexentools.Utils.Companion.toast
+import com.conexentools.core.util.log
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,14 +40,7 @@ class InstrumentedTest {
   @Before
   fun InitializeClass() {
 
-    // TODO val chats = wh.getLatestChatsInConversation(getYourChats = true) to false
-    // select SESION only if it is not already selected
-    // Tipo de cuenta a operar is not workin, text inseertion is not workin, how to handle Drop Down menus in UiAutomator2
-    // Opearciones tab is getting executed before message arrived, or that seems, implement toast system when message arrived
-    // TODO Error Monto fuera de rango. Rl monto debe estar entre 25 y 1250
-
     device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-//    device.pressHome();
     dm = DeviceManager(device)
     th = TransfermovilHelper(device)
     wh = WhatsAppHelper(device)
@@ -64,189 +57,246 @@ class InstrumentedTest {
   }
 
   @Test
-  fun MakeMobileRecharge() {
+  fun RechargeMobile() = runTest {
 
-    try {
+    device.pressHome()
 
-      if (th.installedVersion == null){
-        toast("Por favor instale Transfermóvil", vibrate = true, waitForToastToHide = true)
+    th.throwExceptionIfNotInstalled()
+
+    toast("Iniciando el proceso de automatización", isShortToast = true)
+
+    var recharges = cliArguments.getString("recharges")?.split("@")
+      ?.map { Pair(it.split(',')[0], it.split(',')[1]) }?.toList()
+    val waContact = cliArguments.getString("waContact")
+    val joinMessages = cliArguments.getString("joinMessages")?.toBoolean() ?: true
+    // Parameter for testing purposes
+    // If visible chats are for both senders, then get only owner chats or not
+    val getOwnerChats = cliArguments.getString("getOwnerChats").toBoolean()
+    var bank = cliArguments.getString("bank")!!.lowercase()
+    if (bank == "metropolitano")
+      bank = "metro"
+    val pin = cliArguments.getString("pin")!!
+    val cardLast4Digits = cliArguments.getString("cardLast4Digits")
+
+    var dataFetchedFromWA = false
+
+    // Grab data from WA if transfers isNullOrEmpty
+    if (recharges.isNullOrEmpty()) {
+
+      wh.throwExceptionIfNotInstalled()
+
+      if (waContact.isNullOrEmpty()) {
+        toast(
+          "Cuando ninguna recarga es especificada un nombre de contacto de WA tiene que ser especificado",
+          vibrate = true,
+          waitForToastToHide = true
+        )
+        assert(false)
+      }
+      toast("Obteniendo datos desde WhatsApp", isShortToast = true)
+      wh.launch()
+      wh.startConversation(waContact!!)
+      val chats = wh.getLatestChatsInConversation(getOwnerChats = getOwnerChats)
+      log("Chats:")
+      chats.forEach { log(it) }
+      if (chats.isEmpty()) {
+        toast(
+          "Los últimos chats en la conversación no parecen ser los del contacto: $waContact, en cambio los tuyos",
+          vibrate = true,
+          waitForToastToHide = true
+        )
+        toast("También puede haber ocurrido algún error mientras se obtenían los chats")
         assert(false)
       }
 
-      toast("Iniciando el proceso de automatización", Toast.LENGTH_SHORT)
-
-      var recharges = cliArguments.getString("recargas")?.split("@")?.map { Pair(it.split(',')[0], it.split(',')[1]) }?.toMutableList()
-      val waContact = cliArguments.getString("contactoWA")
-      var bank = cliArguments.getString("banco")!!.lowercase()
-      if (bank == "metropolitano")
-        bank = "metro"
-      val pin = cliArguments.getString("pin")!!
-      val cardLast4Digits = cliArguments.getString("digitosTarjeta")
-
-      var dataFetchedFromWA = false
-      // Grab data from WA if transfers isNullOrEmpty
-
-      if (recharges.isNullOrEmpty()) {
-
-        if (wh.installedVersion == null){
-          toast("Por favor instale WhatsApp", vibrate = true, waitForToastToHide = true)
-          assert(false)
-        }
-
-        if (waContact.isNullOrEmpty()){
-          toast("Cuando ninguna recarga es especificada un nombre de contacto de WA tiene que ser especificado", vibrate = true, waitForToastToHide = true)
-          assert(false)
-        }
-        toast("Obteniendo datos desde WhatsApp", Toast.LENGTH_SHORT)
-        wh.launch()
-        wh.startConversation(waContact!!)
-        val chats = wh.getLatestChatsInConversation(getYourChats = true)
-        if (chats.isEmpty()){
-          toast("Los últimos chats en la conversación no parecen ser los del contacto: $waContact, en cambio los tuyos", vibrate = true, waitForToastToHide = true)
-          toast("También puede haber ocurrido algún error mientras se obtenían los chats")
-          assert(false)
-        }
-
-        if (recharges == null)
-          recharges = mutableListOf()
-        chats.forEach { chat ->
-          val matches = RECHARGE_RE.findAll(chat)
-          val r = matches.map { Pair(it.groups["n"]!!.value, it.groups["r"]!!.value) }.toList()
-          if (r.isNotEmpty())
-            recharges += r
-        }
-        if (recharges.isEmpty()){
-          toast("Las recargas no pudieron ser obtenidas desde WhatsApp o no hay recargas en el los últimos chats", vibrate = true, waitForToastToHide = true)
-          assert(false)
-        }
-        dataFetchedFromWA = true
-        toast("Recargas obtenidas desde WhatsApp satisfactoriamente", Toast.LENGTH_SHORT)
+      if (recharges == null)
+        recharges = mutableListOf()
+      chats.forEach { chat ->
+        val matches = RECHARGE_RE.findAll(chat)
+        val r = matches.map { Pair(it.groups["n"]!!.value, it.groups["r"]!!.value) }.toList()
+        if (r.isNotEmpty())
+          recharges += r
       }
-
-      recharges.forEach {
-        if (it.second.toInt() !in 25..1250){
-          toast("Recarga de $$it es inválida, cada recarga debe estar entre $25 y $1250", vibrate = true, waitForToastToHide = true)
-          assert(false)
-        }
-      }
-
-      toast("Abriendo Transfermóvil", Toast.LENGTH_SHORT)
-      // Launch Transfermóvil
-      th.launch()
-
-      // Confirm Welcome Message if present
-      th.bypassStartUpDialogs()
-
-      // Open lateral panel
-      th.openLateralPanel()
-
-      // Select bank
-      th.selectBank(bank)
-
-      // Authenticate
-      if (!th.authenticate(pin)) {
-        toast("Autenticación fallida", vibrate = true, waitForToastToHide = true)
+      if (recharges.isEmpty()) {
+        toast(
+          "Las recargas no pudieron ser obtenidas desde WhatsApp o no hay recargas en el los últimos chats",
+          vibrate = true,
+          waitForToastToHide = true
+        )
         assert(false)
       }
+      dataFetchedFromWA = true
+      toast("Recargas obtenidas desde WhatsApp satisfactoriamente", isShortToast = true)
+    }
 
-      toast("Autenticado satisfactoriamente")
+    recharges.forEach {
+      if (it.second.toInt() !in 25..1250) {
+        toast(
+          "Recarga de $$it es inválida, cada recarga debe estar entre $25 y $1250",
+          vibrate = true,
+          waitForToastToHide = true
+        )
+        assert(false)
+      }
+    }
 
-      val confirmationMessages = mutableListOf<String>()
-      var latestClientNumberRecharged = ""
-      for (index in 0..<recharges.count()) {
-        if (index > 1)
-          break
+    toast("Abriendo Transfermóvil", isShortToast = true)
+    // Launch Transfermóvil
+    th.launch()
 
-        th.selectBankTab("Operaciones")
-        th.selectBankOperation("Recarga Saldo Móvil")
+    // Confirm Welcome Message if present
+    th.bypassStartUpDialogs()
 
-        val pair = recharges[index]
-        latestClientNumberRecharged = pair.first
+    // Open lateral panel
+    th.openLateralPanel()
+
+    // Select bank
+    th.selectBank(bank)
+
+    // Authenticate
+    if (!th.authenticate(pin)) {
+      toast("Autenticación fallida", vibrate = true, waitForToastToHide = true)
+      assert(false)
+    }
+
+    toast("Autenticado satisfactoriamente")
+
+    val confirmationMessages = mutableListOf<String>()
+    for (index in 0..<recharges.count()) {
+      if (index > 1)
+        break
+
+      th.selectBankTab("Operaciones")
+      th.selectBankOperation("Recarga Saldo Móvil")
+
+      val pair = recharges[index]
+      val latestClientNumberRecharged = pair.first
 //      dm.findObject("spTipoRecarga").text = "Recarga Móvil con tarjeta CUP"
-        dm.selectDropDownMenuChoice(resourceID = "spTipoRecarga", choice = 1)
-        dm.findObject("txCuenta").text = pair.first
-        dm.findObject("txMonto").text = pair.second
+      dm.selectDropDownMenuChoice(resourceID = "spTipoRecarga", choice = 1)
+      dm.findObject("txCuenta").text = pair.first
+      dm.findObject("txMonto").text = pair.second
 
 //      val spinnerTipoMonedaChoice = 1//dm.findObject("spinnerTipoMoneda")
-        if (!cardLast4Digits.isNullOrEmpty()) {
+      if (!cardLast4Digits.isNullOrEmpty()) {
 //        spinnerTipoMoneda.text = "-MIS CUENTAS-"
-          dm.selectDropDownMenuChoice(resourceID = "spinnerTipoMoneda", choice = 3)
+        dm.selectDropDownMenuChoice(resourceID = "spinnerTipoMoneda", choice = 3)
 
-          var text = "BANCO "
-          text += if (bank == "metro")
-            "METROPOLITANO"
-          else
-            bank.uppercase()
-          text += " - ${cardLast4Digits.drop(cardLast4Digits.length - 4)}"
-          dm.waitForObject("spinnerCuentas")!!.text = text
-        } else
-          dm.selectDropDownMenuChoice(resourceID = "spinnerTipoMoneda", choice = 1)
+        var text = "BANCO "
+        text += if (bank == "metro")
+          "METROPOLITANO"
+        else
+          bank.uppercase()
+        text += " - ${cardLast4Digits.drop(cardLast4Digits.length - 4)}"
+        dm.waitForObject("spinnerCuentas")!!.text = text
+      } else
+        dm.selectDropDownMenuChoice(resourceID = "spinnerTipoMoneda", choice = 1)
 //        spinnerTipoMoneda.text = "CUP"
 
-        val lastMessage = th.getMessages().entries.last()
-        th.accept()
-        var count = 0
-        var currentMessage: Map.Entry<Int, String>
-        toast("Esperando por mensaje de confirmación", Toast.LENGTH_SHORT)
-        do {
-          Thread.sleep(1000)
-          currentMessage = th.getMessages().entries.last()
-        } while (currentMessage == lastMessage && ++count < SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE)
+      val lastMessage = th.getMessages().entries.last()
+      th.accept()
+      var count = 0
+      var currentMessage: Map.Entry<Int, String>
+      toast("Esperando por mensaje de confirmación", isShortToast = true)
+      do {
+        Thread.sleep(1000)
+        currentMessage = th.getMessages().entries.last()
+      } while (currentMessage == lastMessage && ++count < SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE)
 
-        if (count >= SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE){
-          toast("El mensaje de confirmación no fue recibido en $SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE segundos :(", vibrate = true, waitForToastToHide = true)
-          assert(false)
-        }
-        var message = currentMessage.value
-        if (!message.contains("La recarga se realizo con exito")){
-          toast("Algo salió mal, la recarga parece no haberse realizado con éxito :(", vibrate = true, waitForToastToHide = true)
-          assert(false)
-        }
-        message = message.replace(CASH_REPLACEMENT_RE, "CR 0.00")
-
-        confirmationMessages.add(message)
-        toast("Mensaje de confirmación capturado")
-
-        // If recharging to same number wait between recharges
-        if (index + 1 < recharges.count() && latestClientNumberRecharged == recharges[index + 1].first) {
-          // Waiting 1 min and 5 seconds
-          toast("Esperando 1 minuto y 5 segundos para hacer la próxima recarga... Stay tuned!")
-          toast("No salga de la app ni toque nada, pórtese bien", Toast.LENGTH_SHORT)
-          Thread.sleep(1000 * 60 + 1000 * 5)
-        }
+      if (count >= SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE) {
+        toast(
+          "El mensaje de confirmación no fue recibido en $SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE segundos :(",
+          vibrate = true,
+          waitForToastToHide = true
+        )
+        assert(false)
       }
+      var message = currentMessage.value
+      if (!message.contains("La recarga se realizo con exito")) {
+        toast(
+          "Algo salió mal, la recarga parece no haberse realizado con éxito :(",
+          vibrate = true,
+          waitForToastToHide = true
+        )
+        assert(false)
+      }
+      message = message.replace(CASH_REPLACEMENT_RE, "CR 0.00")
 
-      // Copying message to clipboard
-      var clipboardContent = ""
-      confirmationMessages.forEach { clipboardContent += (it + "\n") }
-      clipboardContent = clipboardContent.trim()
-      setClipboard(clipboardContent)
-      toast("Mensajes de confirmación copiados al portapapeles")
+      confirmationMessages.add(message)
+      toast("Mensaje de confirmación capturado")
 
-      if (!waContact.isNullOrEmpty()) {
-        wh.launch(clearOutPreviousInstances = !dataFetchedFromWA)
-        if (!dataFetchedFromWA)
-          wh.startConversation(waContact)
+      // If recharging to same number wait between recharges
+      if (index + 1 < recharges.count() && latestClientNumberRecharged == recharges[index + 1].first) {
+        // Waiting 1 min and 5 seconds
+        toast("Esperando 1 minuto y 5 segundos para hacer la próxima recarga... Stay tuned!")
+        toast("No salga de la app ni toque nada, pórtese bien", isShortToast = true)
+        Thread.sleep(1000 * 60 + 1000 * 5)
+      }
+    }
+
+    // Copying message to clipboard
+    val clipboardContent = confirmationMessages.joinToString { "\n" }.trim()
+    setClipboard(clipboardContent)
+    toast("Mensajes de confirmación copiados al portapapeles")
+
+    if (!waContact.isNullOrEmpty()) {
+      // If data was fetched from WhatsApp an of it must be open in background, in the conversation screen
+      wh.launch(clearOutPreviousInstances = !dataFetchedFromWA)
+      if (!dataFetchedFromWA)
+        wh.startConversation(waContact)
+      if (joinMessages)
         wh.sendMessage(clipboardContent)
+      else {
+        confirmationMessages.forEach {
+          wh.sendMessage(it.trim())
+        }
       }
+    }
 
-      toast("Operaciones satisfactoriamente completadas... fino", waitForToastToHide = true)
-    } catch (assertionExc: AssertionError){
-      checkInstalledVersionsOfTMAndShowMessageIfNecessary()
-      throw assertionExc
-    }
-    catch (ex: Exception){
-      toast("Un error inesperado ocurrió", Toast.LENGTH_SHORT, vibrate = true)
-      toast(ex.message.toString(), waitForToastToHide = true)
-      checkInstalledVersionsOfTMAndShowMessageIfNecessary()
-      throw ex
-    }
+    toast("Operaciones satisfactoriamente completadas... fino", waitForToastToHide = true)
   }
 
-  fun checkInstalledVersionsOfTMAndShowMessageIfNecessary(){
-    if (th.installedVersion != null && th.installedVersion != th.testedVersion){
-      toast("Usted esta usando una versión de Transfermóvil diferente")
-      toast( "a la usada para ejecutar la prueba de automatización", waitForToastToHide = true)
+  @Test
+  fun SendWhatsAppMessage() = runTest {
+    wh.throwExceptionIfNotInstalled()
+    val waContact = cliArguments.getString("waContact")!!
+    val message = cliArguments.getString("message")
+
+    wh.launch()
+    wh.startConversation(waContact)
+
+  }
+
+  @Test
+  fun TransferCash() = runTest {
+
+  }
+
+  private fun runTest(
+    startAtHome: Boolean = true,
+    test: () -> Unit
+  ) {
+    try {
+      if (startAtHome)
+        device.pressHome()
+      test()
+    } catch (assertionExc: AssertionError) {
+      throw assertionExc
+    } catch (ex: Exception) {
+      toast(
+        "Un error inesperado ocurrió",
+        isShortToast = true,
+        vibrate = true,
+        waitForToastToHide = true
+      )
+      if (ex.localizedMessage != null)
+        toast(ex.localizedMessage!!, waitForToastToHide = true)
+      else {
+        toast(ex.toString(), waitForToastToHide = true)
+      }
+      throw ex
+    } finally {
+      th.checkVersionCompatibility()
+      wh.checkVersionCompatibility()
     }
   }
 
@@ -255,22 +305,13 @@ class InstrumentedTest {
 
   }
 
-  @Test
-  fun PrintInstalledTransfermovilVersion(){
-    if (th.installedVersion == null)
-      toast("Transfermóvil is not installed", vibrate = true, waitForToastToHide = true)
-    else
-      toast("Installed Transfermóvil:\n\t" +
-          "Version Code: ${th.installedVersion!!.first}\n\t" +
-          "Version Name: ${th.installedVersion!!.second}", waitForToastToHide = true)
-  }
+
 
   @Test
-  fun PrintTestedTransfermovilVersion(){
-    toast("Tested Transfermóvil:\n\t" +
-          "Version Code: ${th.testedVersion.first}\n\t" +
-          "Version Name: ${th.testedVersion.second}", waitForToastToHide = true)
-  }
+  fun PrintTransfermovilVersion() = th.printVersionInfo()
+
+  @Test
+  fun PrintWhatsAppVersionVersion() = wh.printVersionInfo()
 
   @Test
   fun sendWAMessage() {

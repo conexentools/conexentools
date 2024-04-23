@@ -144,7 +144,7 @@ fun HomeScreenFAB(
               .clipToBounds()
               .combinedClickable(
                 onLongClick = {
-                  if (!page.value!!.isInstrumentedTestPage())
+                  if (page.value!!.isClientListPage())
                     onBatchAddClient()
                 },
                 onClick = {

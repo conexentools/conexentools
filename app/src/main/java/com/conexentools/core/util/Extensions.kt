@@ -29,7 +29,7 @@ import androidx.navigation.PopUpToBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navOptions
 import com.conexentools.data.local.model.Client
-import com.conexentools.presentation.components.common.cleanCubanMobileNumber
+import com.conexentools.presentation.components.common.sanitizeCubanMobileNumber
 import com.conexentools.presentation.navigation.Screen
 import contacts.core.entities.Contact
 import contacts.core.util.phoneList
@@ -108,16 +108,6 @@ fun NavGraphBuilder.composable(
   )
 }
 
-//fun NavHostController.navigate(
-//  screen: Screen,
-//  builder: NavOptionsBuilder.() -> Unit,
-//) {
-//  navigate(
-//    route = screen.route,
-//    builder = builder
-//  )
-//}
-
 fun NavController.navigate(
   screen: Screen,
 ) {
@@ -136,7 +126,6 @@ fun NavController.navigateAndPopDestinationFromTheBackStack(screen: Screen) {
   }
 }
 
-
 fun NavOptionsBuilder.popUpTo(screen: Screen, popUpToBuilder: PopUpToBuilder.() -> Unit = {}) {
   popUpTo(
     route = screen.route,
@@ -147,7 +136,7 @@ fun NavOptionsBuilder.popUpTo(screen: Screen, popUpToBuilder: PopUpToBuilder.() 
 fun Contact.toClient() = Client(
   name = this.displayNamePrimary ?: this.displayNameAlt ?: "",
   phoneNumber = this.phoneList()
-    .firstOrNull()?.normalizedNumber?.cleanCubanMobileNumber(),
+    .firstOrNull()?.normalizedNumber?.sanitizeCubanMobileNumber(),
   cardNumber = null,
   latestRechargeDateISOString = null,
   imageUriString = (this.photoUri ?: this.photoThumbnailUri)?.toString(),

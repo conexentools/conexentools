@@ -9,7 +9,7 @@ import androidx.room.Update
 
 @Dao
 interface ClientDao {
-  @Query("SELECT * FROM client")
+  @Query("SELECT * FROM client WHERE submittedForDeletionFlag=0")
   fun getAllClients(): PagingSource<Int, Client>
 //  fun getAllClients() : Flow<List<Client>>
 
@@ -21,6 +21,9 @@ interface ClientDao {
 
   @Query("DELETE FROM client WHERE id=:id")
   suspend fun delete(id: Long)
+
+  @Query("DELETE FROM client WHERE submittedForDeletionFlag=1")
+  suspend fun cleanDatabase()
 
   /*
     var name: String = "",

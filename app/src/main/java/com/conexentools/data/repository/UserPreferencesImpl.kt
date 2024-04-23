@@ -52,6 +52,7 @@ class UserPreferencesImpl @Inject constructor(
   override suspend fun saveClientListPageHelpDialogsShowed(value: Boolean?) = save(PK.CLIENT_LIST_PAGE_HELP_DIALOGS_SHOWED, value)
   override suspend fun saveSavePin(value: Boolean?) = save(PK.SAVE_PIN, value)
   override suspend fun savePin(value: String?) = save(PK.PIN, value)
+  override suspend fun saveJoinMessages(value: Boolean?) = save(PK.JOIN_MESSAGES, value)
 
   override val bank: Flow<String?>
     get() = load(PK.BANK)
@@ -85,4 +86,6 @@ class UserPreferencesImpl @Inject constructor(
     get() = load(PK.SAVE_PIN)
   override val pin: Flow<String?>
     get() = load(PK.PIN)
+  override val joinMessages: Flow<Boolean?>
+    get() = load(PK.JOIN_MESSAGES)
 }

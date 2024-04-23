@@ -61,7 +61,6 @@ import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
 import com.conexentools.core.util.log
 import com.conexentools.core.util.moveFocusOnTabPressed
-import com.conexentools.core.util.navigateAndPopDestinationFromTheBackStack
 import com.conexentools.core.util.pickContact
 import com.conexentools.core.util.toFormattedDate
 import com.conexentools.data.local.model.Client
@@ -70,9 +69,7 @@ import com.conexentools.presentation.components.common.CreditCardTextField
 import com.conexentools.presentation.components.common.CubanPhoneNumberTextField
 import com.conexentools.presentation.components.common.PrimaryIconButton
 import com.conexentools.presentation.components.common.ScreenSurface
-import com.conexentools.presentation.components.common.cleanCubanMobileNumber
-import com.conexentools.presentation.navigation.AddEditClientScreenParameterManager
-import com.conexentools.presentation.navigation.Screen
+import com.conexentools.presentation.components.common.sanitizeCubanMobileNumber
 import contacts.core.util.phoneList
 import java.time.Instant
 
@@ -101,6 +98,7 @@ fun AddEditClientScreen(
       client.value.cardNumber ?: ""
     )
   }
+
   var quickMessage by remember(client.value.quickMessage) {
     mutableStateOf(
       if (isNewClient)
@@ -144,7 +142,11 @@ fun AddEditClientScreen(
   val pickContactLauncher = pickContact(au = au) { contact ->
     if (contact != null) {
       name = contact.displayNamePrimary ?: ""
-      val number = contact.phoneList().firstOrNull()?.normalizedNumber?.cleanCubanMobileNumber()
+      var number = contact.phoneList().firstOrNull()?.normalizedNumber?.sanitizeCubanMobileNumber()
+      if (number != null && number.length != 8) {
+        au.toast("El número del contacto '${name}' parece no ser un número cubano", vibrate = true)
+        number = ""
+      }
       phoneNumber = number ?: ""
       imageUri = contact.photoUri?.toString() ?: contact.photoThumbnailUri?.toString()
       client.value.name = name
@@ -281,8 +283,10 @@ fun AddEditClientScreen(
             modifier = Modifier.fillMaxWidth(),
             value = phoneNumber,
             onValueChange = {
-              client.value.phoneNumber = it
-              phoneNumber = it
+              if (it.length <= 8) {
+                client.value.phoneNumber = it
+                phoneNumber = it
+              }
             },
             isOutlinedTextField = true,
           )

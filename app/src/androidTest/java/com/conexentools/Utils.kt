@@ -2,7 +2,6 @@ package com.conexentools
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
@@ -10,6 +9,8 @@ import android.os.Vibrator
 import android.provider.Telephony
 import android.util.Log
 import android.widget.Toast
+import android.widget.Toast.LENGTH_LONG
+import android.widget.Toast.LENGTH_SHORT
 import androidx.core.content.ContextCompat
 import androidx.test.platform.app.InstrumentationRegistry
 
@@ -39,7 +40,7 @@ class Utils {
 
     fun toast(
       message: String,
-      duration: Int = Toast.LENGTH_LONG,
+      isShortToast: Boolean = false,
       vibrate: Boolean = false,
       waitForToastToHide: Boolean = false
     ) {
@@ -48,13 +49,13 @@ class Utils {
       val handler = Handler(Looper.getMainLooper())
 
       handler.post {
-        Toast.makeText(context, message, duration).show()
+        Toast.makeText(context, message, if (isShortToast) LENGTH_SHORT else LENGTH_LONG).show()
         log(message)
         if (vibrate)
           vibrate()
-        if (waitForToastToHide)
-          Thread.sleep(if (duration == Toast.LENGTH_SHORT) 2000 else 3500)
       }
+      if (waitForToastToHide)
+        Thread.sleep(if (isShortToast) 2000 else 3500)
     }
 
     fun vibrate() {
@@ -88,6 +89,23 @@ class Utils {
         ContextCompat.getSystemService(context, ClipboardManager::class.java)
       val clip = ClipData.newPlainText(label, text)
       clipboard!!.setPrimaryClip(clip)
+    }
+
+    fun printPackageVersionInfo(
+      name: String,
+      installedVersion: Pair<Long, String>?,
+      testedVersion: Pair<Long, String>,
+    ) {
+      if (installedVersion == null)
+        toast("$name is not installed", vibrate = true, waitForToastToHide = true)
+      else
+        toast("Installed $name:\n\t" +
+            "Version Code: ${installedVersion.first}\n\t" +
+            "Version Name: ${installedVersion.second}", waitForToastToHide = true)
+
+      toast("Tested $name:\n\t" +
+          "Version Code: ${testedVersion.first}\n\t" +
+          "Version Name: ${testedVersion.second}", waitForToastToHide = true)
     }
   }
 }

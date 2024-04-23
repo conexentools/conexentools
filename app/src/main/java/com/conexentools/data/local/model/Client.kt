@@ -24,10 +24,11 @@ data class Client(
   var imageUriString: String? = null,
   var quickMessage: String? = null,
   var rechargesMade: Int? = 0,
+  var submittedForDeletionFlag: Int = 0
 ) {
 
-  @Ignore
-  var visible = mutableStateOf(true)
+//  @Ignore
+//  var visible = mutableStateOf(true)
 
   fun getRemainingTimeForNextRechargeToBeAvailable(): RemainingTimeTextRepresentation? {
     return latestRechargeDateISOString?.run {
@@ -38,7 +39,7 @@ data class Client(
   }
 
   fun call(au: AndroidUtils) {
-    if (phoneNumber == null) {
+    if (phoneNumber.isNullOrEmpty()) {
       au.toast("Este cliente no tiene número asociado", vibrate = true)
     } else {
       au.call(phoneNumber!!)
@@ -57,10 +58,10 @@ data class Client(
     listOf(
       phoneNumber,
       cardNumber,
-//      latestRechargeDateISOString,
-//      imageUriString,
-//      quickMessage,
-//      rechargesMade,
+      latestRechargeDateISOString,
+      imageUriString,
+      quickMessage,
+      rechargesMade,
     ).forEach {
       result = 31 * result + it.hashCode()
     }

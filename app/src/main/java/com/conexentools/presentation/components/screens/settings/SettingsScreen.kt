@@ -4,8 +4,6 @@ import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.widthIn
@@ -39,6 +37,7 @@ fun SettingsScreen(
   appTheme: MutableState<AppTheme>,
   alwaysWaMessageByIntent: MutableState<Boolean>,
   savePin: MutableState<Boolean>,
+  joinMessages: MutableState<Boolean>,
   onNavigateBack: () -> Unit
 ) {
 
@@ -131,12 +130,14 @@ fun SettingsScreen(
       )
     }
 
+    // Always API WA Message
     LabelSwitch(
       label = "Siempre API WA Message",
-      infoText = "Por defecto si el dispositivo está rooteado y la aplicación de instrumentación (Conexen Tools - Instrumentation App) está instalada el mensaje se tratará de enviar a través de esta, si las previas condiciones no se cumplen el mensaje se escribirá en la entrada de texto del chat haciendo uso de la API de WhatsApp, la cual requiere conexión a Internet. Active esta opción para user siempre la API de WhatsApp",
+      info = "Por defecto si el dispositivo está rooteado y la aplicación de instrumentación (Conexen Tools - Instrumentation App) está instalada el mensaje se tratará de enviar a través de esta, si las previas condiciones no se cumplen el mensaje se escribirá en la entrada de texto del chat haciendo uso de la API de WhatsApp, la cual requiere conexión a Internet. Active esta opción para siempre usar la API de WhatsApp",
       checked = alwaysWaMessageByIntent,
     )
 
+    // Save PIN
     LabelSwitch(
       label = "Guardar PIN",
       checked = savePin,
@@ -144,6 +145,13 @@ fun SettingsScreen(
       if (it && !wasPinAlertDialogShowed)
         showPinAlertDialog = true
     }
+
+    // Join Messages
+    LabelSwitch(
+      label = "Unir Mensajes",
+      info = "Use esta opción para unir o no los mensajes de confirmación recibidos por Transfermóvil al enviárselos al contacto de WhatsApp",
+      checked = joinMessages
+    )
   }
 }
 
@@ -156,7 +164,9 @@ private fun PreviewSettingsScreen() {
       appTheme = LocalTheme.current.isDark.let { remember { mutableStateOf(if (it) AppTheme.MODE_NIGHT else AppTheme.MODE_DAY) } },
       alwaysWaMessageByIntent = remember { mutableStateOf(true) },
       savePin = remember { mutableStateOf(false) },
+      joinMessages = remember { mutableStateOf(true) },
       onNavigateBack = {},
     )
   }
 }
+

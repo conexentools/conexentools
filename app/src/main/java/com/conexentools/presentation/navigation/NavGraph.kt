@@ -13,18 +13,14 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import androidx.paging.compose.collectAsLazyPagingItems
-import com.conexentools.BuildConfig
 import com.conexentools.core.util.ObserveLifecycleEvents
 import com.conexentools.core.util.composable
 import com.conexentools.core.util.log
 import com.conexentools.core.util.navigate
 import com.conexentools.core.util.navigateAndPopDestinationFromTheBackStack
-import com.conexentools.core.util.toClient
 import com.conexentools.data.local.model.Client
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.HomeScreenViewModel
-import com.conexentools.presentation.components.common.cleanCubanMobileNumber
 import com.conexentools.presentation.components.screens.about.AboutScreen
 import com.conexentools.presentation.components.screens.add_edit_client.AddEditClientScreen
 import com.conexentools.presentation.components.screens.contact_picker.ContactPickerScreen
@@ -68,7 +64,7 @@ fun SetUpNavGraph(
     composable(Screen.Home) {
 
       val homeScreenState by hvm.state.collectAsState()
-      val clientPagingItems = hvm.clients.collectAsLazyPagingItems()
+//      val clientPagingItems = hvm.clients.collectAsLazyPagingItems()
 
       HomeScreen(
         homeScreenState = homeScreenState,
@@ -78,7 +74,7 @@ fun SetUpNavGraph(
         au = au,
 
         // InstrumentationTest Page
-        adbInstrumentationRunCommandGetter = hvm::getAdbInstrumentationRunCommand,
+        adbCommandToRunInstrumentedTestGetter = { "adb shell " + hvm.getCommandToRunRechargeMobileInstrumentedTest() },
         firstClientNumber = hvm.firstClientNumber,
         secondClientNumber = hvm.secondClientNumber,
         firstClientRecharge = hvm.firstClientRecharge,
@@ -90,22 +86,30 @@ fun SetUpNavGraph(
         waContactImageUri = hvm.waContactImageUri,
         rechargesAvailabilityDateISOString = hvm.rechargesAvailabilityDateISOString,
         waContact = hvm.waContact,
-        onRunInstrumentedTest = hvm::runInstrumentedTest,
+        onRunInstrumentedTest = hvm::runRechargeMobileInstrumentedTest,
         whatsAppInstalledVersion = hvm.whatsAppInstalledVersion,
         transfermovilInstalledVersion = hvm.transfermovilInstalledVersion,
         instrumentationAppInstalledVersion = hvm.instrumentationAppInstalledVersion,
 
         // ClientList Page
         isManager = hvm.isManager,
-        clientPagingItems = clientPagingItems,
+        clients = hvm.clients,
         onClientCardSendMessage = { number, message ->
           log("Sending message to number: $number. With message: $message")
           hvm.sendWAMessage(number, message)
         },
         onClientCardRecharge = hvm::rechargeClient,
-        onClientCardDelete = { client: Client ->
+        onSubmitClientForDeletion = { client ->
+          client.submittedForDeletionFlag = 1
+          hvm.updateClient(client)
+        },
+        onDeleteClient = { client: Client ->
           log("Client deleted: $client")
           hvm.deleteClient(clientId = client.id)
+        },
+        onClientRestoredFromDeletion = { client ->
+          client.submittedForDeletionFlag = 0
+          hvm.updateClient(client)
         },
         onClientCardEdit = {
           log("About to edit client: $it")
@@ -117,6 +121,7 @@ fun SetUpNavGraph(
           }
           navController.navigateAndPopDestinationFromTheBackStack(Screen.AddEditClient)
         },
+        onClientCardCounterReset = hvm::updateClient,
         onAddClient = {
           with(AddEditClientScreenParameterManager) {
             client = null
@@ -138,10 +143,6 @@ fun SetUpNavGraph(
             au.toast("Permiso para leer contactos requerido", vibrate = true)
           }
         },
-        onClientCardRechargeCounterReset = {
-          log("Client recharge counter restored")
-          hvm.updateClient(it)
-        }
       )
     }
 
@@ -166,6 +167,7 @@ fun SetUpNavGraph(
         appTheme = hvm.appTheme,
         alwaysWaMessageByIntent = hvm.alwaysWaMessageByIntent,
         savePin = hvm.savePin,
+        joinMessages = hvm.joinMessages,
         onNavigateBack = ::popBackStack
       )
     }
@@ -192,25 +194,9 @@ fun SetUpNavGraph(
           if (selectedContacts.isEmpty()) {
             navController.navigateAndPopDestinationFromTheBackStack(Screen.Home)
           } else {
-            val filteredContacts = selectedContacts.filter { contact ->
-              val client = contact.toClient()
-
-              if (client.phoneNumber.isNullOrEmpty())
-                true
-              else {
-                val isCubanNumber: Boolean =
-                  client.phoneNumber!!.cleanCubanMobileNumber().length == 8
-                if (!isCubanNumber)
-                  au.toast("El contacto '${client.name}' fue omitido porque no parece tener un número cubano")
-                isCubanNumber
-              }
-            }
-
-            AddEditClientScreenParameterManager.client =
-              mutableStateOf(filteredContacts.first().toClient())
-            AddEditClientScreenParameterManager.indexOfNextClientToAddFromContactPickerSelectedContacts =
-              1
-            AddEditClientScreenParameterManager.contactPickerSelectedContacts = filteredContacts
+            AddEditClientScreenParameterManager.contactPickerSelectedContacts = selectedContacts
+            AddEditClientScreenParameterManager.indexOfNextClientToAddFromContactPickerSelectedContacts = 0
+            AddEditClientScreenParameterManager.updateNextClientToProcessFromContactPicker()
             navController.navigateAndPopDestinationFromTheBackStack(Screen.AddEditClient)
           }
         },

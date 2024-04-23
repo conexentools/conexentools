@@ -11,4 +11,5 @@ interface ClientRepository {
   suspend fun update(client: Client)
   suspend fun delete(id: Long)
   suspend fun count(client: Client): Int
+  suspend fun cleanDatabase()
 }

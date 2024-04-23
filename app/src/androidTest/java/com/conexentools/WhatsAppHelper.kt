@@ -2,24 +2,24 @@ package com.conexentools
 
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
-//import me.ibrahimsn.lib.PhoneNumberKit
-//import me.ibrahimsn.lib.api.Phone
 
-
-class WhatsAppHelper(val device: UiDevice) {
-
-  val installedVersion = Utils.getPackageVersion(BuildConfig.WHATSAPP_PACKAGE_NAME)
-
-  val dm: DeviceManager = DeviceManager(device)
-
-  fun launch(clearOutPreviousInstances: Boolean = true) =
-    dm.launchPackage(BuildConfig.WHATSAPP_PACKAGE_NAME, clearOutPreviousInstances = clearOutPreviousInstances)
+class WhatsAppHelper (
+  device: UiDevice
+) : TargetAppHelper(
+device = device,
+name = "WhatsApp",
+packageName = BuildConfig.WHATSAPP_PACKAGE_NAME,
+testedVersionCode = BuildConfig.TESTED_WA_VERSION_CODE,
+testedVersionName = BuildConfig.TESTED_WA_VERSION_NAME,
+) {
 
   fun startConversation(contactNameOrNumber: String) {
       // Assuming WA is already open at main screen
-      dm.click("fab")
+      dm.click("header_fab")
       dm.click("menuitem_search")
-      dm.findObject("search_src_text").text = contactNameOrNumber.filter { it.code < 256 } // Filtering put unicode characters
+      dm.findObject("search_src_text").text = contactNameOrNumber.filter { it.code <= 0xFF } // Taking only ASCII characters
+      device.waitForIdle()
+      Thread.sleep(100)
       dm.click("contactpicker_text_container")
   }
 
@@ -29,12 +29,7 @@ class WhatsAppHelper(val device: UiDevice) {
     dm.click("send")
   }
 
-//  fun getChats(){
-//    val chats = dm.findObjects("message_text").map { it.text }.reversed()
-//    return chats
-//  }
-
-  fun getLatestChatsInConversation(getYourChats: Boolean): List<String> {
+  fun getLatestChatsInConversation(getOwnerChats: Boolean): List<String> {
     val visibleChats = dm.findObjects("main_layout").reversed()
     var latestChatRect = visibleChats.first().visibleBounds
     val chats = mutableListOf(visibleChats.first())
@@ -45,7 +40,7 @@ class WhatsAppHelper(val device: UiDevice) {
       val isToRight =
         chat.visibleBounds.left > latestChatRect.left && chat.visibleBounds.right > latestChatRect.right
       latestChatRect = chat.visibleBounds
-      if (!wasOwnerOfLatestChatsIdentified && (isToLeft && !getYourChats || isToRight && getYourChats)) {
+      if (!wasOwnerOfLatestChatsIdentified && (isToLeft && !getOwnerChats || isToRight && getOwnerChats)) {
         chats.clear()
         wasOwnerOfLatestChatsIdentified = true
       } else if (isToLeft || isToRight)
