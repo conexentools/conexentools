@@ -13,6 +13,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.conexentools.core.util.ObserveLifecycleEvents
 import com.conexentools.core.util.composable
 import com.conexentools.core.util.log
@@ -50,6 +52,10 @@ fun SetUpNavGraph(
     )
   }
 
+  // Client paging items MUST be collected here, before NavHost, in order to LazyColumn remember its scroll position
+  // https://issuetracker.google.com/issues/177245496
+  val homeScreenClientsListLazyPagingItems = hvm.clients.collectAsLazyPagingItems()
+
   NavHost(
     navController = navController,
     startDestination = startDestination.route
@@ -64,7 +70,6 @@ fun SetUpNavGraph(
     composable(Screen.Home) {
 
       val homeScreenState by hvm.state.collectAsState()
-//      val clientPagingItems = hvm.clients.collectAsLazyPagingItems()
 
       HomeScreen(
         homeScreenState = homeScreenState,
@@ -93,10 +98,10 @@ fun SetUpNavGraph(
 
         // ClientList Page
         isManager = hvm.isManager,
-        clients = hvm.clients,
+        clients = homeScreenClientsListLazyPagingItems,
         onClientCardSendMessage = { number, message ->
           log("Sending message to number: $number. With message: $message")
-          hvm.sendWAMessage(number, message)
+          hvm.sendWhatsAppMessage(number, message)
         },
         onClientCardRecharge = hvm::rechargeClient,
         onSubmitClientForDeletion = { client ->
@@ -143,6 +148,7 @@ fun SetUpNavGraph(
             au.toast("Permiso para leer contactos requerido", vibrate = true)
           }
         },
+        clientsListScrollPosition = hvm.homeScreenClientListScrollPosition
       )
     }
 

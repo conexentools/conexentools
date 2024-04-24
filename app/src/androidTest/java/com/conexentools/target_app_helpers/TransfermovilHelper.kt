@@ -1,4 +1,4 @@
-package com.conexentools
+package com.conexentools.target_app_helpers
 
 import android.widget.ImageButton
 import androidx.appcompat.widget.LinearLayoutCompat
@@ -6,10 +6,13 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
+import com.conexentools.BuildConfig
+import com.conexentools.DeviceManager
 import com.conexentools.DeviceManager.Companion.LONG_TIMEOUT
 import com.conexentools.DeviceManager.Companion.MEDIUM_TIMEOUT
 import com.conexentools.DeviceManager.Companion.getPatternForResourceID
 import com.conexentools.InstrumentedTest.Companion.SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE
+import com.conexentools.Utils
 import com.conexentools.Utils.Companion.log
 
 class TransfermovilHelper(

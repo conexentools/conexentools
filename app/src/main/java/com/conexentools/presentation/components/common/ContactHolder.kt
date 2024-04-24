@@ -128,7 +128,7 @@ fun Contact(
 //              contentDescription = null
 //            )
             Text(
-              text = name.codePointAt(0).toUnicodeString().uppercase(),
+              text = if (name.isNotEmpty()) name.codePointAt(0).toUnicodeString().uppercase() else "",
               style = MaterialTheme.typography.headlineMedium,
               color = titleLetter,
               modifier = Modifier

@@ -51,6 +51,7 @@ object Constants {
     val IS_MANAGER = booleanPreferencesKey("is_manager")
     val INITIAL_HOME_SCREEN_PAGE = intPreferencesKey("initial_home_screen_page")
     val APP_LAUNCH_COUNT = intPreferencesKey("app_launch_count")
+    val HOME_SCREEN_CLIENT_LIST_SCROLL_POSITION = intPreferencesKey("home_screen_client_list_scroll_position")
     val WA_CONTACT_IMAGE_URI_STRING = stringPreferencesKey("wa_contact_image_uri_string")
     val ALWAYS_WA_MESSAGE_BY_INTENT = booleanPreferencesKey("always_wa_message_by_intent")
   }

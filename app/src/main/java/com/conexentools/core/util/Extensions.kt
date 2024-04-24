@@ -137,10 +137,10 @@ fun Contact.toClient() = Client(
   name = this.displayNamePrimary ?: this.displayNameAlt ?: "",
   phoneNumber = this.phoneList()
     .firstOrNull()?.normalizedNumber?.sanitizeCubanMobileNumber(),
-  cardNumber = null,
+  cardNumber = "",
   latestRechargeDateISOString = null,
   imageUriString = (this.photoUri ?: this.photoThumbnailUri)?.toString(),
-  quickMessage = null,
+  quickMessage = "",
   rechargesMade = 0
 )
 

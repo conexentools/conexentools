@@ -234,14 +234,8 @@ fun InstrumentedTestPage(
     // Fetch Data from WA Switch
     LabelSwitch(
       label = stringResource(R.string.data_from_wa_switch_label),
-      info = "Si tiene acceso root y la aplicación de instrumentación (Conexen Tools - Instrumentation App) está instalada active esta opción para obtener los datos de recarga desde un contacto de WhatsApp. Los datos se buscarán en los últimos chats enviados por el contacto especificado, los cuales deben estar en el siguiente formato <numero_a_recargar>,<recarga>. Por ejemplo: \n\n55123456,1000\n55654321,500\n\nEl contacto debe ser el primer resultado en aparecer en la lista de contactos de WhatsApp cuando se introduzca en la barra de búsqueda el texto especificado como contacto, así que asegúrese de eso, de lo contrario la prueba automatizada fallará",
-      checked = fetchDataFromWA,
-      onCheckedChange = {
-        if (it && !RootUtil.isDeviceRooted){
-          au.toast("Acceso root requerido", vibrate = true)
-          fetchDataFromWA.value = false
-        }
-      }
+      info = "Active esta opción para buscar los datos de recarga en los últimos chats enviados por el contacto especificado, los cuales deben estar en el siguiente formato <numero_a_recargar>,<recarga>. Por ejemplo: \n\n55123456,1000\n55654321,500\n\nEl contacto debe ser el primer resultado en aparecer en la lista de contactos de WhatsApp cuando se introduzca en la barra de búsqueda el texto especificado como contacto, así que asegúrese de eso, de lo contrario la prueba automatizada fallará",
+      checked = fetchDataFromWA
     )
     AnimatedVisibility(visible = fetchDataFromWA.value) {
       var leadingIcon: @Composable (() -> Unit)? by remember {

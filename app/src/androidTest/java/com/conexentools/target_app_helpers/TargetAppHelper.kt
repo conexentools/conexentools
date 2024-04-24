@@ -1,6 +1,8 @@
-package com.conexentools
+package com.conexentools.target_app_helpers
 
 import androidx.test.uiautomator.UiDevice
+import com.conexentools.DeviceManager
+import com.conexentools.Utils
 
 abstract class TargetAppHelper(
   val device: UiDevice,

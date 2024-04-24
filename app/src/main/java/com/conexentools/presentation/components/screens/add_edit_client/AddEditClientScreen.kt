@@ -86,20 +86,20 @@ fun AddEditClientScreen(
 ) {
 
   // States
-  var name by remember(client.value.name) { mutableStateOf(client.value.name) }
-  var phoneNumber by remember(client.value.phoneNumber) {
+  var name by remember(client.value) { mutableStateOf(client.value.name) }
+  var phoneNumber by remember(client.value) {
     mutableStateOf(
       client.value.phoneNumber ?: ""
     )
   }
 
-  var cardNumber by remember(client.value.cardNumber) {
+  var cardNumber by remember(client.value) {
     mutableStateOf(
       client.value.cardNumber ?: ""
     )
   }
 
-  var quickMessage by remember(client.value.quickMessage) {
+  var quickMessage by remember(client.value) {
     mutableStateOf(
       if (isNewClient)
         "💸💸💳📲💸💸"
@@ -111,19 +111,19 @@ fun AddEditClientScreen(
   if (client.value.quickMessage != quickMessage)
     client.value.quickMessage = quickMessage
 
-  var latestRechargeDateISOString by remember(client.value.latestRechargeDateISOString) {
+  var latestRechargeDateISOString by remember(client.value) {
     mutableStateOf(
       client.value.latestRechargeDateISOString
     )
   }
 
-  var rechargesMade by remember(client.value.rechargesMade) {
+  var rechargesMade by remember(client.value) {
     mutableIntStateOf(
       client.value.rechargesMade ?: 0
     )
   }
 
-  var imageUri by remember(client.value.imageUriString) { mutableStateOf(client.value.imageUriString) }
+  var imageUri by remember(client.value) { mutableStateOf(client.value.imageUriString) }
 
   val quickMessageTrailingIcon = @Composable {
     IconButton(

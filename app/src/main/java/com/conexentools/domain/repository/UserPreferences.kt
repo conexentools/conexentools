@@ -24,6 +24,7 @@ interface UserPreferences {
   suspend fun saveSavePin(value: Boolean?)
   suspend fun savePin(value: String?)
   suspend fun saveJoinMessages(value: Boolean?)
+  suspend fun saveHomeScreenClientListScrollPosition(value: Int?)
 
   val bank: Flow<String?>
   val waContact: Flow<String?>
@@ -42,4 +43,5 @@ interface UserPreferences {
   val savePin: Flow<Boolean?>
   val pin: Flow<String?>
   val joinMessages: Flow<Boolean?>
+  val homeScreenClientListScrollPosition: Flow<Int?>
 }

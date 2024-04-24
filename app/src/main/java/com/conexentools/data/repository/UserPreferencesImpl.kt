@@ -53,6 +53,7 @@ class UserPreferencesImpl @Inject constructor(
   override suspend fun saveSavePin(value: Boolean?) = save(PK.SAVE_PIN, value)
   override suspend fun savePin(value: String?) = save(PK.PIN, value)
   override suspend fun saveJoinMessages(value: Boolean?) = save(PK.JOIN_MESSAGES, value)
+  override suspend fun saveHomeScreenClientListScrollPosition(value: Int?) = save(PK.HOME_SCREEN_CLIENT_LIST_SCROLL_POSITION, value)
 
   override val bank: Flow<String?>
     get() = load(PK.BANK)
@@ -88,4 +89,6 @@ class UserPreferencesImpl @Inject constructor(
     get() = load(PK.PIN)
   override val joinMessages: Flow<Boolean?>
     get() = load(PK.JOIN_MESSAGES)
+  override val homeScreenClientListScrollPosition: Flow<Int?>
+    get() = load(PK.HOME_SCREEN_CLIENT_LIST_SCROLL_POSITION)
 }

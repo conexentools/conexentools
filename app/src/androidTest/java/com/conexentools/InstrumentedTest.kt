@@ -9,6 +9,8 @@ import androidx.test.uiautomator.UiDevice
 import com.conexentools.Utils.Companion.setClipboard
 import com.conexentools.Utils.Companion.toast
 import com.conexentools.core.util.log
+import com.conexentools.target_app_helpers.TransfermovilHelper
+import com.conexentools.target_app_helpers.WhatsAppHelper
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -172,24 +174,42 @@ class InstrumentedTest {
       val pair = recharges[index]
       val latestClientNumberRecharged = pair.first
 //      dm.findObject("spTipoRecarga").text = "Recarga Móvil con tarjeta CUP"
-      dm.selectDropDownMenuChoice(resourceID = "spTipoRecarga", choice = 1)
+      dm.selectDropDownMenuItem(
+        resourceID = "spTipoRecarga",
+        choice = 1,
+        choicesCount = 2,
+        isItemBelowTextInput = true,
+        expectedTextAfterSelection = "Recarga Móvil con tarjeta CUP"
+      )
       dm.findObject("txCuenta").text = pair.first
       dm.findObject("txMonto").text = pair.second
 
 //      val spinnerTipoMonedaChoice = 1//dm.findObject("spinnerTipoMoneda")
       if (!cardLast4Digits.isNullOrEmpty()) {
 //        spinnerTipoMoneda.text = "-MIS CUENTAS-"
-        dm.selectDropDownMenuChoice(resourceID = "spinnerTipoMoneda", choice = 3)
+        dm.selectDropDownMenuItem(
+          resourceID = "spinnerTipoMoneda",
+          choice = 3,
+          choicesCount = 4,
+          isItemBelowTextInput = true,
+          expectedTextAfterSelection = "-MIS CUENTAS-"
+        )
 
         var text = "BANCO "
         text += if (bank == "metro")
           "METROPOLITANO"
         else
           bank.uppercase()
-        text += " - ${cardLast4Digits.drop(cardLast4Digits.length - 4)}"
+        text += " - $cardLast4Digits"
         dm.waitForObject("spinnerCuentas")!!.text = text
       } else
-        dm.selectDropDownMenuChoice(resourceID = "spinnerTipoMoneda", choice = 1)
+        dm.selectDropDownMenuItem(
+          resourceID = "spinnerTipoMoneda",
+          choice = 1,
+          choicesCount = 4,
+          isItemBelowTextInput = true,
+          expectedTextAfterSelection = "CUP"
+        )
 //        spinnerTipoMoneda.text = "CUP"
 
       val lastMessage = th.getMessages().entries.last()
@@ -258,17 +278,48 @@ class InstrumentedTest {
   @Test
   fun SendWhatsAppMessage() = runTest {
     wh.throwExceptionIfNotInstalled()
-    val waContact = cliArguments.getString("waContact")!!
-    val message = cliArguments.getString("message")
+//    var waContact = cliArguments.getString("waContact")!!
+//    var message = cliArguments.getString("message")
+    // Testing purposes
+    val waContact = "+5355797140"
+    val message = "Hellolw alkdsfkas dsnmdkf sdf sdfjsdf $ $$$   f"
 
     wh.launch()
     wh.startConversation(waContact)
-
+    if (message != null)
+      wh.sendMessage(message)
   }
 
   @Test
   fun TransferCash() = runTest {
+    TODO()
+  }
 
+  @Test
+  fun TestDropDownMenuSelector() = runTest (startAtHome = false) {
+//    val choice = cliArguments.getString("choice")!!.toInt()
+//    val choicesCount = cliArguments.getString("choicesCount")!!.toInt()
+//    val expectedText = cliArguments.getString("expectedText")!!
+//    val isItemBelow = cliArguments.getBoolean("isItemBelow")
+//    val resourceID = cliArguments.getString("resourceId")!!
+
+    log("Testing DropDownMenu item selector")
+
+    val choice = 1
+    val choicesCount = 4
+    val expectedText = "CUP"
+    val isItemBelow = true
+    val resourceID = "spinnerTipoMoneda"
+
+    dm.selectDropDownMenuItem(
+      resourceID = resourceID,
+      choice = choice,
+      choicesCount = choicesCount,
+      isItemBelowTextInput = isItemBelow,
+      expectedTextAfterSelection = expectedText,
+    )
+
+    // adb shell am instrument -w -e class com.conexentools.InstrumentedTest#TestDropDownMenuSelector -e choice 1 -e choicesCount 2 -e expectedText Recarga\ Móvil\ con\ tarjeta\ CUP -e isItemBelow true -e resourceId spTipoRecarga com.conexentools.test/androidx.test.runner.AndroidJUnitRunner --no-window-animation --no-hidden-api-checks
   }
 
   private fun runTest(
@@ -304,7 +355,6 @@ class InstrumentedTest {
   fun Test() {
 
   }
-
 
 
   @Test

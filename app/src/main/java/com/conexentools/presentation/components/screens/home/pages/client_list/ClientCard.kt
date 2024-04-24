@@ -72,7 +72,11 @@ fun ClientCard(
   val recharge = SwipeAction(icon = rememberVectorPainter(Icons.TwoTone.AttachMoney),
     background = Color.Yellow,
     onSwipe = {
-      onRecharge(client) { counterToForceRecomposition++ }
+      if (client.cardNumber.isNullOrEmpty()){
+        au.toast("Adjunte un número de tarjeta a este cliente para poder recargarlo", vibrate = true)
+      } else {
+        onRecharge(client) { counterToForceRecomposition++ }
+      }
     }
   )
 

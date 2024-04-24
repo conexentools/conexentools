@@ -5,6 +5,12 @@
       <entry key="PrintTransfermovilVersion()">
         <State />
       </entry>
+      <entry key="SendWhatsAppMessage()">
+        <State />
+      </entry>
+      <entry key="TestDropDownMenuSelector()">
+        <State />
+      </entry>
       <entry key="app">
         <State />
       </entry>

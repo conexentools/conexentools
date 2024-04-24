@@ -37,35 +37,70 @@ class DeviceManager(private val device: UiDevice) {
     return device.wait(Until.findObject(selector), timeout.toLong())
   }
 
-  fun selectDropDownMenuChoice(resourceID: String?, text: String? = null, timeout: Int = MEDIUM_TIMEOUT, choice: Int, isMenuBelow: Boolean = true){
+  fun selectDropDownMenuItem(
+    resourceID: String?,
+    text: String? = null,
+    choice: Int,
+    choicesCount: Int,
+    timeout: Int = MEDIUM_TIMEOUT,
+    isItemBelowTextInput: Boolean = true,
+    expectedTextAfterSelection: String,
+  ) {
     val selector: BySelector = makeSelector(resourceID, text)
-    selectDropDownMenuChoice(
+    selectDropDownMenuItem(
       selector = selector,
       timeout = timeout,
-      choice =  choice,
-      isMenuBelow = isMenuBelow)
+      choice = choice,
+      choicesCount = choicesCount,
+      isItemBelowTextInput = isItemBelowTextInput,
+      expectedTextAfterSelection = expectedTextAfterSelection
+    )
   }
 
-  fun selectDropDownMenuChoice(selector: BySelector, choice: Int, timeout: Int = MEDIUM_TIMEOUT, isMenuBelow: Boolean = true){
-    assert(choice >= 1)
-    val element = waitForObject(selector, timeout)!!
-    element.click()
-//    click(selector, timeout)
-    var distanceToChoiceCenter = element.visibleBounds.height() * choice
-    if (!isMenuBelow)
-      distanceToChoiceCenter *= -1
-    val point = Point(element.visibleCenter.x, element.visibleCenter.y + distanceToChoiceCenter)
-    Thread.sleep(700)
-    device.click(point.x, point.y)
+  fun selectDropDownMenuItem(
+    selector: BySelector,
+    choice: Int,
+    choicesCount: Int,
+    timeout: Int = MEDIUM_TIMEOUT,
+    isItemBelowTextInput: Boolean = true,
+    expectedTextAfterSelection: String,
+  ) {
+    assert(choicesCount > 0 && choice in 1.. choicesCount)
+    val textInput = waitForObject(selector, timeout)!!
+
+    fun clickDropDownItem(isBelow: Boolean): Boolean {
+      val offset = if (isBelow) {
+        choice
+      } else {
+        (choicesCount - choice + 1) * -1
+      }
+      val distanceToChoiceCenter = textInput.visibleBounds.height() * offset
+      val point = Point(textInput.visibleCenter.x, textInput.visibleCenter.y + distanceToChoiceCenter)
+      textInput.click()
+      Thread.sleep(700)
+      device.click(point.x, point.y)
+      return textInput.text == expectedTextAfterSelection
+    }
+
+    if (!clickDropDownItem(isBelow = isItemBelowTextInput))
+      if (!clickDropDownItem(isBelow = !isItemBelowTextInput))
+        throw Exception("Expected DropDownMenuItem '$expectedTextAfterSelection' couldn't be selected, instead we got '${textInput.text}'")
   }
 
-
-  fun waitForObject(resourceID: String?, text: String? = null, timeout: Int = MEDIUM_TIMEOUT): UiObject2? {
+  fun waitForObject(
+    resourceID: String?,
+    text: String? = null,
+    timeout: Int = MEDIUM_TIMEOUT
+  ): UiObject2? {
     val selector: BySelector = makeSelector(resourceID, text)
     return waitForObject(selector, timeout)
   }
 
-  fun launchPackage(packageName: String, timeout: Int = LONG_TIMEOUT, clearOutPreviousInstances: Boolean = true) {
+  fun launchPackage(
+    packageName: String,
+    timeout: Int = LONG_TIMEOUT,
+    clearOutPreviousInstances: Boolean = true
+  ) {
     val context: Context = getApplicationContext()
     val intent = context.packageManager.getLaunchIntentForPackage(packageName)!!
 

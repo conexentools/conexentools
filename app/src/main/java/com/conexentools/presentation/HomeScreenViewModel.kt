@@ -83,11 +83,13 @@ class HomeScreenViewModel @Inject constructor(
   var clientListPageHelpDialogsShowed = mutableStateOf(false)
   var savePin = mutableStateOf(false)
   var joinMessages = mutableStateOf(true)
+  val homeScreenClientListScrollPosition = mutableIntStateOf(0)
 
   val whatsAppInstalledVersion = au.getPackageVersion(BuildConfig.WHATSAPP_PACKAGE_NAME)
   val transfermovilInstalledVersion =
     au.getPackageVersion(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME)
   val instrumentationAppInstalledVersion = au.getPackageVersion(BuildConfig.TEST_NAMESPACE)
+
 
   private val _clients = MutableStateFlow(value = PagingData.empty<Client>())
   val clients: StateFlow<PagingData<Client>> get() = _clients
@@ -143,6 +145,7 @@ class HomeScreenViewModel @Inject constructor(
       appLaunchCount.intValue = (up.appLaunchCount.first() ?: 0) + 1
       clientListPageHelpDialogsShowed.value = up.clientListPageHelpDialogsShowed.first() ?: false
       joinMessages.value = up.joinMessages.first() ?: true
+      homeScreenClientListScrollPosition.intValue = up.homeScreenClientListScrollPosition.first() ?: 0
       savePin.value = up.savePin.first() ?: false
       if (savePin.value)
         pin.value = up.pin.first() ?: ""
@@ -175,6 +178,7 @@ class HomeScreenViewModel @Inject constructor(
     up.saveJoinMessages(joinMessages.value)
     up.saveSavePin(savePin.value)
     up.savePin(if (savePin.value) pin.value else null)
+    up.saveHomeScreenClientListScrollPosition(homeScreenClientListScrollPosition.intValue)
   }
 
   private suspend fun getClients() =
@@ -218,6 +222,8 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     if (areMainConditionsToRunInstrumentedTestMet) {
+      var args = "-e "
+      au.executeCommand(getInstrumentedTestCommand(InstrumentedTest.TransferCash, args), su = true)
       // TODO Launch recharge instrumented test
     } else {
       if (!au.launchPackage(transfermovilInstalledVersion.second))
@@ -225,7 +231,7 @@ class HomeScreenViewModel @Inject constructor(
     }
   }
 
-  fun sendWAMessage(number: String, message: String?) {
+  fun sendWhatsAppMessage(number: String, message: String?) {
     log("Sending WhatsApp message to :$number, Message: $message")
     log("alwaysWaMessageByIntent: ${alwaysWaMessageByIntent.value}")
     if (whatsAppInstalledVersion == null) {
@@ -237,12 +243,20 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     if (alwaysWaMessageByIntent.value || !RootUtil.isDeviceRooted) {
-      au.sendWaMessage(number, message)
+      var num = number
+      if (number.length == 8)
+        num = "53$number"
+      au.sendWaMessage(num, message)
+    } else if (instrumentationAppInstalledVersion == null) {
+      au.toast("Conexen Tool - Instrumentation App, parece no estar instalada", vibrate = true)
+      return
     } else {
       var args = "-e waContact $number"
       if (message != null)
-        args += " -e message ${message.replace(" ", "\\ ")}"
-      au.executeCommand(getTestCommand(InstrumentedTest.SendWhatsAppMessage, args), su = true)
+        args += " -e message ${message
+          .replace(" ", "\\ ")
+          .replace("$", "\$")}"
+      au.executeCommand(getInstrumentedTestCommand(InstrumentedTest.SendWhatsAppMessage, args), su = true)
     }
   }
 
@@ -269,7 +283,7 @@ class HomeScreenViewModel @Inject constructor(
     }
   }
 
-  private fun getTestCommand(
+  private fun getInstrumentedTestCommand(
     test: InstrumentedTest,
     args: String
   ): String {
@@ -315,7 +329,7 @@ class HomeScreenViewModel @Inject constructor(
       append(" -e pin ${pin.value} -e bank ${bank_.lowercase()}")
     }.toString()
 
-    return getTestCommand(
+    return getInstrumentedTestCommand(
       test = InstrumentedTest.RechargeMobile,
       args = arguments
     )

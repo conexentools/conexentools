@@ -5,60 +5,82 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.paging.LoadState
 import androidx.paging.PagingData
+import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
+import com.conexentools.core.util.log
 import com.conexentools.data.local.model.Client
 import com.conexentools.data.repository.AndroidUtilsImpl
 import com.conexentools.domain.repository.AndroidUtils
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import my.nanihadesuka.compose.LazyColumnScrollbar
 import kotlin.random.Random
 
+@OptIn(FlowPreview::class)
 @Composable
 fun ClientsListPage(
-  clients: StateFlow<PagingData<Client>>,
+  clients: LazyPagingItems<Client>,
   searchBarText: String = "",
   onClientEdit: (Client) -> Unit,
   onClientRecharge: (Client, () -> Unit) -> Unit,
   onClientSendMessage: (String, String?) -> Unit,
   onClientDelete: (Client) -> Unit,
   onClientCardCounterReset: (Client) -> Unit,
+  scrollPosition: MutableIntState,
   au: AndroidUtils
 ) {
 
-  val listState = rememberLazyListState()
-  val clientsLazyPagingItems = clients.collectAsLazyPagingItems()
+  val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = scrollPosition.intValue)
+
+  LaunchedEffect(lazyListState) {
+    snapshotFlow { lazyListState.firstVisibleItemIndex }
+      .debounce(500L)
+      .collectLatest { pos ->
+        scrollPosition.intValue = pos
+        log("saving scroll position: $pos")
+      }
+  }
 
 //  key(clients) {
   LazyColumnScrollbar(
-    listState = listState,
+    listState = lazyListState,
   ) {
     LazyColumn(
-      state = listState,
+      state = lazyListState,
       verticalArrangement = Arrangement.Center,
       horizontalAlignment = Alignment.CenterHorizontally,
       modifier = Modifier.fillMaxSize()
     ) {
       items(
-        count = clientsLazyPagingItems.itemCount,
-        key = { clientsLazyPagingItems[it]?.hashCode() ?: Random.nextDouble() }
+        count = clients.itemCount,
+        key = { clients[it]?.hashCode() ?: Random.nextDouble() }
       ) { index ->
-        val client = clientsLazyPagingItems[index]
+        val client = clients[index]
         var isVisibleByFilters by remember { mutableStateOf(true) }
         if (client != null) {
           LaunchedEffect(client, searchBarText) {
@@ -80,7 +102,7 @@ fun ClientsListPage(
               onEdit = onClientEdit,
               onRecharge = onClientRecharge,
               onDelete = { onClientDelete(it) },
-              showDivider = index < clientsLazyPagingItems.itemCount - 1,
+              showDivider = index < clients.itemCount - 1,
               onSendMessage = onClientSendMessage,
               onClientCardCounterReset = onClientCardCounterReset,
               au = au
@@ -90,7 +112,7 @@ fun ClientsListPage(
       }
 
       item {
-        clientsLazyPagingItems.run {
+        clients.run {
           when {
             loadState.refresh is LoadState.Loading -> {
               PageLoader(
@@ -99,7 +121,7 @@ fun ClientsListPage(
             }
 
             loadState.refresh is LoadState.Error -> {
-              val error = clientsLazyPagingItems.loadState.refresh as LoadState.Error
+              val error = clients.loadState.refresh as LoadState.Error
               ErrorMessage(
                 modifier = Modifier.height(Constants.Dimens.HorizontalCardHeight),
                 message = error.error.localizedMessage!!,
@@ -112,7 +134,7 @@ fun ClientsListPage(
             }
 
             loadState.append is LoadState.Error -> {
-              val error = clientsLazyPagingItems.loadState.append as LoadState.Error
+              val error = clients.loadState.append as LoadState.Error
               ErrorMessage(
                 modifier = Modifier,
                 message = error.error.localizedMessage!!,
@@ -132,7 +154,7 @@ fun ClientsListPage(
 private fun PreviewClientsListPage() {
   PreviewComposable {
     ClientsListPage(
-      clients = MutableStateFlow(value = PagingData.from(clientsForTesting)),
+      clients = MutableStateFlow(value = PagingData.from(clientsForTesting)).collectAsLazyPagingItems(),
       searchBarText = "",
       onClientEdit = {},
       onClientDelete = { },
@@ -141,6 +163,8 @@ private fun PreviewClientsListPage() {
 //      onAddClient = {},
       au = AndroidUtilsImpl(LocalContext.current),
       onClientRecharge = { _, _ -> },
+      scrollPosition = remember { mutableIntStateOf(0) },
+//      lazyListState = rememberLazyListState(),
       onClientCardCounterReset = {},
     )
   }

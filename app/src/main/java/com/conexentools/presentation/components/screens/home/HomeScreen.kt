@@ -52,8 +52,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -74,6 +76,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import androidx.paging.PagingData
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.conexentools.R
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
@@ -133,7 +137,7 @@ fun HomeScreen(
 
   // ClientList Page
   isManager: MutableState<Boolean>,
-  clients: StateFlow<PagingData<Client>>,
+  clients: LazyPagingItems<Client>,
   onClientCardEdit: (Client) -> Unit,
   onClientCardRecharge: (Client, () -> Unit) -> Unit,
   onSubmitClientForDeletion: (Client) -> Unit,
@@ -143,6 +147,7 @@ fun HomeScreen(
   onClientCardCounterReset: (Client) -> Unit,
   onAddClient: () -> Unit,
   onBatchAddClient: () -> Unit,
+  clientsListScrollPosition: MutableIntState
 ) {
 
   when (homeScreenState.state) {
@@ -192,6 +197,7 @@ fun HomeScreen(
         onAddClient = onAddClient,
         onClientCardCounterReset = onClientCardCounterReset,
         onBatchAddClient = onBatchAddClient,
+        clientsListScrollPosition = clientsListScrollPosition
       )
     }
 
@@ -246,7 +252,7 @@ private fun DrawHome(
 
   // ClientList Page
   isManager: MutableState<Boolean>,
-  clients: StateFlow<PagingData<Client>>,
+  clients: LazyPagingItems<Client>,
   onClientCardEdit: (Client) -> Unit,
   onClientCardRecharge: (Client, () -> Unit) -> Unit,
   onClientCardSendMessage: (String, String?) -> Unit,
@@ -256,6 +262,7 @@ private fun DrawHome(
   onClientCardCounterReset: (Client) -> Unit,
   onAddClient: () -> Unit,
   onBatchAddClient: () -> Unit,
+  clientsListScrollPosition: MutableIntState
 ) {
 
   val showAdbRunCommandDialog = remember { mutableStateOf(false) }
@@ -545,6 +552,7 @@ private fun DrawHome(
                   }
                 },
                 onClientCardCounterReset = onClientCardCounterReset,
+                scrollPosition = clientsListScrollPosition,
                 au = au
               )
             }
@@ -726,7 +734,7 @@ fun HomeScreenPreview() {
       waContact = remember { mutableStateOf("Jeans MR") },
       page = remember { mutableStateOf(HomeScreenPage.CLIENT_LIST) },
       au = AndroidUtilsImpl(context = context),
-      clients = MutableStateFlow(PagingData.from(clientsForTesting)),
+      clients = MutableStateFlow(PagingData.from(clientsForTesting)).collectAsLazyPagingItems(),
       onClientCardEdit = {},
       onClientCardRecharge = { _, _ ->},
       onSubmitClientForDeletion = {},
@@ -740,6 +748,7 @@ fun HomeScreenPreview() {
       transfermovilInstalledVersion = Pair(23, "123.124.51"),
       instrumentationAppInstalledVersion = Pair(23, "123.124.51"),
       onRunInstrumentedTest = {},
+      clientsListScrollPosition = remember { mutableIntStateOf(0) },
     )
   }
 }

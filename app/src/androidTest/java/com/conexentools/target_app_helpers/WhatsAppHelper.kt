@@ -1,26 +1,31 @@
-package com.conexentools
+package com.conexentools.target_app_helpers
 
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import com.conexentools.BuildConfig
+import com.conexentools.DeviceManager
+import java.util.regex.Pattern
 
-class WhatsAppHelper (
+class WhatsAppHelper(
   device: UiDevice
 ) : TargetAppHelper(
-device = device,
-name = "WhatsApp",
-packageName = BuildConfig.WHATSAPP_PACKAGE_NAME,
-testedVersionCode = BuildConfig.TESTED_WA_VERSION_CODE,
-testedVersionName = BuildConfig.TESTED_WA_VERSION_NAME,
+  device = device,
+  name = "WhatsApp",
+  packageName = BuildConfig.WHATSAPP_PACKAGE_NAME,
+  testedVersionCode = BuildConfig.TESTED_WA_VERSION_CODE,
+  testedVersionName = BuildConfig.TESTED_WA_VERSION_NAME,
 ) {
 
   fun startConversation(contactNameOrNumber: String) {
-      // Assuming WA is already open at main screen
-      dm.click("header_fab")
-      dm.click("menuitem_search")
-      dm.findObject("search_src_text").text = contactNameOrNumber.filter { it.code <= 0xFF } // Taking only ASCII characters
-      device.waitForIdle()
-      Thread.sleep(100)
-      dm.click("contactpicker_text_container")
+    // Assuming WA is already open at main screen
+    dm.click(By.res(Pattern.compile(".*:id/.*?fab")))
+
+    dm.click("menuitem_search")
+    dm.findObject("search_src_text").text =
+      contactNameOrNumber.filter { it.code <= 0xFF } // Taking only ASCII characters
+    device.waitForIdle()
+    Thread.sleep(100)
+    dm.click("contactpicker_text_container")
   }
 
   fun sendMessage(message: String) {
