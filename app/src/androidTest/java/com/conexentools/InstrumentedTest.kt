@@ -61,8 +61,6 @@ class InstrumentedTest {
   @Test
   fun RechargeMobile() = runTest {
 
-    device.pressHome()
-
     th.throwExceptionIfNotInstalled()
 
     toast("Iniciando el proceso de automatización", isShortToast = true)
@@ -143,25 +141,8 @@ class InstrumentedTest {
     }
 
     toast("Abriendo Transfermóvil", isShortToast = true)
-    // Launch Transfermóvil
-    th.launch()
 
-    // Confirm Welcome Message if present
-    th.bypassStartUpDialogs()
-
-    // Open lateral panel
-    th.openLateralPanel()
-
-    // Select bank
-    th.selectBank(bank)
-
-    // Authenticate
-    if (!th.authenticate(pin)) {
-      toast("Autenticación fallida", vibrate = true, waitForToastToHide = true)
-      assert(false)
-    }
-
-    toast("Autenticado satisfactoriamente")
+    th.performFullProcessTillAuthentication(bank, pin)
 
     val confirmationMessages = mutableListOf<String>()
     for (index in 0..<recharges.count()) {
@@ -278,11 +259,11 @@ class InstrumentedTest {
   @Test
   fun SendWhatsAppMessage() = runTest {
     wh.throwExceptionIfNotInstalled()
-//    var waContact = cliArguments.getString("waContact")!!
-//    var message = cliArguments.getString("message")
+    val waContact = cliArguments.getString("waContact")!!
+    val message = cliArguments.getString("message")
     // Testing purposes
-    val waContact = "+5355797140"
-    val message = "Hellolw alkdsfkas dsnmdkf sdf sdfjsdf $ $$$   f"
+//    val waContact = "+5355797140"
+//    val message = "Hellolw alkdsfkas dsnmdkf sdf sdfjsdf $ $$$   f"
 
     wh.launch()
     wh.startConversation(waContact)
@@ -292,11 +273,11 @@ class InstrumentedTest {
 
   @Test
   fun TransferCash() = runTest {
-    TODO()
+
   }
 
   @Test
-  fun TestDropDownMenuSelector() = runTest (startAtHome = false) {
+  fun TestDropDownMenuSelector() = runTest(startAtHome = false) {
 //    val choice = cliArguments.getString("choice")!!.toInt()
 //    val choicesCount = cliArguments.getString("choicesCount")!!.toInt()
 //    val expectedText = cliArguments.getString("expectedText")!!

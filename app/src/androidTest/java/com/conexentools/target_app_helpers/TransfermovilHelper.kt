@@ -25,6 +25,8 @@ class TransfermovilHelper(
   testedVersionName = BuildConfig.TESTED_TM_VERSION_NAME,
 ) {
 
+  var isAuthenticatedInLatestSelectedBank = false
+
   fun accept(){
     dm.click("btn_aceptar")
 //    device.pressEnter()
@@ -43,6 +45,7 @@ class TransfermovilHelper(
     val designNavigationView = dm.waitForObject("design_navigation_view")!!
     val s = By.res(getPatternForResourceID(bank)).clazz(LinearLayoutCompat::class.java)
     designNavigationView.scrollUntil(Direction.DOWN, Until.findObject(s))
+    isAuthenticatedInLatestSelectedBank = device.findObject(s.hasChild(By.textEndsWith("actual"))) != null
     dm.click(s)
   }
 
@@ -99,5 +102,23 @@ class TransfermovilHelper(
 
   fun getMessages(): Map<Int, String>{
     return Utils.getMessages("PAGOxMOVIL")
+  }
+
+  fun performFullProcessTillAuthentication(bank: String, pin: String) {
+    launch()
+    bypassStartUpDialogs()
+    openLateralPanel()
+    selectBank(bank)
+
+    if (isAuthenticatedInLatestSelectedBank) {
+      Utils.toast("Actualmente autenticado para el banco seleccionado", isShortToast = true)
+    } else {
+      // Authenticate
+      if (!authenticate(pin)) {
+        Utils.toast("Autenticación fallida", vibrate = true, waitForToastToHide = true)
+        assert(false)
+      }
+      Utils.toast("Autenticado satisfactoriamente")
+    }
   }
 }

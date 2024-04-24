@@ -90,7 +90,6 @@ class HomeScreenViewModel @Inject constructor(
     au.getPackageVersion(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME)
   val instrumentationAppInstalledVersion = au.getPackageVersion(BuildConfig.TEST_NAMESPACE)
 
-
   private val _clients = MutableStateFlow(value = PagingData.empty<Client>())
   val clients: StateFlow<PagingData<Client>> get() = _clients
 
@@ -292,16 +291,6 @@ class HomeScreenViewModel @Inject constructor(
       append(" ${args.trim()} ${BuildConfig.TEST_NAMESPACE}/${BuildConfig.TEST_INSTRUMENTATION_RUNNER} --no-window-animation --no-hidden-api-checks")
     }.toString()
   }
-
-//  private fun runTest(
-//    command: String,
-//  ) {
-//    au.executeCommand(command, su = true)
-//  }
-
-//  private fun getCommandToRunTransferCashInstrumentedTest(): String {
-//return ""
-//  }
 
   fun getCommandToRunRechargeMobileInstrumentedTest(): String {
 
