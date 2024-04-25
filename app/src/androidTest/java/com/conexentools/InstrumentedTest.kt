@@ -9,8 +9,10 @@ import androidx.test.uiautomator.UiDevice
 import com.conexentools.Utils.Companion.setClipboard
 import com.conexentools.Utils.Companion.toast
 import com.conexentools.core.util.log
-import com.conexentools.target_app_helpers.TransfermovilHelper
-import com.conexentools.target_app_helpers.WhatsAppHelper
+import com.conexentools.target_app_helpers.transfermovil.BankOperation
+import com.conexentools.target_app_helpers.transfermovil.BankTab
+import com.conexentools.target_app_helpers.transfermovil.TransfermovilHelper
+import com.conexentools.target_app_helpers.whatsapp.WhatsAppHelper
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -59,8 +61,10 @@ class InstrumentedTest {
   }
 
   @Test
-  fun RechargeMobile() = runTest {
-
+  fun RechargeMobile() = runTest(
+    includeWhatsAppVersionCompatibilityWarningToastOnErrors = true,
+    includeTransfermovilVersionCompatibilityWarningToastOnErrors = true
+  ) {
     th.throwExceptionIfNotInstalled()
 
     toast("Iniciando el proceso de automatización", isShortToast = true)
@@ -76,7 +80,8 @@ class InstrumentedTest {
     if (bank == "metropolitano")
       bank = "metro"
     val pin = cliArguments.getString("pin")!!
-    val cardLast4Digits = cliArguments.getString("cardLast4Digits")
+    val cardToUseDropDownMenuPosition =
+      cliArguments.getString("cardToUseDropDownMenuPosition")?.toInt()
 
     var dataFetchedFromWA = false
 
@@ -140,8 +145,6 @@ class InstrumentedTest {
       }
     }
 
-    toast("Abriendo Transfermóvil", isShortToast = true)
-
     th.performFullProcessTillAuthentication(bank, pin)
 
     val confirmationMessages = mutableListOf<String>()
@@ -149,8 +152,8 @@ class InstrumentedTest {
       if (index > 1)
         break
 
-      th.selectBankTab("Operaciones")
-      th.selectBankOperation("Recarga Saldo Móvil")
+      th.selectBankTab(BankTab.Operaciones)
+      th.selectBankOperation(BankOperation.RechargeMobile)
 
       val pair = recharges[index]
       val latestClientNumberRecharged = pair.first
@@ -165,67 +168,22 @@ class InstrumentedTest {
       dm.findObject("txCuenta").text = pair.first
       dm.findObject("txMonto").text = pair.second
 
-//      val spinnerTipoMonedaChoice = 1//dm.findObject("spinnerTipoMoneda")
-      if (!cardLast4Digits.isNullOrEmpty()) {
-//        spinnerTipoMoneda.text = "-MIS CUENTAS-"
-        dm.selectDropDownMenuItem(
-          resourceID = "spinnerTipoMoneda",
-          choice = 3,
-          choicesCount = 4,
-          isItemBelowTextInput = true,
-          expectedTextAfterSelection = "-MIS CUENTAS-"
-        )
+      th.selectAccountTypeToOperate(cardToUseDropDownMenuPosition)
 
-        var text = "BANCO "
-        text += if (bank == "metro")
-          "METROPOLITANO"
-        else
-          bank.uppercase()
-        text += " - $cardLast4Digits"
-        dm.waitForObject("spinnerCuentas")!!.text = text
-      } else
-        dm.selectDropDownMenuItem(
-          resourceID = "spinnerTipoMoneda",
-          choice = 1,
-          choicesCount = 4,
-          isItemBelowTextInput = true,
-          expectedTextAfterSelection = "CUP"
-        )
-//        spinnerTipoMoneda.text = "CUP"
-
-      val lastMessage = th.getMessages().entries.last()
+      val latestMessage = th.getMessages().entries.last()
       th.accept()
-      var count = 0
-      var currentMessage: Map.Entry<Int, String>
-      toast("Esperando por mensaje de confirmación", isShortToast = true)
-      do {
-        Thread.sleep(1000)
-        currentMessage = th.getMessages().entries.last()
-      } while (currentMessage == lastMessage && ++count < SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE)
 
-      if (count >= SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE) {
-        toast(
-          "El mensaje de confirmación no fue recibido en $SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE segundos :(",
-          vibrate = true,
-          waitForToastToHide = true
-        )
-        assert(false)
-      }
-      var message = currentMessage.value
-      if (!message.contains("La recarga se realizo con exito")) {
-        toast(
-          "Algo salió mal, la recarga parece no haberse realizado con éxito :(",
-          vibrate = true,
-          waitForToastToHide = true
-        )
-        assert(false)
-      }
+      // Waiting for confirmation message
+      var message = th.waitForConfirmationMessage(
+        latestMessage = latestMessage,
+        textToBePresent = "La recarga se realizo con exito"
+      )
       message = message.replace(CASH_REPLACEMENT_RE, "CR 0.00")
 
       confirmationMessages.add(message)
       toast("Mensaje de confirmación capturado")
 
-      // If recharging to same number wait between recharges
+      // If recharging to same number, wait between recharges
       if (index + 1 < recharges.count() && latestClientNumberRecharged == recharges[index + 1].first) {
         // Waiting 1 min and 5 seconds
         toast("Esperando 1 minuto y 5 segundos para hacer la próxima recarga... Stay tuned!")
@@ -239,8 +197,8 @@ class InstrumentedTest {
     setClipboard(clipboardContent)
     toast("Mensajes de confirmación copiados al portapapeles")
 
+    // If data was obtained from WhatsApp, an instance of it should be open in the background on the chat screen
     if (!waContact.isNullOrEmpty()) {
-      // If data was fetched from WhatsApp an of it must be open in background, in the conversation screen
       wh.launch(clearOutPreviousInstances = !dataFetchedFromWA)
       if (!dataFetchedFromWA)
         wh.startConversation(waContact)
@@ -257,13 +215,17 @@ class InstrumentedTest {
   }
 
   @Test
-  fun SendWhatsAppMessage() = runTest {
+  fun SendWhatsAppMessage() = runTest(
+    includeWhatsAppVersionCompatibilityWarningToastOnErrors = true
+  ) {
     wh.throwExceptionIfNotInstalled()
     val waContact = cliArguments.getString("waContact")!!
     val message = cliArguments.getString("message")
-    // Testing purposes
-//    val waContact = "+5355797140"
-//    val message = "Hellolw alkdsfkas dsnmdkf sdf sdfjsdf $ $$$   f"
+
+    log("========SendWhatsAppMessage========")
+    log("waContact: $waContact")
+    log("message: $message")
+    log("===================================")
 
     wh.launch()
     wh.startConversation(waContact)
@@ -272,25 +234,86 @@ class InstrumentedTest {
   }
 
   @Test
-  fun TransferCash() = runTest {
+  fun TransferCash() = runTest(
+    includeTransfermovilVersionCompatibilityWarningToastOnErrors = true
+  ) {
+    var bank = cliArguments.getString("bank")!!.lowercase()
+    if (bank == "metropolitano")
+      bank = "metro"
+    val pin = cliArguments.getString("pin")!!
+    val cardToUseDropDownMenuPosition =
+      cliArguments.getString("cardToUseDropDownMenuPosition")?.toInt()
+    val recipientCard = cliArguments.getString("recipientCard")!!
+    val cash = cliArguments.getString("cash")!!
+    val mobileToConfirm = cliArguments.getString("mobileToConfirm")!!
+    val recipientReceiveMyNumber = cliArguments.getBoolean("recipientReceiveMyNumber")
 
+    log("========TransferCash========")
+    log("bank: $bank")
+    log("pin: $pin")
+    log("cardToUseDropDownMenuPosition: $cardToUseDropDownMenuPosition")
+    log("recipientCard: $recipientCard")
+    log("cash: $cash")
+    log("mobileToConfirm: $mobileToConfirm")
+    log("recipientReceiveMyNumber: $recipientReceiveMyNumber")
+    log("============================")
+
+    th.throwExceptionIfNotInstalled()
+    th.performFullProcessTillAuthentication(bank, pin)
+    th.selectBankTab(BankTab.Operaciones)
+    th.selectBankOperation(BankOperation.TransferCash)
+
+    // Tarjeta o cuenta del destinatario
+    dm.write("input_cuenta", recipientCard)!!
+    // Monto
+    dm.write("input_monto", cash)!!
+    // Moneda
+    dm.selectDropDownMenuItem(
+      resourceID = "spinnerTipoMonedaImporte",
+      choice = 1,
+      choicesCount = 3,
+      isItemBelowTextInput = true,
+      expectedTextAfterSelection = "CUP"
+    )
+    // Tipo de cuenta a operar
+    th.selectAccountTypeToOperate(
+      cardToUseDropDownMenuPosition = cardToUseDropDownMenuPosition,
+      isFiveEntriesDropDownMenu = true
+    )
+    // Móvil a confirmar
+    dm.write("input_phone_confirm", mobileToConfirm)!!
+    // El destinatario recibe mi número de móvil
+    if (recipientReceiveMyNumber)
+      dm.click("checkBoxMyPhone")
+
+    val latestMessage = th.getMessages().entries.last()
+    // Confirm dialogs
+    th.accept()
+
+    // Wait for confirmation message
+    th.waitForConfirmationMessage(
+      latestMessage = latestMessage,
+      textToBePresent = "ransferencia fue completada"
+    )
+
+    // adb -s KRYX796HVGF67XWO shell am instrument -w -e class com.conexentools.InstrumentedTest#TransferCash -e bank metro -e pin 1064 -e cardToUseDropDownMenuPosition 1 -e recipientReceiveMyNumber false -e recipientCard 9224069991767498 -e cash 5 -e mobileToConfirm 55797140 com.conexentools.test/androidx.test.runner.AndroidJUnitRunner --no-window-animation --no-hidden-api-checks
   }
 
   @Test
-  fun TestDropDownMenuSelector() = runTest(startAtHome = false) {
-//    val choice = cliArguments.getString("choice")!!.toInt()
-//    val choicesCount = cliArguments.getString("choicesCount")!!.toInt()
-//    val expectedText = cliArguments.getString("expectedText")!!
-//    val isItemBelow = cliArguments.getBoolean("isItemBelow")
-//    val resourceID = cliArguments.getString("resourceId")!!
+  fun TestDropDownMenuSelector() = runTest {
+    val choice = cliArguments.getString("choice")!!.toInt()
+    val choicesCount = cliArguments.getString("choicesCount")!!.toInt()
+    val expectedText = cliArguments.getString("expectedText")!!
+    val isItemBelow = cliArguments.getBoolean("isItemBelow")
+    val resourceID = cliArguments.getString("resourceId")!!
 
-    log("Testing DropDownMenu item selector")
-
-    val choice = 1
-    val choicesCount = 4
-    val expectedText = "CUP"
-    val isItemBelow = true
-    val resourceID = "spinnerTipoMoneda"
+    log("========TestDropDownMenuSelector======")
+    log("choice: $choice")
+    log("choicesCount: $choicesCount")
+    log("expectedText: $expectedText")
+    log("isItemBelow: $isItemBelow")
+    log("resourceID: $resourceID")
+    log("======================================")
 
     dm.selectDropDownMenuItem(
       resourceID = resourceID,
@@ -303,8 +326,36 @@ class InstrumentedTest {
     // adb shell am instrument -w -e class com.conexentools.InstrumentedTest#TestDropDownMenuSelector -e choice 1 -e choicesCount 2 -e expectedText Recarga\ Móvil\ con\ tarjeta\ CUP -e isItemBelow true -e resourceId spTipoRecarga com.conexentools.test/androidx.test.runner.AndroidJUnitRunner --no-window-animation --no-hidden-api-checks
   }
 
+  @Test
+  fun Test() {
+    th.accept()
+  }
+
+  @Test
+  fun PrintTransfermovilVersion() = th.printVersionInfo()
+
+  @Test
+  fun PrintWhatsAppVersionVersion() = wh.printVersionInfo()
+
+  @Test
+  fun sendWAMessage() = runTest(
+    includeWhatsAppVersionCompatibilityWarningToastOnErrors = true,
+  ) {
+    val number: String? = cliArguments.getString("numero")
+    val message: String? = cliArguments.getString("mensaje")
+
+    assert(number != null)
+
+    wh.launch(clearOutPreviousInstances = true)
+    wh.startConversation(number!!)
+    if (message != null)
+      wh.sendMessage(message)
+  }
+
   private fun runTest(
-    startAtHome: Boolean = true,
+    startAtHome: Boolean = false,
+    includeWhatsAppVersionCompatibilityWarningToastOnErrors: Boolean = false,
+    includeTransfermovilVersionCompatibilityWarningToastOnErrors: Boolean = false,
     test: () -> Unit
   ) {
     try {
@@ -327,33 +378,10 @@ class InstrumentedTest {
       }
       throw ex
     } finally {
-      th.checkVersionCompatibility()
-      wh.checkVersionCompatibility()
+      if (includeTransfermovilVersionCompatibilityWarningToastOnErrors)
+        th.checkVersionCompatibility()
+      if (includeWhatsAppVersionCompatibilityWarningToastOnErrors)
+        wh.checkVersionCompatibility()
     }
-  }
-
-  @Test
-  fun Test() {
-
-  }
-
-
-  @Test
-  fun PrintTransfermovilVersion() = th.printVersionInfo()
-
-  @Test
-  fun PrintWhatsAppVersionVersion() = wh.printVersionInfo()
-
-  @Test
-  fun sendWAMessage() {
-    val number: String? = cliArguments.getString("numero")
-    val message: String? = cliArguments.getString("mensaje")
-
-    assert(number != null)
-
-    wh.launch(clearOutPreviousInstances = true)
-    wh.startConversation(number!!)
-    if (message != null)
-      wh.sendMessage(message)
   }
 }

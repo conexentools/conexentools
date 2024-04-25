@@ -13,6 +13,7 @@ import android.widget.Toast.LENGTH_LONG
 import android.widget.Toast.LENGTH_SHORT
 import androidx.core.content.ContextCompat
 import androidx.test.platform.app.InstrumentationRegistry
+import java.util.regex.Pattern
 
 
 class Utils {
@@ -106,6 +107,10 @@ class Utils {
       toast("Tested $name:\n\t" +
           "Version Code: ${testedVersion.first}\n\t" +
           "Version Name: ${testedVersion.second}", waitForToastToHide = true)
+    }
+
+    fun getPatternForResourceID(resourceName: String): Pattern {
+      return Pattern.compile(".*:id/$resourceName")
     }
   }
 }

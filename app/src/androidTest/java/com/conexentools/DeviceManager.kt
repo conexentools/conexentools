@@ -9,7 +9,9 @@ import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
-import java.util.regex.Pattern
+import com.conexentools.Constants.LONG_TIMEOUT
+import com.conexentools.Constants.MEDIUM_TIMEOUT
+import com.conexentools.Utils.Companion.getPatternForResourceID
 
 class DeviceManager(private val device: UiDevice) {
 
@@ -44,7 +46,7 @@ class DeviceManager(private val device: UiDevice) {
     choicesCount: Int,
     timeout: Int = MEDIUM_TIMEOUT,
     isItemBelowTextInput: Boolean = true,
-    expectedTextAfterSelection: String,
+    expectedTextAfterSelection: String?,
   ) {
     val selector: BySelector = makeSelector(resourceID, text)
     selectDropDownMenuItem(
@@ -63,9 +65,9 @@ class DeviceManager(private val device: UiDevice) {
     choicesCount: Int,
     timeout: Int = MEDIUM_TIMEOUT,
     isItemBelowTextInput: Boolean = true,
-    expectedTextAfterSelection: String,
+    expectedTextAfterSelection: String?,
   ) {
-    assert(choicesCount > 0 && choice in 1.. choicesCount)
+    assert(choicesCount > 0 && choice in 1..choicesCount)
     val textInput = waitForObject(selector, timeout)!!
 
     fun clickDropDownItem(isBelow: Boolean): Boolean {
@@ -75,11 +77,12 @@ class DeviceManager(private val device: UiDevice) {
         (choicesCount - choice + 1) * -1
       }
       val distanceToChoiceCenter = textInput.visibleBounds.height() * offset
-      val point = Point(textInput.visibleCenter.x, textInput.visibleCenter.y + distanceToChoiceCenter)
+      val point =
+        Point(textInput.visibleCenter.x, textInput.visibleCenter.y + distanceToChoiceCenter)
       textInput.click()
       Thread.sleep(700)
       device.click(point.x, point.y)
-      return textInput.text == expectedTextAfterSelection
+      return expectedTextAfterSelection == null || textInput.text == expectedTextAfterSelection
     }
 
     if (!clickDropDownItem(isBelow = isItemBelowTextInput))
@@ -124,14 +127,24 @@ class DeviceManager(private val device: UiDevice) {
     return selector!!
   }
 
-  companion object {
-    fun getPatternForResourceID(resourceName: String): Pattern {
-      return Pattern.compile(".*:id/$resourceName")
-    }
+  fun write(
+    resourceID: String?,
+    text: String,
+    elementText: String? = null,
+    timeout: Int = MEDIUM_TIMEOUT,
+  ): UiObject2? {
+    val selector = makeSelector(resourceID, elementText)
+    return write(selector, text, timeout)
+  }
 
-    const val SHORT_TIMEOUT = 2000
-    const val MEDIUM_TIMEOUT = 5000
-    const val LONG_TIMEOUT = 10000
-
+  fun write(
+    selector: BySelector,
+    text: String,
+    timeout: Int = MEDIUM_TIMEOUT,
+  ): UiObject2? {
+    val element = waitForObject(selector, timeout)
+    if (element != null)
+      element.text = text
+    return element
   }
 }

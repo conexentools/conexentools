@@ -17,7 +17,7 @@ abstract class TargetAppHelper(
   val installedVersion = Utils.getPackageVersion(packageName)
   val testedVersion = Pair(testedVersionCode.toLong(), testedVersionName)
 
-  fun launch(clearOutPreviousInstances: Boolean = true) = dm.launchPackage(
+  open fun launch(clearOutPreviousInstances: Boolean = true) = dm.launchPackage(
     packageName,
     clearOutPreviousInstances = clearOutPreviousInstances
   )
