@@ -62,6 +62,7 @@ class InstrumentedTest {
 
   @Test
   fun RechargeMobile() = runTest(
+    startAtHome = true,
     includeWhatsAppVersionCompatibilityWarningToastOnErrors = true,
     includeTransfermovilVersionCompatibilityWarningToastOnErrors = true
   ) {
@@ -186,7 +187,7 @@ class InstrumentedTest {
       // Waiting for confirmation message
       var message = th.waitForConfirmationMessage(
         latestMessage = latestMessage,
-        textToBePresent = "La recarga se realizo con exito"
+        "La recarga se realizo con exito"
       )
       message = message.replace(CASH_REPLACEMENT_RE, "CR 0.00")
 
@@ -226,6 +227,7 @@ class InstrumentedTest {
 
   @Test
   fun SendWhatsAppMessage() = runTest(
+    startAtHome = true,
     includeWhatsAppVersionCompatibilityWarningToastOnErrors = true
   ) {
     wh.throwExceptionIfNotInstalled()
@@ -240,6 +242,7 @@ class InstrumentedTest {
 
   @Test
   fun TransferCash() = runTest(
+    startAtHome = true,
     includeTransfermovilVersionCompatibilityWarningToastOnErrors = true
   ) {
     var bank = cliArguments.getString("bank")!!.lowercase()
@@ -251,7 +254,7 @@ class InstrumentedTest {
     val recipientCard = cliArguments.getString("recipientCard")!!
     val cash = cliArguments.getString("cash")!!
     val mobileToConfirm = cliArguments.getString("mobileToConfirm")!!
-    val recipientReceiveMyNumber = cliArguments.getBoolean("recipientReceiveMyNumber")
+    val recipientReceiveMyNumber = cliArguments.getString("recipientReceiveMyNumber").toBoolean()
 
     log("======== TransferCash ========")
     log("bank: $bank")
@@ -297,18 +300,18 @@ class InstrumentedTest {
     // Wait for confirmation message
     th.waitForConfirmationMessage(
       latestMessage = latestMessage,
-      textToBePresent = "ransferencia fue completada"
+      "ransferencia fue completada", "le ha realizado una transferencia"
     )
 
     // adb -s KRYX796HVGF67XWO shell am instrument -w -e class com.conexentools.InstrumentedTest#TransferCash -e bank metro -e pin 1064 -e cardToUseDropDownMenuPosition 1 -e recipientReceiveMyNumber false -e recipientCard 9224069991767498 -e cash 5 -e mobileToConfirm 55797140 com.conexentools.test/androidx.test.runner.AndroidJUnitRunner --no-window-animation --no-hidden-api-checks
   }
 
   @Test
-  fun TestDropDownMenuSelector() = runTest {
+  fun TestDropDownMenuSelector() = runTest (startAtHome = false) {
     val choice = cliArguments.getString("choice")!!.toInt()
     val choicesCount = cliArguments.getString("choicesCount")!!.toInt()
     val expectedText = cliArguments.getString("expectedText")!!
-    val isItemBelow = cliArguments.getBoolean("isItemBelow")
+    val isItemBelow = cliArguments.getString("isItemBelow").toBoolean()
     val resourceID = cliArguments.getString("resourceId")!!
 
     log("======== TestDropDownMenuSelector ======")
@@ -332,7 +335,8 @@ class InstrumentedTest {
 
   @Test
   fun Test() {
-    th.accept()
+    log("pepa: " + cliArguments.getBoolean("pepa"))
+    log("pepa: " + cliArguments.getString("pepa").toBoolean())
   }
 
   @Test
@@ -342,7 +346,8 @@ class InstrumentedTest {
   fun PrintWhatsAppVersionVersion() = wh.printVersionInfo()
 
   @Test
-  fun sendWAMessage() = runTest(
+  fun sendWAMessage() = runTest (
+    startAtHome = true,
     includeWhatsAppVersionCompatibilityWarningToastOnErrors = true,
   ) {
     val number: String? = cliArguments.getString("numero")
@@ -357,13 +362,13 @@ class InstrumentedTest {
   }
 
   private fun runTest(
-    startAtHome: Boolean = false,
+    startAtHome: Boolean,
     includeWhatsAppVersionCompatibilityWarningToastOnErrors: Boolean = false,
     includeTransfermovilVersionCompatibilityWarningToastOnErrors: Boolean = false,
     test: () -> Unit
   ) {
     try {
-      if (startAtHome)
+      if (startAtHome && !device.currentPackageName.endsWith("launcher"))
         device.pressHome()
       test()
     } catch (assertionExc: AssertionError) {

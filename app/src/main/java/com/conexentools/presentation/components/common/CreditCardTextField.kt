@@ -66,6 +66,7 @@ fun CreditCardTextField(
     },
     trailingIcon = trailingIcon,
     value = value,
+    textStyle = MaterialTheme.typography.bodyLarge,
 //    placeholder = { Text("XXXX-XXXX-XXXX-XXXX") },
     onValueChange = {
       var v = it.sanitizeNumberString()

@@ -25,13 +25,14 @@ fun CashTextField(
   value: String,
   onValueChange: (String) -> Unit,
   minValue: Int = 0,
-  maxValue: Int? = null
+  maxValue: Int? = null,
+  label: String? = null
 ) {
   var isInvalidEntry by remember { mutableStateOf(false) }
   var supportingText: @Composable (() -> Unit)? by remember { mutableStateOf(null) }
   val focusManager = LocalFocusManager.current
 
-  val maxValue_ = maxValue ?: 100000
+  val maxValue_ = maxValue ?: 1000000
 
   fun isValidEntry() =
     value.isEmpty() || (value.isDigitsOnly() && value.toInt() in minValue..maxValue_)
@@ -41,7 +42,7 @@ fun CashTextField(
       .onFocusChanged { focusState ->
         if (!focusState.isFocused && !isValidEntry()) {
           isInvalidEntry = true
-          supportingText = { Text("La valor debe estar entre $minValue y $maxValue_") }
+          supportingText = { Text("El valor debe estar entre $minValue y $maxValue_") }
         } else {
           supportingText = null
           isInvalidEntry = false
@@ -51,18 +52,20 @@ fun CashTextField(
       .then(modifier),
     supportingText = supportingText,
     isError = isInvalidEntry,
-    value = value,
+    value = value, //TODO fixxx
     prefix = { Text("$", color = MaterialTheme.colorScheme.primary) },
     suffix = { Text("CUP", color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)) },
     onValueChange = {
       if (isValidEntry())
         onValueChange(it)
     },
+    label = label?.let { { Text(it) } },
+    textStyle = MaterialTheme.typography.bodyLarge,
     keyboardOptions = KeyboardOptions.Default.copy(
       keyboardType = KeyboardType.Number,
       imeAction = ImeAction.Next
     ),
     keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-    singleLine = true
+    singleLine = true,
   )
 }

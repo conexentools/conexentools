@@ -4,9 +4,11 @@ import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
@@ -25,7 +27,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
@@ -54,7 +58,6 @@ fun ClientsListPage(
   clients: LazyPagingItems<Client>,
   searchBarText: String = "",
   onClientEdit: (Client) -> Unit,
-//  onTransferCash: (Client, () -> Unit) -> Unit,
   onClientSendMessage: (String, String?) -> Unit,
   onClientDelete: (Client) -> Unit,
   onClientCardCounterReset: (Client) -> Unit,
@@ -86,7 +89,6 @@ fun ClientsListPage(
       .debounce(500L)
       .collectLatest { pos ->
         scrollPosition.intValue = pos
-        log("saving scroll position: $pos")
       }
   }
 
@@ -186,7 +188,7 @@ fun ClientsListPage(
     if (clientToTransferCash.value == null)
       throw Exception("client should not be null at this point")
 
-    var mobileToConfirm by remember {
+    var mobileToConfirm by remember(clientToTransferCash) {
       mutableStateOf(defaultMobileToSendCashTransferConfirmation.ifEmpty {
         clientToTransferCash.value!!.phoneNumber ?: ""
       })
@@ -196,7 +198,13 @@ fun ClientsListPage(
     var showAdbCommand by remember { mutableStateOf(false) }
 
     AlertDialog(
-      title = { Text("Transferir Efectivo") },
+      title = {
+        Text(
+          text = "Transferir Efectivo",
+          modifier = Modifier.fillMaxWidth(),
+          textAlign = TextAlign.Center
+        )
+      },
       onDismissRequest = {},
       dismissButton = {
         // Cancelar
@@ -210,7 +218,7 @@ fun ClientsListPage(
         Row {
           // Atrás
           if (showAdbCommand) {
-            TextButton(onClick = { showTransferCashDialog.value = false }) {
+            TextButton(onClick = { showAdbCommand = false }) {
               Text("Atrás")
             }
           } else {
@@ -265,7 +273,6 @@ fun ClientsListPage(
         } else {
           LazyColumn(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(Constants.Dimens.Small),
             horizontalAlignment = Alignment.CenterHorizontally
           ) {
             item {
@@ -275,11 +282,17 @@ fun ClientsListPage(
                 onValueChange = { creditCard = it }
               )
 
+              Spacer(modifier = Modifier.height(Constants.Dimens.Small))
+
               // Cash
               CashTextField(
                 value = cashToTransferToClient.value,
-                onValueChange = { cashToTransferToClient.value = it }
+                onValueChange = { cashToTransferToClient.value = it },
+                label = "Monto",
+                modifier = Modifier.width(160.dp)
               )
+
+              Spacer(modifier = Modifier.height(Constants.Dimens.Small))
 
               // Mobile to send transfer confirmation message
               CubanPhoneNumberTextField(
@@ -289,11 +302,15 @@ fun ClientsListPage(
                 label = { Text("Móvil a confirmar") }
               )
 
+              Spacer(modifier = Modifier.height(Constants.Dimens.Small))
+
               // Recipient receive my phone number
               LabelSwitch(
                 label = "Destinatario recibe mi número",
                 checked = recipientReceiveMyMobileNumberAfterCashTransfer
               )
+
+              Spacer(modifier = Modifier.height(Constants.Dimens.Small))
 
               // Send WhatsApp Message On Transfer Cash Test Completed
               LabelSwitch(

@@ -139,10 +139,6 @@ fun AddEditClientScreen(
       client.value.name = name
       client.value.phoneNumber = number
       client.value.imageUriString = imageUri
-      log("name: $name")
-      log("phoneNumber: $phoneNumber")
-      log("onEditionClient.imageUriString: ${client.value.imageUriString}")
-      log("imageUri: $imageUri")
     }
   }
 

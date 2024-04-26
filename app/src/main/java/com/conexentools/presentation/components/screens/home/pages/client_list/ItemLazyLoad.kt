@@ -34,7 +34,7 @@ fun PageLoader(modifier: Modifier = Modifier) {
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
     Text(
-      text = stringResource(id = R.string.fetching_data),
+      text = "Obteniendo datos",
       color = MaterialTheme.colorScheme.primary,
       maxLines = 1,
       overflow = TextOverflow.Ellipsis
@@ -81,7 +81,7 @@ fun ErrorMessage(
       onClick = onClickRetry,
 //      modifier = Modifier.weight(1f)
     ) {
-      Text(text = stringResource(id = R.string.retry))
+      Text(text = "Reintentar")
     }
   }
 }

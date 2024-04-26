@@ -229,8 +229,11 @@ class HomeScreenViewModel @Inject constructor(
     if (transfermovilInstalledVersion == null)
       return
 
-    client.latestRechargeDateISOString = Instant.now().plus(15, ChronoUnit.MINUTES).toString()
-    client.rechargesMade = (client.rechargesMade ?: 0) + 1
+    // TODO change this logic, update latestRechargeDateISOString user click Transferir button on TransferCash dialog
+    if (areMainConditionsToRunInstrumentedTestMet) {
+      client.latestRechargeDateISOString = Instant.now().plus(15, ChronoUnit.MINUTES).toString()
+      client.rechargesMade = (client.rechargesMade ?: 0) + 1
+    }
 
     updateClient(client).invokeOnCompletion {
       if (it == null)
@@ -356,7 +359,7 @@ class HomeScreenViewModel @Inject constructor(
       if (bank_ == "Metropolitano")
         bank_ = "metro"
 
-      append("-e pin ${pin.value} -e bank ${bank_.lowercase()} -e recipientCard $recipientCard -e cash ${cashToTransfer.value} -e mobileToConfirm ${mobileToConfirm.replace(" ", "\\ ")}")
+      append(" -e pin ${pin.value} -e bank ${bank_.lowercase()} -e recipientCard $recipientCard -e cash ${cashToTransfer.value} -e mobileToConfirm ${mobileToConfirm.replace(" ", "\\ ")}")
     }.toString()
 
     return getInstrumentedTestShellCommand(
@@ -444,6 +447,19 @@ class HomeScreenViewModel @Inject constructor(
 
   override fun onPause(owner: LifecycleOwner) {
     super.onPause(owner)
+    log("onPause")
+    if (state.value == HomeScreenState(HomeScreenLoadingState.Success))
+      saveUserPreferences()
+  }
+
+  override fun onStop(owner: LifecycleOwner) {
+    super.onStop(owner)
+    log("onStop")
+  }
+
+  override fun onDestroy(owner: LifecycleOwner) {
+    super.onDestroy(owner)
+    log("onDestroy")
     if (state.value == HomeScreenState(HomeScreenLoadingState.Success))
       saveUserPreferences()
   }

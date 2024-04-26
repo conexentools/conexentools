@@ -166,7 +166,7 @@ class TransfermovilHelper(
 
   fun waitForConfirmationMessage(
     latestMessage: Map.Entry<Int, String>,
-    textToBePresent: String
+    vararg textToBePresent: String
   ): String {
 
     var count = 0
@@ -185,14 +185,24 @@ class TransfermovilHelper(
       )
       assert(false)
     }
-    if (!currentMessage.value.contains(textToBePresent)) {
-      Utils.toast(
-        "Algo parece haber salido mal, el mensaje de confirmación no fue el esperado :(",
-        vibrate = true,
-        waitForToastToHide = true
-      )
-      assert(false)
+
+    var containsText = false
+    for (pattern in textToBePresent){
+      if (currentMessage.value.contains(pattern)){
+        containsText = true
+        break
+      }
     }
-    return currentMessage.value
+
+    if (containsText)
+      return currentMessage.value
+
+    Utils.toast(
+      "Algo parece haber salido mal, el mensaje de confirmación no fue el esperado :(",
+      vibrate = true,
+      waitForToastToHide = true
+    )
+    assert(false)
+    return ""
   }
 }

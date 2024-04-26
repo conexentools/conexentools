@@ -120,9 +120,10 @@ fun CubanPhoneNumberTextField(
       leadingIcon = leadingIcon,
       keyboardOptions = keyboardOptions,
       keyboardActions = keyboardActions,
-      visualTransformation = { cubanMobileNumberFilter(it, darkTheme = darkTheme) },
       label = label,
-      singleLine = true
+      textStyle = MaterialTheme.typography.bodyLarge,
+      singleLine = true,
+      visualTransformation = { cubanMobileNumberFilter(it, darkTheme = darkTheme) },
     )
   } else {
     TextField(
@@ -136,6 +137,7 @@ fun CubanPhoneNumberTextField(
       prefix = prefix,
       keyboardOptions = keyboardOptions,
       keyboardActions = keyboardActions,
+      textStyle = MaterialTheme.typography.bodyLarge,
       singleLine = true,
       visualTransformation = { cubanMobileNumberFilter(it, darkTheme = darkTheme) }
     )

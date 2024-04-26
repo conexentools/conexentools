@@ -114,7 +114,7 @@ fun SettingsScreen(
 
     if (showPinAlertDialog){
       ScrollableAlertDialog(
-        text = "Tenga en cuenta que guardar el PIN de su tarjeta Telebanca puede ser peligroso pues este aunque por una parte no sea visible en la interfaz por otra estará expuesto en las preferencias de la aplicación, almacenadas en el almacenamiento interno protegido de la app, al cuál hay maneras de acceder, por ejemplo rooteando el teléfono",
+        text = "Tenga en cuenta que guardar el PIN de su tarjeta Telebanca puede ser peligroso pues este aunque por una parte no sea visible en la interfaz por otra estará expuesto en las preferencias de la aplicación, almacenadas en el almacenamiento interno protegido de la app, al cuál hay maneras de acceder, por ejemplo rooteando el teléfono.",
         isInfoDialog = false
       ) {
         showPinAlertDialog = false
