@@ -1,22 +1,25 @@
 package com.conexentools.presentation.components.screens.home.pages.client_list
 
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -33,9 +36,13 @@ import com.conexentools.core.util.log
 import com.conexentools.data.local.model.Client
 import com.conexentools.data.repository.AndroidUtilsImpl
 import com.conexentools.domain.repository.AndroidUtils
+import com.conexentools.presentation.components.common.CashTextField
+import com.conexentools.presentation.components.common.CreditCardTextField
+import com.conexentools.presentation.components.common.CubanPhoneNumberTextField
+import com.conexentools.presentation.components.common.LabelSwitch
+import com.conexentools.presentation.components.common.MultilineTextField
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import my.nanihadesuka.compose.LazyColumnScrollbar
@@ -47,15 +54,32 @@ fun ClientsListPage(
   clients: LazyPagingItems<Client>,
   searchBarText: String = "",
   onClientEdit: (Client) -> Unit,
-  onClientRecharge: (Client, () -> Unit) -> Unit,
+//  onTransferCash: (Client, () -> Unit) -> Unit,
   onClientSendMessage: (String, String?) -> Unit,
   onClientDelete: (Client) -> Unit,
   onClientCardCounterReset: (Client) -> Unit,
   scrollPosition: MutableIntState,
+  defaultMobileToSendCashTransferConfirmation: String,
+  transferCashInstrumentedTestAdbCommandGetter: (
+    recipientCard: String,
+    mobileToConfirm: String
+  ) -> String,
+  onRunTransferCashInstrumentedTest: (
+    recipientCard: String,
+    mobileToConfirm: String,
+    numberToSendWhatsAppMessage: String?
+  ) -> Unit,
+  recipientReceiveMyMobileNumberAfterCashTransfer: MutableState<Boolean>,
+  cashToTransferToClient: MutableState<String>,
+  sendWhatsAppMessageOnTransferCashTestCompleted: MutableState<Boolean>,
+  whatsAppMessageToSendOnTransferCashTestCompleted: MutableState<String>,
+  onTransferCashToClient: (Client, (canExecuteTransferCashInstrumentedTest: Boolean) -> Unit) -> Unit,
   au: AndroidUtils
 ) {
 
   val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = scrollPosition.intValue)
+  val showTransferCashDialog = remember { mutableStateOf(false) }
+  val clientToTransferCash: MutableState<Client?> = remember { mutableStateOf(null) }
 
   LaunchedEffect(lazyListState) {
     snapshotFlow { lazyListState.firstVisibleItemIndex }
@@ -100,11 +124,20 @@ fun ClientsListPage(
             ClientCard(
               client = client,
               onEdit = onClientEdit,
-              onRecharge = onClientRecharge,
+              onTransferCash = onTransferCashToClient,
               onDelete = { onClientDelete(it) },
               showDivider = index < clients.itemCount - 1,
               onSendMessage = onClientSendMessage,
               onClientCardCounterReset = onClientCardCounterReset,
+              clientToTransferCash = clientToTransferCash,
+              showTransferCashDialog = showTransferCashDialog,
+//              onRunTransferCashInstrumentedTest = onRunTransferCashInstrumentedTest,
+//              defaultMobileToSendCashTransferConfirmation = defaultMobileToSendCashTransferConfirmation,
+//              recipientReceiveMyMobileNumberAfterCashTransfer = recipientReceiveMyMobileNumberAfterCashTransfer,
+//              cashToTransfer = cashToTransfer,
+//              sendWhatsAppMessageOnTransferCashTestCompleted = sendWhatsAppMessageOnTransferCashTestCompleted,
+//              whatsAppMessageToSendOnTransferCashTestCompleted = whatsAppMessageToSendOnTransferCashTestCompleted,
+//              transferCashInstrumentedTestAdbCommandGetter = transferCashInstrumentedTestAdbCommandGetter,
               au = au
             )
           }
@@ -146,6 +179,148 @@ fun ClientsListPage(
       }
     }
   }
+
+  // Transfer Cash Dialog
+  if (showTransferCashDialog.value) {
+
+    if (clientToTransferCash.value == null)
+      throw Exception("client should not be null at this point")
+
+    var mobileToConfirm by remember {
+      mutableStateOf(defaultMobileToSendCashTransferConfirmation.ifEmpty {
+        clientToTransferCash.value!!.phoneNumber ?: ""
+      })
+    }
+    var creditCard by remember { mutableStateOf(clientToTransferCash.value!!.cardNumber ?: "") }
+
+    var showAdbCommand by remember { mutableStateOf(false) }
+
+    AlertDialog(
+      title = { Text("Transferir Efectivo") },
+      onDismissRequest = {},
+      dismissButton = {
+        // Cancelar
+        if (!showAdbCommand) {
+          TextButton(onClick = { showTransferCashDialog.value = false }) {
+            Text("Cancelar")
+          }
+        }
+      },
+      confirmButton = {
+        Row {
+          // Atrás
+          if (showAdbCommand) {
+            TextButton(onClick = { showTransferCashDialog.value = false }) {
+              Text("Atrás")
+            }
+          } else {
+
+            // Show ADB command
+            TextButton(onClick = { showAdbCommand = true }) {
+              Text("Comando ADB")
+            }
+
+            // Transfer
+            TextButton(onClick = {
+
+              val errorMessage = if (creditCard.length != 16)
+                "El número de la tarjeta debe tener 16 dígitos"
+              else if (mobileToConfirm.length != 8)
+                "El número del móvil a confirmar debe tener 8 dígitos"
+              else ""
+
+              if (errorMessage.isEmpty()) {
+                showTransferCashDialog.value = false
+                onRunTransferCashInstrumentedTest(
+                  creditCard,
+                  mobileToConfirm,
+                  clientToTransferCash.value!!.phoneNumber
+                )
+              } else {
+                au.toast(errorMessage, vibrate = true)
+              }
+            }) {
+              Text("Transferir")
+            }
+          }
+        }
+      },
+      text = {
+        if (showAdbCommand) {
+          val command by remember(creditCard, mobileToConfirm) {
+            mutableStateOf(
+              transferCashInstrumentedTestAdbCommandGetter(
+                creditCard,
+                mobileToConfirm
+              )
+            )
+          }
+          Text(
+            text = command,
+            modifier = Modifier.clickable {
+              au.setClipboard(command)
+              au.toast("Comando copiado al portapapeles")
+            }
+          )
+        } else {
+          LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Constants.Dimens.Small),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            item {
+              // Credit card
+              CreditCardTextField(
+                value = creditCard,
+                onValueChange = { creditCard = it }
+              )
+
+              // Cash
+              CashTextField(
+                value = cashToTransferToClient.value,
+                onValueChange = { cashToTransferToClient.value = it }
+              )
+
+              // Mobile to send transfer confirmation message
+              CubanPhoneNumberTextField(
+                value = mobileToConfirm,
+                onValueChange = { mobileToConfirm = it },
+                isOutlinedTextField = true,
+                label = { Text("Móvil a confirmar") }
+              )
+
+              // Recipient receive my phone number
+              LabelSwitch(
+                label = "Destinatario recibe mi número",
+                checked = recipientReceiveMyMobileNumberAfterCashTransfer
+              )
+
+              // Send WhatsApp Message On Transfer Cash Test Completed
+              LabelSwitch(
+                info = "Enviar mensaje por WhatsApp cuando la transferencia se complete satisfactoriamente?",
+                label = "Enviar mensaje",
+                checked = sendWhatsAppMessageOnTransferCashTestCompleted,
+                onCheckedChange = {
+                  if (it && clientToTransferCash.value!!.phoneNumber == null) {
+                    sendWhatsAppMessageOnTransferCashTestCompleted.value = false
+                    au.toast("Este cliente no tiene número asociado")
+                  }
+                }
+              )
+              if (sendWhatsAppMessageOnTransferCashTestCompleted.value) {
+                MultilineTextField(
+                  value = whatsAppMessageToSendOnTransferCashTestCompleted.value,
+                  onValueChange = { whatsAppMessageToSendOnTransferCashTestCompleted.value = it },
+                  onDeleteText = { whatsAppMessageToSendOnTransferCashTestCompleted.value = "" },
+                  label = "Mensaje"
+                )
+              }
+            }
+          }
+        }
+      }
+    )
+  }
 }
 
 @Preview(showBackground = true, apiLevel = 33)
@@ -162,10 +337,17 @@ private fun PreviewClientsListPage() {
       onClientSendMessage = { _, _ -> },
 //      onAddClient = {},
       au = AndroidUtilsImpl(LocalContext.current),
-      onClientRecharge = { _, _ -> },
+      onTransferCashToClient = { _, _ -> },
       scrollPosition = remember { mutableIntStateOf(0) },
 //      lazyListState = rememberLazyListState(),
       onClientCardCounterReset = {},
+      defaultMobileToSendCashTransferConfirmation = "55123456",
+      transferCashInstrumentedTestAdbCommandGetter = { _, _ -> "" },
+      onRunTransferCashInstrumentedTest = { _, _, _ -> },
+      recipientReceiveMyMobileNumberAfterCashTransfer = remember { mutableStateOf(false) },
+      cashToTransferToClient = remember { mutableStateOf("452") },
+      sendWhatsAppMessageOnTransferCashTestCompleted = remember { mutableStateOf(true) },
+      whatsAppMessageToSendOnTransferCashTestCompleted = remember { mutableStateOf("45254") },
     )
   }
 }

@@ -140,7 +140,7 @@ class AndroidUtilsImpl @Inject constructor(
     }
   }
 
-  override fun executeCommand(command: String, su: Boolean) {
+  override fun executeCommand(command: String, su: Boolean): Int {
     var c = command
     try {
       if (su)
@@ -166,9 +166,11 @@ class AndroidUtilsImpl @Inject constructor(
       // Check the exit value (0 for success)
       val exitValue = process.exitValue()
       println("Process exited with value: $exitValue")
+      return exitValue
     } catch (e: Exception) {
       e.printStackTrace()
     }
+    return -1
   }
 
   override fun isPermissionGranted(permission: String): Boolean = ContextCompat.checkSelfPermission(

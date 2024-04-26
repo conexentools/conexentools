@@ -11,7 +11,7 @@ interface UserPreferences {
   suspend fun saveWaContact(value: String?)
   suspend fun saveWaContactImageUriString(value: String?)
   suspend fun saveFetchDataFromWA(value: Boolean?)
-  suspend fun saveCardLast4Digits(value: String?)
+  suspend fun saveCardToUseDropDownMenuPosition(value: String?)
   suspend fun saveFirstClientRecharge(value: String?)
   suspend fun saveSecondClientRecharge(value: String?)
   suspend fun saveRechargeAvailabilityDateISOString(value: String?)
@@ -25,12 +25,17 @@ interface UserPreferences {
   suspend fun savePin(value: String?)
   suspend fun saveJoinMessages(value: Boolean?)
   suspend fun saveHomeScreenClientListScrollPosition(value: Int?)
+  suspend fun saveSendWhatsAppMessageOnTransferCashTestCompleted(value: Boolean?)
+  suspend fun saveWhatsAppMessageToSendOnTransferCashTestCompleted(value: String?)
+  suspend fun saveDefaultMobileToSendCashTransferConfirmation(value: String?)
+  suspend fun saveCashToTransfer(value: String?)
+  suspend fun saveRecipientReceiveMyMobileNumberAfterCashTransfer(value: Boolean?)
 
   val bank: Flow<String?>
   val waContact: Flow<String?>
   val waContactImageUriString: Flow<String?>
   val fetchDataFromWA: Flow<Boolean?>
-  val cardLast4Digits: Flow<String?>
+  val cardToUseDropDownMenuPosition: Flow<String?>
   val firstClientRecharge: Flow<String?>
   val secondClientRecharge: Flow<String?>
   val rechargeAvailabilityDate: Flow<String?>
@@ -44,4 +49,9 @@ interface UserPreferences {
   val pin: Flow<String?>
   val joinMessages: Flow<Boolean?>
   val homeScreenClientListScrollPosition: Flow<Int?>
+  val defaultMobileToSendCashTransferConfirmation: Flow<String?>
+  val sendWhatsAppMessageOnTransferCashTestCompleted: Flow<Boolean?>
+  val whatsAppMessageToSendOnTransferCashTestCompleted: Flow<String?>
+  val cashToTransfer: Flow<String?>
+  val recipientReceiveMyMobileNumberAfterCashTransfer: Flow<Boolean?>
 }

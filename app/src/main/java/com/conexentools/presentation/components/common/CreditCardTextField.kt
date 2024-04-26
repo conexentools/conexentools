@@ -24,17 +24,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.core.text.isDigitsOnly
 import com.conexentools.core.util.cubanCardNumberFilter
 import com.conexentools.core.util.moveFocusOnTabPressed
-import com.conexentools.core.util.textFilter
 import com.conexentools.presentation.theme.LocalTheme
-import kotlin.math.min
 
 @Composable
 fun CreditCardTextField(
   modifier: Modifier = Modifier,
   value: String,
-//  valueGetter: () -> String,
   onValueChange: (String) -> Unit,
-  isFourDigitsCard: Boolean = false,
   trailingIcon: @Composable (() -> Unit)? = null,
   focusDirection: FocusDirection = FocusDirection.Down,
   onNext: (KeyboardActionScope.() -> Unit)? = null,
@@ -42,21 +38,16 @@ fun CreditCardTextField(
 ) {
 
   val focusManager = LocalFocusManager.current
-  val digits = if (isFourDigitsCard) 4 else 16
 
-//  var cardNumber by remember {
-//    mutableStateOf(valueGetter())
-//  }
-//  var cardNumber by remember { mutableStateOf(value) }
   var supportingText: @Composable (() -> Unit)? by remember { mutableStateOf(null) }
   var isInvalidCard by remember { mutableStateOf(false) }
   OutlinedTextField(
     modifier = modifier
       .fillMaxWidth()
       .onFocusChanged { focusState ->
-        if (!focusState.isFocused && value.isNotEmpty() && value.length != digits) {
+        if (!focusState.isFocused && value.isNotEmpty() && value.length != 16) {
           isInvalidCard = true
-          supportingText = { Text("$digits dígitos requeridos") }
+          supportingText = { Text("16 dígitos requeridos") }
         } else {
           supportingText = null
           isInvalidCard = false
@@ -79,25 +70,15 @@ fun CreditCardTextField(
     onValueChange = {
       var v = it.sanitizeNumberString()
       if (v.isDigitsOnly()) {
-        if (v.length > digits)
-          v = v.take(digits)
+        if (v.length > 16)
+          v = v.take(16)
         onValueChange(v)
 //        value = v
       }
     },
     visualTransformation = LocalTheme.current.isDark.let { darkTheme ->
       { annotatedString ->
-        if (isFourDigitsCard)
-          textFilter(
-            text = annotatedString,
-            mask = "XXXX",
-            separator = ' ',
-            darkTheme = darkTheme,
-            transformedToOriginalOffsetTranslator = { min(it, value.length) },
-//            originalToTransformedOffsetTranslator = { offset -> min(offset, it.text.length) }
-          )
-        else
-          cubanCardNumberFilter(annotatedString, darkTheme = darkTheme)
+        cubanCardNumberFilter(annotatedString, darkTheme = darkTheme)
       }
     },
     keyboardOptions = KeyboardOptions.Default.copy(

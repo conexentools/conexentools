@@ -14,7 +14,7 @@ interface AndroidUtils {
   fun isPermissionGranted(permission: String): Boolean
   fun canDrawOverlays(): Boolean
   fun sendWaMessage(number: String, message: String?)
-  fun executeCommand(command: String, su: Boolean)
+  fun executeCommand(command: String, su: Boolean): Int
   fun composeEmail(recipientAddress: String, subject: String = "")
   fun openSettings(settingsMenuWindow: String, flagActivityNewTask: Boolean, onlyReturnIntent: Boolean = false): Intent
   fun hasExternalStorageReadWriteAccess(): Boolean
@@ -60,7 +60,7 @@ interface AndroidUtils {
           TODO("Not yet implemented")
         }
 
-        override fun executeCommand(command: String, su: Boolean) {
+        override fun executeCommand(command: String, su: Boolean): Int {
           TODO("Not yet implemented")
         }
 

@@ -69,7 +69,8 @@ class InstrumentedTest {
 
     toast("Iniciando el proceso de automatización", isShortToast = true)
 
-    var recharges = cliArguments.getString("recharges")?.split("@")
+    val rechargesRaw = cliArguments.getString("recharges")
+    var recharges = rechargesRaw?.split("@")
       ?.map { Pair(it.split(',')[0], it.split(',')[1]) }?.toList()
     val waContact = cliArguments.getString("waContact")
     val joinMessages = cliArguments.getString("joinMessages")?.toBoolean() ?: true
@@ -82,6 +83,15 @@ class InstrumentedTest {
     val pin = cliArguments.getString("pin")!!
     val cardToUseDropDownMenuPosition =
       cliArguments.getString("cardToUseDropDownMenuPosition")?.toInt()
+
+    log("======== RechargeMobile ========")
+    log("recharges: $rechargesRaw")
+    log("waContact: $waContact")
+    log("joinMessages: $joinMessages")
+    log("getOwnerChats: $getOwnerChats")
+    log("bank: $bank")
+    log("cardToUseDropDownMenuPosition: $cardToUseDropDownMenuPosition")
+    log("==============================")
 
     var dataFetchedFromWA = false
 
@@ -222,11 +232,6 @@ class InstrumentedTest {
     val waContact = cliArguments.getString("waContact")!!
     val message = cliArguments.getString("message")
 
-    log("========SendWhatsAppMessage========")
-    log("waContact: $waContact")
-    log("message: $message")
-    log("===================================")
-
     wh.launch()
     wh.startConversation(waContact)
     if (message != null)
@@ -248,9 +253,8 @@ class InstrumentedTest {
     val mobileToConfirm = cliArguments.getString("mobileToConfirm")!!
     val recipientReceiveMyNumber = cliArguments.getBoolean("recipientReceiveMyNumber")
 
-    log("========TransferCash========")
+    log("======== TransferCash ========")
     log("bank: $bank")
-    log("pin: $pin")
     log("cardToUseDropDownMenuPosition: $cardToUseDropDownMenuPosition")
     log("recipientCard: $recipientCard")
     log("cash: $cash")
@@ -307,7 +311,7 @@ class InstrumentedTest {
     val isItemBelow = cliArguments.getBoolean("isItemBelow")
     val resourceID = cliArguments.getString("resourceId")!!
 
-    log("========TestDropDownMenuSelector======")
+    log("======== TestDropDownMenuSelector ======")
     log("choice: $choice")
     log("choicesCount: $choicesCount")
     log("expectedText: $expectedText")

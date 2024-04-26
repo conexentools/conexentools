@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.text.isDigitsOnly
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.moveFocusOnTabPressed
+import com.conexentools.presentation.components.common.CashTextField
 import com.conexentools.presentation.components.common.CubanPhoneNumberTextField
 
 @Composable
@@ -65,37 +66,12 @@ fun RechargeSlot(
     Spacer(modifier = Modifier.width(Constants.Dimens.ExtraSmall))
 
     // Recharge
-    var isInvalidRecharge by remember { mutableStateOf(false) }
-    var rechargeSlotSupportingText: @Composable (() -> Unit)? by remember { mutableStateOf(null) }
-
-    TextField(
-      modifier = Modifier
-        .weight(2.5f)
-        .onFocusChanged { focusState ->
-          if (!focusState.isFocused && recharge.isNotEmpty() && recharge.toInt() !in 25..1250) {
-            isInvalidRecharge = true
-            rechargeSlotSupportingText = { Text("La recarga debe estar entre 25 y 1250") }
-          } else {
-            rechargeSlotSupportingText = null
-            isInvalidRecharge = false
-          }
-        }
-        .moveFocusOnTabPressed(FocusDirection.Down, focusManager),
-      supportingText = rechargeSlotSupportingText,
-      isError = isInvalidRecharge,
+    CashTextField(
+      modifier = Modifier.weight(2.5f),
       value = recharge,
-      prefix = { Text("$", color = MaterialTheme.colorScheme.primary) },
-      suffix = { Text("CUP", color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)) },
-      onValueChange = {
-        if (it.isDigitsOnly() && it.length <= 4)
-          onRechargeChange(it)
-      },
-      keyboardOptions = KeyboardOptions.Default.copy(
-        keyboardType = KeyboardType.Number,
-        imeAction = ImeAction.Next
-      ),
-      keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-      singleLine = true
+      onValueChange = onRechargeChange,
+      minValue = 25,
+      maxValue = 1250
     )
 
     Spacer(modifier = Modifier.width(Constants.Dimens.ExtraSmall))

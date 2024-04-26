@@ -2,11 +2,16 @@ package com.conexentools.presentation.components.screens.settings
 
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -19,12 +24,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
+import com.conexentools.presentation.components.common.CubanPhoneNumberTextField
 import com.conexentools.presentation.components.common.LabelSwitch
+import com.conexentools.presentation.components.common.PrimaryIconButton
 import com.conexentools.presentation.components.common.ScreenSurface
 import com.conexentools.presentation.components.common.ScrollableAlertDialog
 import com.conexentools.presentation.components.common.enums.AppTheme
@@ -37,6 +45,7 @@ fun SettingsScreen(
   appTheme: MutableState<AppTheme>,
   alwaysWaMessageByIntent: MutableState<Boolean>,
   savePin: MutableState<Boolean>,
+  defaultMobileToSendCashTransferConfirmation: MutableState<String>,
   joinMessages: MutableState<Boolean>,
   onNavigateBack: () -> Unit
 ) {
@@ -76,6 +85,7 @@ fun SettingsScreen(
     var showThemeSelectorDialog by remember { mutableStateOf(false) }
     var showPinAlertDialog by remember { mutableStateOf(false) }
     var wasPinAlertDialogShowed by remember { mutableStateOf(false) }
+    var showDefaultMobileToSendCashTransferConfirmationInfoDialog by remember { mutableStateOf(false) }
 
     if (showThemeSelectorDialog) {
       AlertDialog(
@@ -104,11 +114,19 @@ fun SettingsScreen(
 
     if (showPinAlertDialog){
       ScrollableAlertDialog(
-        text = "Tenga en cuenta que guardar el PIN de su tarjeta Telebanca puede ser muy peligroso pues este estará siempre expuesto en la aplicación",
+        text = "Tenga en cuenta que guardar el PIN de su tarjeta Telebanca puede ser peligroso pues este aunque por una parte no sea visible en la interfaz por otra estará expuesto en las preferencias de la aplicación, almacenadas en el almacenamiento interno protegido de la app, al cuál hay maneras de acceder, por ejemplo rooteando el teléfono",
         isInfoDialog = false
       ) {
         showPinAlertDialog = false
         wasPinAlertDialogShowed = true
+      }
+    }
+
+    if (showDefaultMobileToSendCashTransferConfirmationInfoDialog){
+      ScrollableAlertDialog(
+        text = "Por defecto en el menú 'Transferir Efectivo' en el campo 'Móvil a confirmar' se muestra el número del cliente a recargar, rellene este campo para mostrar por defecto este número en vez del número del cliente",
+      ) {
+        showDefaultMobileToSendCashTransferConfirmationInfoDialog = false
       }
     }
 
@@ -152,6 +170,34 @@ fun SettingsScreen(
       info = "Use esta opción para unir o no los mensajes de confirmación recibidos por Transfermóvil al enviárselos al contacto de WhatsApp",
       checked = joinMessages
     )
+
+    // Always use myNumber to confirm transfers
+    Column(
+      verticalArrangement = Arrangement.Center,
+      horizontalAlignment = Alignment.CenterHorizontally,
+      modifier = Modifier.fillMaxWidth()
+    ) {
+      Row (
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Text(
+          text = "Número para confirmar",
+          style = MaterialTheme.typography.titleMedium
+        )
+        PrimaryIconButton(
+          imageVector = Icons.Rounded.Info,
+          modifier = Modifier
+            .padding(Constants.Dimens.Small)
+            .alpha(0.5f),
+          onClick = { showDefaultMobileToSendCashTransferConfirmationInfoDialog = true }
+        )
+      }
+      CubanPhoneNumberTextField(
+        value = defaultMobileToSendCashTransferConfirmation.value,
+        isOutlinedTextField = false,
+        onValueChange = { defaultMobileToSendCashTransferConfirmation.value = it }
+      )
+    }
   }
 }
 
@@ -164,6 +210,7 @@ private fun PreviewSettingsScreen() {
       appTheme = LocalTheme.current.isDark.let { remember { mutableStateOf(if (it) AppTheme.MODE_NIGHT else AppTheme.MODE_DAY) } },
       alwaysWaMessageByIntent = remember { mutableStateOf(true) },
       savePin = remember { mutableStateOf(false) },
+      defaultMobileToSendCashTransferConfirmation = remember { mutableStateOf("55797140") },
       joinMessages = remember { mutableStateOf(true) },
       onNavigateBack = {},
     )

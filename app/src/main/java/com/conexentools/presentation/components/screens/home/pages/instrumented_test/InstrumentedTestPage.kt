@@ -6,8 +6,6 @@ import android.content.res.Configuration
 import android.net.Uri
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
@@ -33,11 +31,12 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -65,10 +64,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.text.isDigitsOnly
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.conexentools.BuildConfig
@@ -102,7 +101,7 @@ fun InstrumentedTestPage(
   fetchDataFromWA: MutableState<Boolean>,
   pin: MutableState<String>,
   bank: MutableState<String>,
-  cardLast4Digits: MutableState<String>,
+  cardToUseDropDownMenuPosition: MutableState<String>,
   waContactImageUri: MutableState<Uri?>,
   rechargesAvailabilityDateISOString: MutableState<String?>,
   waContact: MutableState<String>,
@@ -118,13 +117,6 @@ fun InstrumentedTestPage(
   }
 
   var maxPinLength by remember { mutableIntStateOf(if (bank.value == "Metropolitano") 4 else 5) }
-
-  var isPinVisible by remember { mutableStateOf(false) }
-  val pinVisibilityTintColor by animateColorAsState(
-    targetValue = MaterialTheme.colorScheme.primary.copy(alpha = if (isPinVisible) 1f else 0.4f),
-    animationSpec = tween(650),
-    label = ""
-  )
 
   var isWrongPin by remember { mutableStateOf(false) }
   var pinTextFieldSupportingText: @Composable (() -> Unit)? by remember { mutableStateOf(null) }
@@ -187,49 +179,67 @@ fun InstrumentedTestPage(
         ),
         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
         singleLine = true,
-        trailingIcon = {
-          IconButton(
-            onClick = { isPinVisible = !isPinVisible },
-          ) {
-            Icon(
-              painter = painterResource(id = com.google.android.material.R.drawable.design_ic_visibility),
-              tint = pinVisibilityTintColor,
-              contentDescription = null
-            )
-          }
-        },
-        visualTransformation = if (isPinVisible) VisualTransformation.None
-        else PasswordVisualTransformation()
+        visualTransformation = PasswordVisualTransformation()
       )
     }
 
-    var showCardLast4DigitsInfoDialog by remember { mutableStateOf(false) }
+    var showCardToUseDropDownMenuPositionInfoDialog by remember { mutableStateOf(false) }
 
-    if (showCardLast4DigitsInfoDialog) {
+    if (showCardToUseDropDownMenuPositionInfoDialog) {
       ScrollableAlertDialog(
-        text = "Últimos 4 dígitos de la tarjeta en CUP que vaya a usar para hacer la recarga. Deje sin especificar si tiene una sola tarjeta asociada al banco seleccionado",
+        text = "Posición en la que aparece el alias de la tarjeta que vaya a usar para hacer la recarga|transferencia en el menu desplegable de Transfermóvil en el campo 'Tipo de cuenta a operar'[-MIS CUENTAS-] -> 'Seleccione una cuenta'. Deje en blanco si tiene una sola tarjeta",
         isInfoDialog = true,
         title = null,
         yesNoDialog = false,
         onDismiss = null,
-        onDismissRequest = { showCardLast4DigitsInfoDialog = false },
-        onConfirm = { showCardLast4DigitsInfoDialog = false }
+        onDismissRequest = { showCardToUseDropDownMenuPositionInfoDialog = false },
+        onConfirm = { showCardToUseDropDownMenuPositionInfoDialog = false }
       )
     }
 
-    // Card Last 4 Digits
-    CreditCardTextField(onValueChange = { cardLast4Digits.value = it },
-      value = cardLast4Digits.value,
-      isFourDigitsCard = true,
-      trailingIcon = {
+    // Card to use DropDownMenu position
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween,
+      modifier = Modifier.fillMaxWidth()
+    ) {
+      Row (
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Text(
+          text = "Posición de tarjeta a usar",
+          style = MaterialTheme.typography.titleMedium
+        )
         PrimaryIconButton(
           imageVector = Icons.Rounded.Info,
           modifier = Modifier
             .padding(Constants.Dimens.Small)
             .alpha(0.5f),
-          onClick = { showCardLast4DigitsInfoDialog = true }
+          onClick = { showCardToUseDropDownMenuPositionInfoDialog = true }
         )
-      })
+      }
+
+      TextField(
+        value = cardToUseDropDownMenuPosition.value,
+        onValueChange = {
+          if (it.isEmpty() || (it.length == 1 && it.isDigitsOnly() && it.toInt() > 0)) {
+            cardToUseDropDownMenuPosition.value = it
+          }
+        },
+        modifier = Modifier
+          .width(50.dp)
+          .padding(vertical = Constants.Dimens.Small),
+        keyboardOptions = KeyboardOptions.Default.copy(
+          keyboardType = KeyboardType.Number,
+          imeAction = ImeAction.Done
+        ),
+        maxLines = 1,
+        colors =TextFieldDefaults.colors(
+          focusedContainerColor = Color.Transparent.copy(0.05f),
+          unfocusedContainerColor = Color.Transparent.copy(0.05f),
+        )
+      )
+    }
 
     // Fetch Data from WA Switch
     LabelSwitch(
@@ -383,7 +393,9 @@ fun InstrumentedTestPage(
     ) {
       PrimaryIconButton(
         imageVector = Icons.Rounded.Info,
-        modifier = Modifier.size(30.dp).alpha(0.5f)
+        modifier = Modifier
+          .size(45.dp)
+          .alpha(0.5f)
       ) { showInstrumentedTestExtraInfoDialog = true }
     }
 
@@ -397,7 +409,7 @@ fun InstrumentedTestPage(
           )
         },
         text = {
-          Column (horizontalAlignment = Alignment.CenterHorizontally) {
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
             InstrumentedTestRequiredAppsVersionTable(
               waVersion = whatsAppInstalledVersion,
               transfermovilVersion = transfermovilInstalledVersion,

@@ -13,7 +13,6 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.conexentools.core.util.ObserveLifecycleEvents
 import com.conexentools.core.util.composable
@@ -75,11 +74,11 @@ fun SetUpNavGraph(
         homeScreenState = homeScreenState,
         navController = navController,
         page = hvm.initialHomeScreenPage,
-        clientListPageHelpDialogShowed = hvm.clientListPageHelpDialogsShowed,
+        clientListPageHelpDialogsShowed = hvm.clientListPageHelpDialogsShowed,
         au = au,
 
         // InstrumentationTest Page
-        adbCommandToRunInstrumentedTestGetter = { "adb shell " + hvm.getCommandToRunRechargeMobileInstrumentedTest() },
+        rechargeMobileInstrumentedTestAdbCommandGetter = { "adb shell " + hvm.getShellCommandToRunRechargeMobileInstrumentedTest() },
         firstClientNumber = hvm.firstClientNumber,
         secondClientNumber = hvm.secondClientNumber,
         firstClientRecharge = hvm.firstClientRecharge,
@@ -87,7 +86,7 @@ fun SetUpNavGraph(
         fetchDataFromWA = hvm.fetchDataFromWA,
         pin = hvm.pin,
         bank = hvm.bank,
-        cardLast4Digits = hvm.cardLast4Digits,
+        cardToUseDropDownMenuPosition = hvm.cardToUseDropDownMenuPosition,
         waContactImageUri = hvm.waContactImageUri,
         rechargesAvailabilityDateISOString = hvm.rechargesAvailabilityDateISOString,
         waContact = hvm.waContact,
@@ -99,11 +98,16 @@ fun SetUpNavGraph(
         // ClientList Page
         isManager = hvm.isManager,
         clients = homeScreenClientsListLazyPagingItems,
-        onClientCardSendMessage = { number, message ->
-          log("Sending message to number: $number. With message: $message")
-          hvm.sendWhatsAppMessage(number, message)
+        onClientCardEdit = {
+          log("About to edit client: $it")
+          with(AddEditClientScreenParameterManager) {
+            client = mutableStateOf(it)
+            onSubmitClient = onEditClient
+            onOmitClient = null
+            isNewClient = false
+          }
+          navController.navigateAndPopDestinationFromTheBackStack(Screen.AddEditClient)
         },
-        onClientCardRecharge = hvm::rechargeClient,
         onSubmitClientForDeletion = { client ->
           client.submittedForDeletionFlag = 1
           hvm.updateClient(client)
@@ -116,15 +120,9 @@ fun SetUpNavGraph(
           client.submittedForDeletionFlag = 0
           hvm.updateClient(client)
         },
-        onClientCardEdit = {
-          log("About to edit client: $it")
-          with(AddEditClientScreenParameterManager) {
-            client = mutableStateOf(it)
-            onSubmitClient = onEditClient
-            onOmitClient = null
-            isNewClient = false
-          }
-          navController.navigateAndPopDestinationFromTheBackStack(Screen.AddEditClient)
+        onClientCardSendMessage = { number, message ->
+          log("Sending message to number: $number. With message: $message")
+          hvm.sendWhatsAppMessage(number, message)
         },
         onClientCardCounterReset = hvm::updateClient,
         onAddClient = {
@@ -148,7 +146,17 @@ fun SetUpNavGraph(
             au.toast("Permiso para leer contactos requerido", vibrate = true)
           }
         },
-        clientsListScrollPosition = hvm.homeScreenClientListScrollPosition
+        clientsListScrollPosition = hvm.homeScreenClientListScrollPosition,
+        onTransferCashToClient = hvm::transferCash,
+        defaultMobileToSendCashTransferConfirmation = hvm.defaultMobileToSendCashTransferConfirmation.value,
+        transferCashInstrumentedTestAdbCommandGetter = { recipientCard: String, mobileToConfirm: String ->
+          "adb shell " + hvm.getShellCommandToRunTransferCashInstrumentedTest(recipientCard, mobileToConfirm)
+        },
+        onRunTransferCashInstrumentedTest = hvm::runTransferCashInstrumentedTest,
+        recipientReceiveMyMobileNumberAfterCashTransfer = hvm.recipientReceiveMyMobileNumberAfterCashTransfer,
+        cashToTransferToClient = hvm.cashToTransfer,
+        sendWhatsAppMessageOnTransferCashTestCompleted = hvm.sendWhatsAppMessageOnTransferCashTestCompleted,
+        whatsAppMessageToSendOnTransferCashTestCompleted = hvm.whatsAppMessageToSendOnTransferCashTestCompleted,
       )
     }
 
@@ -174,6 +182,7 @@ fun SetUpNavGraph(
         alwaysWaMessageByIntent = hvm.alwaysWaMessageByIntent,
         savePin = hvm.savePin,
         joinMessages = hvm.joinMessages,
+        defaultMobileToSendCashTransferConfirmation = hvm.defaultMobileToSendCashTransferConfirmation,
         onNavigateBack = ::popBackStack
       )
     }

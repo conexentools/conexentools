@@ -104,21 +104,21 @@ import com.conexentools.presentation.navigation.Screen
 import com.conexentools.presentation.theme.LocalTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(
   homeScreenState: HomeScreenState,
   navController: NavController,
   page: MutableState<HomeScreenPage?>,
-  clientListPageHelpDialogShowed: MutableState<Boolean>,
+  clientListPageHelpDialogsShowed: MutableState<Boolean>,
   au: AndroidUtils,
 
   // InstrumentationTest Page
-  adbCommandToRunInstrumentedTestGetter: () -> String,
+  rechargeMobileInstrumentedTestAdbCommandGetter: () -> String,
   firstClientNumber: MutableState<String>,
   secondClientNumber: MutableState<String?>,
   firstClientRecharge: MutableState<String>,
@@ -126,7 +126,7 @@ fun HomeScreen(
   fetchDataFromWA: MutableState<Boolean>,
   pin: MutableState<String>,
   bank: MutableState<String>,
-  cardLast4Digits: MutableState<String>,
+  cardToUseDropDownMenuPosition: MutableState<String>,
   waContactImageUri: MutableState<Uri?>,
   rechargesAvailabilityDateISOString: MutableState<String?>,
   waContact: MutableState<String>,
@@ -139,7 +139,6 @@ fun HomeScreen(
   isManager: MutableState<Boolean>,
   clients: LazyPagingItems<Client>,
   onClientCardEdit: (Client) -> Unit,
-  onClientCardRecharge: (Client, () -> Unit) -> Unit,
   onSubmitClientForDeletion: (Client) -> Unit,
   onDeleteClient: (Client) -> Unit,
   onClientRestoredFromDeletion: (Client) -> Unit,
@@ -147,10 +146,20 @@ fun HomeScreen(
   onClientCardCounterReset: (Client) -> Unit,
   onAddClient: () -> Unit,
   onBatchAddClient: () -> Unit,
-  clientsListScrollPosition: MutableIntState
+  clientsListScrollPosition: MutableIntState,
+  onTransferCashToClient: (Client, (canExecuteTransferCashInstrumentedTest: Boolean) -> Unit) -> Unit,
+  defaultMobileToSendCashTransferConfirmation: String,
+  transferCashInstrumentedTestAdbCommandGetter: (recipientCard: String, mobileToConfirm: String) -> String,
+  onRunTransferCashInstrumentedTest: (recipientCard: String, mobileToConfirm: String, numberToSendWhatsAppMessage: String?) -> Unit,
+  recipientReceiveMyMobileNumberAfterCashTransfer: MutableState<Boolean>,
+  cashToTransferToClient: MutableState<String>,
+  sendWhatsAppMessageOnTransferCashTestCompleted: MutableState<Boolean>,
+  whatsAppMessageToSendOnTransferCashTestCompleted: MutableState<String>
 ) {
 
   when (homeScreenState.state) {
+
+    // Loading
     is HomeScreenLoadingState.ScreenLoading -> {
       Row(
         modifier = Modifier.background(MaterialTheme.colorScheme.background),
@@ -161,46 +170,7 @@ fun HomeScreen(
       }
     }
 
-    is HomeScreenLoadingState.Success -> {
-
-      DrawHome(
-        navController = navController,
-        page = page,
-        au = au,
-        clientListPageHelpDialogsShowed = clientListPageHelpDialogShowed,
-
-        adbInstrumentationRunCommandGetter = adbCommandToRunInstrumentedTestGetter,
-        firstClientNumber = firstClientNumber,
-        secondClientNumber = secondClientNumber,
-        firstClientRecharge = firstClientRecharge,
-        secondClientRecharge = secondClientRecharge,
-        fetchDataFromWA = fetchDataFromWA,
-        pin = pin,
-        bank = bank,
-        cardLast4Digits = cardLast4Digits,
-        waContactImageUri = waContactImageUri,
-        rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
-        waContact = waContact,
-        onRunInstrumentedTest = onRunInstrumentedTest,
-        whatsAppInstalledVersion = whatsAppInstalledVersion,
-        transfermovilInstalledVersion = transfermovilInstalledVersion,
-        instrumentationAppInstalledVersion = instrumentationAppInstalledVersion,
-
-        isManager = isManager,
-        clients = clients,
-        onClientCardEdit = onClientCardEdit,
-        onClientCardRecharge = onClientCardRecharge,
-        onSubmitClientForDeletion = onSubmitClientForDeletion,
-        onDeleteClient = onDeleteClient,
-        onClientRestoredFromDeletion = onClientRestoredFromDeletion,
-        onClientCardSendMessage = onClientCardSendMessage,
-        onAddClient = onAddClient,
-        onClientCardCounterReset = onClientCardCounterReset,
-        onBatchAddClient = onBatchAddClient,
-        clientsListScrollPosition = clientsListScrollPosition
-      )
-    }
-
+    // Error
     is HomeScreenLoadingState.Error -> {
       Column(
         modifier = Modifier.padding(Constants.Dimens.Medium),
@@ -220,341 +190,309 @@ fun HomeScreen(
         )
       }
     }
-  }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@SuppressLint("PrivateResource")
-@Composable
-private fun DrawHome(
-  navController: NavController,
-  page: MutableState<HomeScreenPage?>,
-  clientListPageHelpDialogsShowed: MutableState<Boolean>,
-  au: AndroidUtils,
+    // Success -> Draw HomeScreen
+    is HomeScreenLoadingState.Success -> {
 
-  // InstrumentationTest Page
-  adbInstrumentationRunCommandGetter: () -> String,
-  firstClientNumber: MutableState<String>,
-  secondClientNumber: MutableState<String?>,
-  firstClientRecharge: MutableState<String>,
-  secondClientRecharge: MutableState<String>,
-  fetchDataFromWA: MutableState<Boolean>,
-  pin: MutableState<String>,
-  bank: MutableState<String>,
-  cardLast4Digits: MutableState<String>,
-  waContactImageUri: MutableState<Uri?>,
-  rechargesAvailabilityDateISOString: MutableState<String?>,
-  waContact: MutableState<String>,
-  onRunInstrumentedTest: () -> Unit,
-  whatsAppInstalledVersion: Pair<Long, String>?,
-  transfermovilInstalledVersion: Pair<Long, String>?,
-  instrumentationAppInstalledVersion: Pair<Long, String>?,
+      val showRechargeMobileInstrumentedTestAdbCommandDialog = remember { mutableStateOf(false) }
 
-  // ClientList Page
-  isManager: MutableState<Boolean>,
-  clients: LazyPagingItems<Client>,
-  onClientCardEdit: (Client) -> Unit,
-  onClientCardRecharge: (Client, () -> Unit) -> Unit,
-  onClientCardSendMessage: (String, String?) -> Unit,
-  onSubmitClientForDeletion: (Client) -> Unit,
-  onDeleteClient: (Client) -> Unit,
-  onClientRestoredFromDeletion: (Client) -> Unit,
-  onClientCardCounterReset: (Client) -> Unit,
-  onAddClient: () -> Unit,
-  onBatchAddClient: () -> Unit,
-  clientsListScrollPosition: MutableIntState
-) {
+      // ADB Command Dialog
+      if (showRechargeMobileInstrumentedTestAdbCommandDialog.value) {
+        AlertDialog(
+          onDismissRequest = {
+            showRechargeMobileInstrumentedTestAdbCommandDialog.value = false
+          },
+          title = {
+            Text("ADB Instrumentation Run Command")
+          },
+          text = {
+            Text(
+              text = rechargeMobileInstrumentedTestAdbCommandGetter(),
+              modifier = Modifier.clickable {
+                au.setClipboard(
+                  rechargeMobileInstrumentedTestAdbCommandGetter()
+                )
+                au.toast("Comando copiado al portapapeles")
+              })
+          },
+          confirmButton = {
+            TextButton(
+              onClick = {
+                showRechargeMobileInstrumentedTestAdbCommandDialog.value = false
+              }) {
+              Text("Cerrar")
+            }
+          },
+          dismissButton = {
+            Row {
+              TextButton(
+                onClick = {
+                  au.openBrowser(Constants.LOCAL_ADB_ARTICLE_URL)
+                  showRechargeMobileInstrumentedTestAdbCommandDialog.value = false
+                }
+              ) {
+                Text("ADB local?")
+              }
 
-  val showAdbRunCommandDialog = remember { mutableStateOf(false) }
+              TextButton(
+                onClick = {
+                  au.openBrowser(Constants.ADB_DOWNLOAD_PAGE_URL)
+                  showRechargeMobileInstrumentedTestAdbCommandDialog.value = false
+                }
+              ) {
+                Text("Descargar ADB")
+              }
+            }
+          },
+        )
+      }
 
-  // ADB Command Dialog
-  if (showAdbRunCommandDialog.value) {
-    AlertDialog(
-      onDismissRequest = {
-        showAdbRunCommandDialog.value = false
-      },
-      title = {
-        Text("ADB Instrumentation Run Command")
-      },
-      text = {
-        Text(
-          text = adbInstrumentationRunCommandGetter(),
-          modifier = Modifier.clickable {
-            au.setClipboard(
-              adbInstrumentationRunCommandGetter()
+      val pagerState: PagerState? = page.value?.let {
+        rememberPagerState(
+          initialPage = it.ordinal,
+          pageCount = { HomeScreenPage.entries.count() }
+        )
+      }
+
+      val coroutineScope = rememberCoroutineScope()
+      val snackbarHostState = remember { SnackbarHostState() }
+      val isSearchingClients = remember { mutableStateOf(false) }
+
+      val searchBarText = remember { mutableStateOf("") }
+
+      val searchAppBar: @Composable () -> Unit = {
+        SearchAppBar(
+          text = searchBarText,
+          onNavigateBack = { isSearchingClients.value = false },
+        )
+      }
+
+      ScreenSurface(
+        title = stringResource(id = R.string.app_name),
+        titleTextAlign = TextAlign.Left,
+        customTopAppBar = if (isSearchingClients.value) searchAppBar else null,
+        scrollBehavior = null,
+        showTopAppBarHorizontalDivider = true,
+        onNavigateBack = null,
+        padding = PaddingValues(0.dp),
+        defaultTopAppBarActions = {
+          TopAppBarActions(
+            page = page,
+            pagerState = pagerState,
+            isSearchingClients = isSearchingClients,
+            coroutineScope = coroutineScope,
+            navController = navController,
+            au = au
+          )
+        },
+        snackbarHost = {
+          SnackbarHost(
+            hostState = snackbarHostState,
+          ) {
+            Snackbar(
+              snackbarData = it,
+              containerColor = MaterialTheme.colorScheme.onBackground,
+              contentColor = MaterialTheme.colorScheme.background,
+              actionColor = MaterialTheme.colorScheme.onPrimary
             )
-            au.toast("Comando copiado al portapapeles")
-          })
-      },
-      confirmButton = {
-        TextButton(
-          onClick = {
-            showAdbRunCommandDialog.value = false
-          }) {
-          Text("Cerrar")
-        }
-      },
-      dismissButton = {
-        Row {
-          TextButton(
-            onClick = {
-              au.openBrowser(Constants.LOCAL_ADB_ARTICLE_URL)
-              showAdbRunCommandDialog.value = false
-            }
-          ) {
-            Text("ADB local?")
           }
-
-          TextButton(
-            onClick = {
-              au.openBrowser(Constants.ADB_DOWNLOAD_PAGE_URL)
-              showAdbRunCommandDialog.value = false
-            }
-          ) {
-            Text("Descargar ADB")
-          }
-        }
-      },
-    )
-  }
-
-  val pagerState: PagerState? = page.value?.let {
-    rememberPagerState(
-      initialPage = it.ordinal,
-      pageCount = { HomeScreenPage.entries.count() }
-    )
-  }
-
-  val coroutineScope = rememberCoroutineScope()
-  val snackbarHostState = remember { SnackbarHostState() }
-  val isSearchingClients = remember { mutableStateOf(false) }
-
-  val searchBarText = remember { mutableStateOf("") }
-
-  val searchAppBar: @Composable () -> Unit = {
-    SearchAppBar(
-      text = searchBarText,
-      onNavigateBack = { isSearchingClients.value = false },
-    )
-  }
-
-  ScreenSurface(
-    title = stringResource(id = R.string.app_name),
-    titleTextAlign = TextAlign.Left,
-    customTopAppBar = if (isSearchingClients.value) searchAppBar else null,
-    scrollBehavior = null,
-    showTopAppBarHorizontalDivider = true,
-    onNavigateBack = null,
-    padding = PaddingValues(0.dp),
-    defaultTopAppBarActions = {
-      TopAppBarActions(
-        page = page,
-        pagerState = pagerState,
-        isSearchingClients = isSearchingClients,
-        coroutineScope = coroutineScope,
-        navController = navController,
-        au = au
-      )
-    },
-    snackbarHost = {
-      SnackbarHost(
-        hostState = snackbarHostState,
-      ) {
-        Snackbar(
-          snackbarData = it,
-          containerColor = MaterialTheme.colorScheme.onBackground,
-          contentColor = MaterialTheme.colorScheme.background,
-          actionColor = MaterialTheme.colorScheme.onPrimary
-        )
-      }
-    },
-    floatingActionButton = {
-      if (page.value != null) {
-        HomeScreenFAB(
-          firstClientNumber = firstClientNumber,
-          secondClientNumber = secondClientNumber,
-          firstClientRecharge = firstClientRecharge,
-          secondClientRecharge = secondClientRecharge,
-          fetchDataFromWA = fetchDataFromWA,
-          rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
-          page = page,
-          showAdbRunCommandDialog = showAdbRunCommandDialog,
-          onAddClient = onAddClient,
-          onRunInstrumentedTest = onRunInstrumentedTest,
-          onBatchAddClient = onBatchAddClient,
-        )
-      }
-    },
-    contentContainer = ScreenSurfaceContentContainer.Surface
-  ) {
-
-    if (pagerState == null || page.value == null) {
-      Row(
-        modifier = Modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        CircularProgressIndicator()
-      }
-    } else {
-      HorizontalPager(
-        state = pagerState,
-        verticalAlignment = Alignment.CenterVertically,
-      ) { currentPageIndex ->
-
-        var showManagerPasswordDialog by remember { mutableStateOf(false) }
-
-        // Manager Password Dialog
-        if (showManagerPasswordDialog) {
-          Dialog(
-            onDismissRequest = {
-              showManagerPasswordDialog = false
-              coroutineScope.launch {
-                pagerState.scrollToPage(HomeScreenPage.INSTRUMENTED_TEST.ordinal)
-              }
-            }) {
-
-            val textFieldFocusRequester = remember { FocusRequester() }
-
-            Column(
-              horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-              var password by remember {
-                mutableStateOf("")
-              }
-
-              Text(
-                text = "Contraseña",
-                style = MaterialTheme.typography.headlineMedium
-              )
-
-              Spacer(modifier = Modifier.height(Constants.Dimens.Medium))
-
-              val dark = LocalTheme.current.isDark
-              TextField(
-                value = password,
-                singleLine = true,
-                onValueChange = {
-                  if (it.length < 13) {
-                    password = it
-                    if (password == "589058825519") {
-                      showManagerPasswordDialog = false
-                      isManager.value = true
-                      coroutineScope.launch {
-                        pagerState.scrollToPage(HomeScreenPage.CLIENT_LIST.ordinal)
-                      }
-                    }
-                  }
-                },
-                modifier = Modifier.focusRequester(textFieldFocusRequester),
-                visualTransformation = {
-                  textFilter(
-                    text = it,
-                    mask = "___0___2___9",
-                    darkTheme = dark,
-                  )
-                },
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
-              )
-            }
-
-            var dialogWindowFocusChangeListenerRegistered by remember { mutableStateOf(false) }
-            if (!dialogWindowFocusChangeListenerRegistered) {
-              LocalView.current.viewTreeObserver.addOnWindowFocusChangeListener { hasFocus ->
-                if (hasFocus) textFieldFocusRequester.requestFocus()
-              }
-              dialogWindowFocusChangeListenerRegistered = true
-            }
-          }
-        }
-
-        LaunchedEffect(pagerState) {
-          snapshotFlow { pagerState.currentPage }.distinctUntilChanged().collect {
-            page.value = HomeScreenPage.fromOrdinal(it)
-            if (page.value == HomeScreenPage.CLIENT_LIST && !isManager.value) {
-              coroutineScope.launch {
-                pagerState.scrollToPage(HomeScreenPage.INSTRUMENTED_TEST.ordinal)
-              }.invokeOnCompletion { showManagerPasswordDialog = true }
-            } else if (page.value!!.isInstrumentedTestPage() && isSearchingClients.value) {
-              isSearchingClients.value = false
-            }
-          }
-        }
-
-        when (HomeScreenPage.fromOrdinal(currentPageIndex)) {
-          HomeScreenPage.INSTRUMENTED_TEST -> {
-            InstrumentedTestPage(
-              au = au,
+        },
+        floatingActionButton = {
+          if (page.value != null) {
+            HomeScreenFAB(
               firstClientNumber = firstClientNumber,
               secondClientNumber = secondClientNumber,
               firstClientRecharge = firstClientRecharge,
               secondClientRecharge = secondClientRecharge,
               fetchDataFromWA = fetchDataFromWA,
-              pin = pin,
-              bank = bank,
-              cardLast4Digits = cardLast4Digits,
-              waContactImageUri = waContactImageUri,
               rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
-              waContact = waContact,
-              whatsAppInstalledVersion = whatsAppInstalledVersion,
-              transfermovilInstalledVersion = transfermovilInstalledVersion,
-              instrumentationAppInstalledVersion = instrumentationAppInstalledVersion,
+              page = page,
+              showAdbRunCommandDialog = showRechargeMobileInstrumentedTestAdbCommandDialog,
+              onAddClient = onAddClient,
+              onRunInstrumentedTest = onRunInstrumentedTest,
+              onBatchAddClient = onBatchAddClient,
             )
           }
+        },
+        contentContainer = ScreenSurfaceContentContainer.Surface
+      ) {
 
-          HomeScreenPage.CLIENT_LIST -> {
-            if (isManager.value) {
+        if (pagerState == null || page.value == null) {
+          Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            CircularProgressIndicator()
+          }
+        } else {
+          HorizontalPager(
+            state = pagerState,
+            verticalAlignment = Alignment.CenterVertically,
+          ) { currentPageIndex ->
 
-              var showClientCardHelpDialog by remember { mutableStateOf(!clientListPageHelpDialogsShowed.value) }
-              var showAddClientButtonHelpDialog by remember { mutableStateOf(false) }
+            var showManagerPasswordDialog by remember { mutableStateOf(false) }
 
-              if (showClientCardHelpDialog) {
-                ScrollableAlertDialog(
-                  text = "Deslize la interfaz de un cliente a la izquierda o a la derecha para ejecutar las diferentes acciones:\n\nEnviar Mensaje\nRecargar\nEditar\nLlamar\nEliminar"
-                ) {
-                  showClientCardHelpDialog = false
-                  showAddClientButtonHelpDialog = true
-                }
-              }
-
-              if (showAddClientButtonHelpDialog) {
-                ScrollableAlertDialog(
-                  text = "Presione el botón 'Añadir Cliente' [➕] para eso mismo y manténgalo presionado para añadir varios clientes a la vez"
-                ) {
-                  showAddClientButtonHelpDialog = false
-                  clientListPageHelpDialogsShowed.value = true
-                }
-              }
-
-              ClientsListPage(
-                clients = clients,
-                searchBarText = searchBarText.value,
-                onClientEdit = onClientCardEdit,
-                onClientRecharge = onClientCardRecharge,
-                onClientSendMessage = onClientCardSendMessage,
-                onClientDelete = { client ->
+            // Manager Password Dialog
+            if (showManagerPasswordDialog) {
+              Dialog(
+                onDismissRequest = {
+                  showManagerPasswordDialog = false
                   coroutineScope.launch {
-                    onSubmitClientForDeletion(client)
-                    val snackbarResult = snackbarHostState.showSnackbar(
-                      message = "${client.name.truncate(20)} eliminado",
-                      actionLabel = "Deshacer",
-                      duration = SnackbarDuration.Short,
-                    )
-                    when (snackbarResult) {
-                      SnackbarResult.Dismissed -> {
-                        onDeleteClient(client)
+                    pagerState.scrollToPage(HomeScreenPage.INSTRUMENTED_TEST.ordinal)
+                  }
+                }) {
+
+                val textFieldFocusRequester = remember { FocusRequester() }
+
+                Column(
+                  horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+
+                  var password by remember {
+                    mutableStateOf("")
+                  }
+
+                  Text(
+                    text = "Contraseña",
+                    style = MaterialTheme.typography.headlineMedium
+                  )
+
+                  Spacer(modifier = Modifier.height(Constants.Dimens.Medium))
+
+                  val dark = LocalTheme.current.isDark
+                  TextField(
+                    value = password,
+                    singleLine = true,
+                    onValueChange = {
+                      if (it.length < 13) {
+                        password = it
+                        if (password == "589058825519") {
+                          showManagerPasswordDialog = false
+                          isManager.value = true
+                          coroutineScope.launch {
+                            pagerState.scrollToPage(HomeScreenPage.CLIENT_LIST.ordinal)
+                          }
+                        }
                       }
-                      else -> {
-                        onClientRestoredFromDeletion(client)
-                      }
+                    },
+                    modifier = Modifier.focusRequester(textFieldFocusRequester),
+                    visualTransformation = {
+                      textFilter(
+                        text = it,
+                        mask = "___0___2___9",
+                        darkTheme = dark,
+                      )
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
+                  )
+                }
+
+                var dialogWindowFocusChangeListenerRegistered by remember { mutableStateOf(false) }
+                if (!dialogWindowFocusChangeListenerRegistered) {
+                  LocalView.current.viewTreeObserver.addOnWindowFocusChangeListener { hasFocus ->
+                    if (hasFocus) textFieldFocusRequester.requestFocus()
+                  }
+                  dialogWindowFocusChangeListenerRegistered = true
+                }
+              }
+            }
+
+            LaunchedEffect(pagerState) {
+              snapshotFlow { pagerState.currentPage }.distinctUntilChanged().collect {
+                page.value = HomeScreenPage.fromOrdinal(it)
+                if (page.value == HomeScreenPage.CLIENT_LIST && !isManager.value) {
+                  coroutineScope.launch {
+                    pagerState.scrollToPage(HomeScreenPage.INSTRUMENTED_TEST.ordinal)
+                  }.invokeOnCompletion { showManagerPasswordDialog = true }
+                } else if (page.value!!.isInstrumentedTestPage() && isSearchingClients.value) {
+                  isSearchingClients.value = false
+                }
+              }
+            }
+
+            when (HomeScreenPage.fromOrdinal(currentPageIndex)) {
+              HomeScreenPage.INSTRUMENTED_TEST -> {
+                InstrumentedTestPage(
+                  au = au,
+                  firstClientNumber = firstClientNumber,
+                  secondClientNumber = secondClientNumber,
+                  firstClientRecharge = firstClientRecharge,
+                  secondClientRecharge = secondClientRecharge,
+                  fetchDataFromWA = fetchDataFromWA,
+                  pin = pin,
+                  bank = bank,
+                  cardToUseDropDownMenuPosition = cardToUseDropDownMenuPosition,
+                  waContactImageUri = waContactImageUri,
+                  rechargesAvailabilityDateISOString = rechargesAvailabilityDateISOString,
+                  waContact = waContact,
+                  whatsAppInstalledVersion = whatsAppInstalledVersion,
+                  transfermovilInstalledVersion = transfermovilInstalledVersion,
+                  instrumentationAppInstalledVersion = instrumentationAppInstalledVersion,
+                )
+              }
+
+              HomeScreenPage.CLIENT_LIST -> {
+                if (isManager.value) {
+
+                  var showClientCardHelpDialog by remember { mutableStateOf(!clientListPageHelpDialogsShowed.value) }
+                  var showAddClientButtonHelpDialog by remember { mutableStateOf(false) }
+
+                  if (showClientCardHelpDialog) {
+                    ScrollableAlertDialog(
+                      text = "Deslize la interfaz de un cliente a la izquierda o a la derecha para ejecutar las diferentes acciones:\n\nEnviar Mensaje (WhatsApp)\nTransferir Efectivo\nEditar\nLlamar (CUBACEL)\nEliminar"
+                    ) {
+                      showClientCardHelpDialog = false
+                      showAddClientButtonHelpDialog = true
                     }
                   }
-                },
-                onClientCardCounterReset = onClientCardCounterReset,
-                scrollPosition = clientsListScrollPosition,
-                au = au
-              )
+
+                  if (showAddClientButtonHelpDialog) {
+                    ScrollableAlertDialog(
+                      text = "Presione el botón 'Añadir Cliente' [➕] para eso mismo y manténgalo presionado para añadir varios clientes a la vez"
+                    ) {
+                      showAddClientButtonHelpDialog = false
+                      clientListPageHelpDialogsShowed.value = true
+                    }
+                  }
+
+                  ClientsListPage(
+                    clients = clients,
+                    searchBarText = searchBarText.value,
+                    onClientEdit = onClientCardEdit,
+                    onTransferCashToClient = onTransferCashToClient,
+                    onClientSendMessage = onClientCardSendMessage,
+                    onClientDelete = { client ->
+                      coroutineScope.launch {
+                        onSubmitClientForDeletion(client)
+                        val snackbarResult = snackbarHostState.showSnackbar(
+                          message = "${client.name.truncate(20)} eliminado",
+                          actionLabel = "Deshacer",
+                          duration = SnackbarDuration.Short,
+                        )
+                        when (snackbarResult) {
+                          SnackbarResult.Dismissed -> {
+                            onDeleteClient(client)
+                          }
+                          else -> {
+                            onClientRestoredFromDeletion(client)
+                          }
+                        }
+                      }
+                    },
+                    onClientCardCounterReset = onClientCardCounterReset,
+                    scrollPosition = clientsListScrollPosition,
+                    defaultMobileToSendCashTransferConfirmation = defaultMobileToSendCashTransferConfirmation,
+                    transferCashInstrumentedTestAdbCommandGetter = transferCashInstrumentedTestAdbCommandGetter,
+                    onRunTransferCashInstrumentedTest = onRunTransferCashInstrumentedTest,
+                    recipientReceiveMyMobileNumberAfterCashTransfer = recipientReceiveMyMobileNumberAfterCashTransfer,
+                    cashToTransferToClient = cashToTransferToClient,
+                    sendWhatsAppMessageOnTransferCashTestCompleted = sendWhatsAppMessageOnTransferCashTestCompleted,
+                    whatsAppMessageToSendOnTransferCashTestCompleted = whatsAppMessageToSendOnTransferCashTestCompleted,
+                    au = au,
+                  )
+                }
+              }
             }
           }
         }
@@ -718,25 +656,29 @@ fun HomeScreenPreview() {
     HomeScreen(
       homeScreenState = HomeScreenState(HomeScreenLoadingState.Success),
       navController = rememberNavController(),
-      clientListPageHelpDialogShowed = remember { mutableStateOf(true) },
-      adbCommandToRunInstrumentedTestGetter = { "" },
+      page = remember { mutableStateOf(HomeScreenPage.INSTRUMENTED_TEST) },
+      clientListPageHelpDialogsShowed = remember { mutableStateOf(true) },
+      au = AndroidUtilsImpl(context = context),
+      rechargeMobileInstrumentedTestAdbCommandGetter = { "" },
       firstClientNumber = remember { mutableStateOf("55797140") },
       secondClientNumber = remember { mutableStateOf("58469745") },
       firstClientRecharge = remember { mutableStateOf("1234") },
       secondClientRecharge = remember { mutableStateOf("2500") },
       fetchDataFromWA = remember { mutableStateOf(false) },
-      isManager = remember { mutableStateOf(false) },
       pin = remember { mutableStateOf("5555") },
       bank = remember { mutableStateOf("Metropolitano") },
-      cardLast4Digits = remember { mutableStateOf("") },
+      cardToUseDropDownMenuPosition = remember { mutableStateOf("") },
       waContactImageUri = remember { mutableStateOf(null) },
       rechargesAvailabilityDateISOString = remember { mutableStateOf(null) },
       waContact = remember { mutableStateOf("Jeans MR") },
-      page = remember { mutableStateOf(HomeScreenPage.CLIENT_LIST) },
-      au = AndroidUtilsImpl(context = context),
+      onRunInstrumentedTest = {},
+      whatsAppInstalledVersion = Pair(23, "123.124.51"),
+      transfermovilInstalledVersion = Pair(23, "123.124.51"),
+      instrumentationAppInstalledVersion = Pair(23, "123.124.51"),
+      isManager = remember { mutableStateOf(false) },
       clients = MutableStateFlow(PagingData.from(clientsForTesting)).collectAsLazyPagingItems(),
       onClientCardEdit = {},
-      onClientCardRecharge = { _, _ ->},
+      onTransferCashToClient = { _, _ ->},
       onSubmitClientForDeletion = {},
       onDeleteClient = {},
       onClientRestoredFromDeletion = {},
@@ -744,11 +686,14 @@ fun HomeScreenPreview() {
       onClientCardCounterReset = {},
       onAddClient = {},
       onBatchAddClient = {},
-      whatsAppInstalledVersion = Pair(23, "123.124.51"),
-      transfermovilInstalledVersion = Pair(23, "123.124.51"),
-      instrumentationAppInstalledVersion = Pair(23, "123.124.51"),
-      onRunInstrumentedTest = {},
       clientsListScrollPosition = remember { mutableIntStateOf(0) },
+      defaultMobileToSendCashTransferConfirmation = "movet",
+      transferCashInstrumentedTestAdbCommandGetter = { _, _ -> "" },
+      onRunTransferCashInstrumentedTest = { _, _, _ -> },
+      recipientReceiveMyMobileNumberAfterCashTransfer = remember { mutableStateOf(true) },
+      cashToTransferToClient = remember { mutableStateOf("5555") },
+      sendWhatsAppMessageOnTransferCashTestCompleted = remember { mutableStateOf(true) },
+      whatsAppMessageToSendOnTransferCashTestCompleted = remember { mutableStateOf("Love at the space station was the definition of shield, deceived to a bare parasite.") },
     )
   }
 }

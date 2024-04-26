@@ -67,6 +67,7 @@ import com.conexentools.data.local.model.Client
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.components.common.CreditCardTextField
 import com.conexentools.presentation.components.common.CubanPhoneNumberTextField
+import com.conexentools.presentation.components.common.MultilineTextField
 import com.conexentools.presentation.components.common.PrimaryIconButton
 import com.conexentools.presentation.components.common.ScreenSurface
 import com.conexentools.presentation.components.common.sanitizeCubanMobileNumber
@@ -102,7 +103,7 @@ fun AddEditClientScreen(
   var quickMessage by remember(client.value) {
     mutableStateOf(
       if (isNewClient)
-        "💸💸💳📲💸💸"
+        Constants.Messages.CLIENT_QUICK_MESSAGE
       else
         client.value.quickMessage ?: ""
     )
@@ -124,20 +125,6 @@ fun AddEditClientScreen(
   }
 
   var imageUri by remember(client.value) { mutableStateOf(client.value.imageUriString) }
-
-  val quickMessageTrailingIcon = @Composable {
-    IconButton(
-      onClick = {
-        client.value.quickMessage = null
-        quickMessage = ""
-      }
-    ) {
-      Icon(
-        imageVector = Icons.Rounded.Cancel,
-        contentDescription = null
-      )
-    }
-  }
 
   val pickContactLauncher = pickContact(au = au) { contact ->
     if (contact != null) {
@@ -223,6 +210,7 @@ fun AddEditClientScreen(
     onNavigateBack = onNavigateBack,
   ) {
 
+    // Contact image
     if (!imageUri.isNullOrEmpty()) {
       AsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
@@ -294,6 +282,7 @@ fun AddEditClientScreen(
 
         Spacer(modifier = Modifier.width(Constants.Dimens.MegaSmall))
 
+        // Select contact button
         Box(
           contentAlignment = Alignment.Center
         ) {
@@ -309,28 +298,30 @@ fun AddEditClientScreen(
 
       Spacer(modifier = Modifier.height(Constants.Dimens.Medium))
 
+      // Credit Card
       CreditCardTextField(
         value = cardNumber,
         onValueChange = {
           client.value.cardNumber = it
           cardNumber = it
-        },
-        isFourDigitsCard = false
+        }
       )
 
       Spacer(modifier = Modifier.height(Constants.Dimens.Medium))
 
+      // Quick Message
       Text("Mensaje")
-      TextField(
+      MultilineTextField(
         value = quickMessage,
-        modifier = Modifier.fillMaxWidth(),
-        trailingIcon = if (quickMessage.isEmpty()) null else quickMessageTrailingIcon,
-        singleLine = false,
         onValueChange = {
           if (it.length <= Constants.MAX_QUICK_MESSAGE_LENGTH) {
             quickMessage = it
             client.value.quickMessage = it
           }
+        },
+        onDeleteText = {
+          client.value.quickMessage = null
+          quickMessage = ""
         }
       )
 
