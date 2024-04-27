@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.core.text.isDigitsOnly
+import com.conexentools.core.util.log
 import com.conexentools.core.util.moveFocusOnTabPressed
 
 @Composable
@@ -35,7 +36,7 @@ fun CashTextField(
   val maxValue_ = maxValue ?: 1000000
 
   fun isValidEntry() =
-    value.isEmpty() || (value.isDigitsOnly() && value.toInt() in minValue..maxValue_)
+    value.isEmpty() || (value.isDigitsOnly() && value.take(maxValue_.toString().length).toInt() in minValue..maxValue_)
 
   TextField(
     modifier = Modifier
@@ -52,11 +53,11 @@ fun CashTextField(
       .then(modifier),
     supportingText = supportingText,
     isError = isInvalidEntry,
-    value = value, //TODO fixxx
+    value = value,
     prefix = { Text("$", color = MaterialTheme.colorScheme.primary) },
     suffix = { Text("CUP", color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)) },
     onValueChange = {
-      if (isValidEntry())
+      if (it.isDigitsOnly())
         onValueChange(it)
     },
     label = label?.let { { Text(it) } },

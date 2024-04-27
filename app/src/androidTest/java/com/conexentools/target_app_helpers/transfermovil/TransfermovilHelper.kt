@@ -7,8 +7,9 @@ import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import com.conexentools.BuildConfig
+import com.conexentools.Constants
 import com.conexentools.Constants.LONG_TIMEOUT
-import com.conexentools.Constants.MEDIUM_TIMEOUT
+import com.conexentools.Constants.SHORT_TIMEOUT
 import com.conexentools.InstrumentedTest.Companion.SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE
 import com.conexentools.Utils
 import com.conexentools.Utils.Companion.getPatternForResourceID
@@ -27,14 +28,13 @@ class TransfermovilHelper(
 
   var isAuthenticatedInLatestSelectedBank = false
 
-  fun accept(){
+  fun accept(type1ToAccept: Boolean){
     dm.click("btn_aceptar")
-//    device.pressEnter()
     // Confirmación
     dm.click("button1", timeout = LONG_TIMEOUT)
     // Marque 1 para confimar, it may not appear, which doesn't matter
-    if (dm.write("input_field", "1", timeout = MEDIUM_TIMEOUT) != null){
-      dm.click("button1", timeout = MEDIUM_TIMEOUT)
+    if (type1ToAccept && dm.write("input_field", "1", timeout = LONG_TIMEOUT) != null){
+      dm.click("button1", timeout = SHORT_TIMEOUT)
     }
     // Su solicitud está siendo procesada
     dm.click("button1", timeout = LONG_TIMEOUT * 3)
@@ -50,14 +50,17 @@ class TransfermovilHelper(
     val designNavigationView = dm.waitForObject("design_navigation_view")!!
     val s = By.res(getPatternForResourceID(bank))
     designNavigationView.scrollUntil(Direction.DOWN, Until.findObject(s))
-    isAuthenticatedInLatestSelectedBank = device.findObject(By.res(getPatternForResourceID("design_menu_item_text")).textContains("actual")) != null
+    isAuthenticatedInLatestSelectedBank = device.hasObject(By
+      .res(getPatternForResourceID("design_menu_item_text"))
+      .hasParent(By.res(getPatternForResourceID(bank)))
+      .textContains("actual"))
     log("Is authenticated for bank $bank: $isAuthenticatedInLatestSelectedBank")
     dm.click(s)
   }
 
   fun selectBankOperation(operation: BankOperation) {
-    val viewPager = dm.findObject("viewpager")
-    val selector = By.text(operation.name)
+    val viewPager = dm.findObject("viewpager")!!
+    val selector = By.textContains(operation.description)
     viewPager.scrollUntil(Direction.DOWN, Until.findObject(selector))
     dm.click(selector)
   }
@@ -69,41 +72,41 @@ class TransfermovilHelper(
   fun bypassStartUpDialogs() {
     log("Waiting for rate dialog")
     val isRateDialogPresent =
-      dm.waitForObject(null, "ENVIAR", timeout = MEDIUM_TIMEOUT) != null
+      dm.waitForObject(text = "ENVIAR") != null
     if (isRateDialogPresent){
       device.pressBack()
-      log("Rate dialog clicked")
+      log("Rate dialog dismissed")
     }
     else
       log("Rate dialog not present")
 
-    val isWelcomeMessagePresent =
-      dm.waitForObject(null, "Bienvenido a Transfermóvil") != null
-    if (isWelcomeMessagePresent) {
-      dm.click("button1", null, MEDIUM_TIMEOUT)
-      log("Welcome message clicked")
+   val welcomeToTransfermovil = dm.waitForObject(null, "Bienvenido a Transfermóvil", timeout = Constants.SHORT_TIMEOUT)
+    if (welcomeToTransfermovil != null) {
+      dm.click("button1")
+      log("Welcome dialog clicked")
     } else
-      log("Welcome message not present")
+      log("Welcome dialog not present")
+
+    val welcomeToSystem = dm.waitForObject(text = "Bienvenido al sistema", timeout = Constants.SHORT_TIMEOUT)
+    if (welcomeToSystem != null) {
+      dm.click("button1")
+      log("Welcome to system dialog clicked")
+    } else
+      log("Welcome to system dialog not present")
   }
 
   fun authenticate(pin: String): Boolean {
     selectBankTab(BankTab.Sesion)
     dm.click(null, "Autenticarse")
-    val input = dm.findObject("input_clave")
+    val input = dm.findObject("input_clave")!!
     input.text = pin
-    accept()
 
     // Waiting for confirmation message
-    var count = 0
-    val lastMessage: Map.Entry<Int, String> = getMessages().entries.last()
-    var currentMessage: Map.Entry<Int, String>
-    Utils.toast("Esperando por mensaje de confirmación")
-    do {
-      Thread.sleep(1000)
-      currentMessage = getMessages().entries.last()
-    } while (currentMessage == lastMessage && ++count < SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE)
+    val latestMessage: Map.Entry<Int, String> = getMessages().entries.last()
 
-    return count < SECONDS_TO_WAIT_FOR_CONFIRMATION_MESSAGE && currentMessage.value.contains("Usted se ha autenticado")
+    accept(type1ToAccept = false)
+
+    return waitForConfirmationMessage(latestMessage, "Usted se ha autenticado").isNotEmpty()
   }
 
   fun getMessages(): Map<Int, String>{
@@ -130,38 +133,40 @@ class TransfermovilHelper(
     }
   }
 
-  fun selectAccountTypeToOperate(
-    cardToUseDropDownMenuPosition: Int?,
-    isFiveEntriesDropDownMenu: Boolean = false
+  fun selectAccountTypeToOperateForBandec(cardAlias: String) {
+    dm.click("swCuentasBanco")
+    dm.click(text = "Listar mis cuentas")
+    selectCard(cardAlias)
+  }
+
+  fun selectAccountTypeToOperateForMetroAndBPA(
+    cardAlias: String?,
   ) {
-    if (cardToUseDropDownMenuPosition == null) {
+    if (cardAlias == null) {
       dm.selectDropDownMenuItem(
         resourceID = "spinnerTipoMoneda",
-        choice = 1,
-        choicesCount = 4,
-        isItemBelowTextInput = true,
-        expectedTextAfterSelection = "CUP"
+        itemText = "CUP",
       )
     } else {
       dm.selectDropDownMenuItem(
         resourceID = "spinnerTipoMoneda",
-        choice = if (isFiveEntriesDropDownMenu) 4 else 3,
-        choicesCount = if (isFiveEntriesDropDownMenu) 5 else 4,
-        isItemBelowTextInput = true,
-        expectedTextAfterSelection = "-MIS CUENTAS-"
+        itemText = "-MIS CUENTAS-",
       )
 
-      //TODO() make it dynamic !!!!!!
-      dm.selectDropDownMenuItem(
-        resourceID = "spinnerCuentas",
-        choice = cardToUseDropDownMenuPosition,
-        choicesCount = 1, // No matter since as expectedTextAfterSelection is null the DropDownMenu items will only be searched below the text input
-        isItemBelowTextInput = true,
-        expectedTextAfterSelection = null
-      )
-      // This seems to crash the app
-//      dm.write("spinnerCuentas", cardNickname)!!
+      if(device.findObject(By.textContains("No tiene cuentas registradas")) != null) {
+        Utils.toast("No posee ninguna cuenta para este banco, por favor agregue una")
+        assert(false)
+      }
+
+      selectCard(cardAlias)
     }
+  }
+
+  fun selectCard(cardAlias: String) {
+    dm.selectDropDownMenuItem(
+      resourceID = "spinnerCuentas",
+      itemText = cardAlias,
+    )
   }
 
   fun waitForConfirmationMessage(

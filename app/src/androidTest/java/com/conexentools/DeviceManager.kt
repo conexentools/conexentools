@@ -2,7 +2,6 @@ package com.conexentools
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Point
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
@@ -15,12 +14,12 @@ import com.conexentools.Utils.Companion.getPatternForResourceID
 
 class DeviceManager(private val device: UiDevice) {
 
-  fun findObject(resourceID: String?, text: String? = null): UiObject2 {
+  fun findObject(resourceID: String? = null, text: String? = null): UiObject2? {
     val selector: BySelector = makeSelector(resourceID, text)
     return device.findObject(selector)
   }
 
-  fun findObjects(resourceID: String?, text: String? = null): MutableList<UiObject2> {
+  fun findObjects(resourceID: String? = null, text: String? = null): MutableList<UiObject2> {
     val selector: BySelector = makeSelector(resourceID, text)
     return device.findObjects(selector)
   }
@@ -30,7 +29,7 @@ class DeviceManager(private val device: UiDevice) {
     element!!.click()
   }
 
-  fun click(resourceID: String?, text: String? = null, timeout: Int = MEDIUM_TIMEOUT) {
+  fun click(resourceID: String? = null, text: String? = null, timeout: Int = MEDIUM_TIMEOUT) {
     val selector: BySelector = makeSelector(resourceID, text)
     click(selector, timeout)
   }
@@ -40,58 +39,60 @@ class DeviceManager(private val device: UiDevice) {
   }
 
   fun selectDropDownMenuItem(
-    resourceID: String?,
+    resourceID: String? = null,
     text: String? = null,
-    choice: Int,
-    choicesCount: Int,
+    itemPosition: Int? = null,
+    itemText: String? = null,
     timeout: Int = MEDIUM_TIMEOUT,
-    isItemBelowTextInput: Boolean = true,
-    expectedTextAfterSelection: String?,
   ) {
     val selector: BySelector = makeSelector(resourceID, text)
     selectDropDownMenuItem(
       selector = selector,
       timeout = timeout,
-      choice = choice,
-      choicesCount = choicesCount,
-      isItemBelowTextInput = isItemBelowTextInput,
-      expectedTextAfterSelection = expectedTextAfterSelection
+      itemPosition = itemPosition,
+      itemText = itemText
     )
   }
 
   fun selectDropDownMenuItem(
     selector: BySelector,
-    choice: Int,
-    choicesCount: Int,
+    itemPosition: Int? = null,
+    itemText: String? = null,
     timeout: Int = MEDIUM_TIMEOUT,
-    isItemBelowTextInput: Boolean = true,
-    expectedTextAfterSelection: String?,
   ) {
-    assert(choicesCount > 0 && choice in 1..choicesCount)
-    val textInput = waitForObject(selector, timeout)!!
 
-    fun clickDropDownItem(isBelow: Boolean): Boolean {
-      val offset = if (isBelow) {
-        choice
-      } else {
-        (choicesCount - choice + 1) * -1
-      }
-      val distanceToChoiceCenter = textInput.visibleBounds.height() * offset
-      val point =
-        Point(textInput.visibleCenter.x, textInput.visibleCenter.y + distanceToChoiceCenter)
+    if (itemPosition == null && itemText == null)
+      throw Exception("You must specify either itemPosition or itemText")
+
+    val textInput = waitForObject(selector, timeout)!!
+    val regularDropDownMenuItemSelector = By.res("android:id/text1").clazz("android.widget.TextView")
+    var count = 0
+    var items: List<UiObject2>
+    do {
       textInput.click()
       Thread.sleep(700)
-      device.click(point.x, point.y)
-      return expectedTextAfterSelection == null || textInput.text == expectedTextAfterSelection
+      items = device.findObjects(regularDropDownMenuItemSelector)
+    }
+    while (items.isEmpty() && count++ < 3)
+
+    if (count == 3)
+      throw Exception("DropDownMenu couldn't be show")
+
+    for (index in items.indices) {
+      val item = items[index]
+      val matchPosition = itemPosition == null || index == itemPosition - 1
+      val matchText = itemText == null || item.text.contains(itemText)
+      if (matchPosition && matchText) {
+        item.click()
+        return
+      }
     }
 
-    if (!clickDropDownItem(isBelow = isItemBelowTextInput))
-      if (!clickDropDownItem(isBelow = !isItemBelowTextInput))
-        throw Exception("Expected DropDownMenuItem '$expectedTextAfterSelection' couldn't be selected, instead we got '${textInput.text}'")
+    throw Exception("Item couldn't be found")
   }
 
   fun waitForObject(
-    resourceID: String?,
+    resourceID: String? = null,
     text: String? = null,
     timeout: Int = MEDIUM_TIMEOUT
   ): UiObject2? {
@@ -121,30 +122,30 @@ class DeviceManager(private val device: UiDevice) {
       selector = By.res(getPatternForResourceID(resourceID))
     }
     if (text != null) {
-      selector = selector?.text(text) ?: By.text(text)
+      selector = selector?.textContains(text) ?: By.textContains(text)
     }
     assert(selector != null)
     return selector!!
   }
 
   fun write(
-    resourceID: String?,
-    text: String,
+    resourceID: String? = null,
+    textToWrite: String,
     elementText: String? = null,
     timeout: Int = MEDIUM_TIMEOUT,
   ): UiObject2? {
     val selector = makeSelector(resourceID, elementText)
-    return write(selector, text, timeout)
+    return write(selector, textToWrite, timeout)
   }
 
   fun write(
     selector: BySelector,
-    text: String,
+    textToWrite: String,
     timeout: Int = MEDIUM_TIMEOUT,
   ): UiObject2? {
     val element = waitForObject(selector, timeout)
     if (element != null)
-      element.text = text
+      element.text = textToWrite
     return element
   }
 }

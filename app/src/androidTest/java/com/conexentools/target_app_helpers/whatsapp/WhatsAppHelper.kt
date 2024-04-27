@@ -3,6 +3,7 @@ package com.conexentools.target_app_helpers.whatsapp
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import com.conexentools.BuildConfig
+import com.conexentools.Constants.LONG_TIMEOUT
 import com.conexentools.Constants.SHORT_TIMEOUT
 import com.conexentools.Utils
 import com.conexentools.Utils.Companion.getPatternForResourceID
@@ -21,10 +22,10 @@ class WhatsAppHelper(
 
   fun startConversation(contactNameOrNumber: String) {
     // Assuming WA is already open at main screen
-    dm.click(By.res(Pattern.compile(".*:id/.*?fab")))
+    dm.click(By.res(HOME_FAB_PATTERN))
 
     dm.click("menuitem_search")
-    dm.findObject("search_src_text").text =
+    dm.waitForObject("search_src_text")!!.text =
       contactNameOrNumber.filter { it.code <= 0xFF } // Taking only ASCII characters
     device.waitForIdle()
     Thread.sleep(100)
@@ -71,5 +72,21 @@ class WhatsAppHelper(
       chats.add(0, chat)
     }
     return chats.mapNotNull { it.findObject(By.res(getPatternForResourceID("message_text")))?.text }
+  }
+
+  fun launchAndSendMessage(
+    waContact: String,
+    message: String?
+  ) {
+    launch()
+    startConversation(waContact)
+    if (message != null)
+      sendMessage(message)
+  }
+
+  fun isHomeScreen() = device.hasObject(By.res(HOME_FAB_PATTERN))
+
+  companion object {
+    private val HOME_FAB_PATTERN = Pattern.compile(".*:id/.*?fab")
   }
 }

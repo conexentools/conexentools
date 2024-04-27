@@ -1,17 +1,25 @@
 package com.conexentools
 
+import android.app.NotificationManager
+import android.app.NotificationManager.INTERRUPTION_FILTER_PRIORITY
+import android.app.UiAutomation
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.provider.Settings
 import android.provider.Telephony
 import android.util.Log
 import android.widget.Toast
 import android.widget.Toast.LENGTH_LONG
 import android.widget.Toast.LENGTH_SHORT
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
+import androidx.core.net.toUri
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.regex.Pattern
 
@@ -20,6 +28,8 @@ class Utils {
   companion object {
 
     val context = InstrumentationRegistry.getInstrumentation().context
+    val notificationManager = getSystemService(context, NotificationManager::class.java) as NotificationManager
+    val userSetInterruptionFilter = notificationManager.currentInterruptionFilter
 
     fun getMessages(sender: String): Map<Int, String> {
       val contentResolver =
@@ -111,6 +121,33 @@ class Utils {
 
     fun getPatternForResourceID(resourceName: String): Pattern {
       return Pattern.compile(".*:id/$resourceName")
+    }
+
+    fun UiAutomation.grantRuntimePermissions(packageName: String, vararg permissions: String) {
+      permissions.forEach {
+        grantRuntimePermission(packageName, it)
+      }
+    }
+
+    fun turnOnDoNotDisturbMode(){
+      if (notificationManager.currentInterruptionFilter != INTERRUPTION_FILTER_PRIORITY)
+        notificationManager.setInterruptionFilter(INTERRUPTION_FILTER_PRIORITY)
+    }
+
+    fun restoreInterruptionFilter() {
+      if (notificationManager.currentInterruptionFilter != userSetInterruptionFilter)
+        notificationManager.setInterruptionFilter(userSetInterruptionFilter)
+    }
+
+    fun openAccessToInterruptionsScreen() {
+      val intent = Intent(
+        Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS
+      ).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
+        addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      }
+      context.startActivity(intent)
     }
   }
 }

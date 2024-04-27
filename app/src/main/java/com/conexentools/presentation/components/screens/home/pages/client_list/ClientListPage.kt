@@ -36,7 +36,6 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.conexentools.core.app.Constants
 import com.conexentools.core.util.PreviewComposable
-import com.conexentools.core.util.log
 import com.conexentools.data.local.model.Client
 import com.conexentools.data.repository.AndroidUtilsImpl
 import com.conexentools.domain.repository.AndroidUtils
@@ -65,18 +64,18 @@ fun ClientsListPage(
   defaultMobileToSendCashTransferConfirmation: String,
   transferCashInstrumentedTestAdbCommandGetter: (
     recipientCard: String,
-    mobileToConfirm: String
-  ) -> String,
-  onRunTransferCashInstrumentedTest: (
-    recipientCard: String,
     mobileToConfirm: String,
-    numberToSendWhatsAppMessage: String?
-  ) -> Unit,
+    waContact: String?
+  ) -> String,
   recipientReceiveMyMobileNumberAfterCashTransfer: MutableState<Boolean>,
   cashToTransferToClient: MutableState<String>,
   sendWhatsAppMessageOnTransferCashTestCompleted: MutableState<Boolean>,
   whatsAppMessageToSendOnTransferCashTestCompleted: MutableState<String>,
-  onTransferCashToClient: (Client, (canExecuteTransferCashInstrumentedTest: Boolean) -> Unit) -> Unit,
+  onTransferCashToClient: (
+    client: Client,
+    mobileToConfirm: String,
+    numberToSendWhatsAppMessage: String?
+  ) -> Unit,
   au: AndroidUtils
 ) {
 
@@ -126,7 +125,7 @@ fun ClientsListPage(
             ClientCard(
               client = client,
               onEdit = onClientEdit,
-              onTransferCash = onTransferCashToClient,
+//              onTransferCash = onTransferCashToClient,
               onDelete = { onClientDelete(it) },
               showDivider = index < clients.itemCount - 1,
               onSendMessage = onClientSendMessage,
@@ -239,8 +238,8 @@ fun ClientsListPage(
 
               if (errorMessage.isEmpty()) {
                 showTransferCashDialog.value = false
-                onRunTransferCashInstrumentedTest(
-                  creditCard,
+                onTransferCashToClient(
+                  clientToTransferCash.value!!,
                   mobileToConfirm,
                   clientToTransferCash.value!!.phoneNumber
                 )
@@ -259,7 +258,8 @@ fun ClientsListPage(
             mutableStateOf(
               transferCashInstrumentedTestAdbCommandGetter(
                 creditCard,
-                mobileToConfirm
+                mobileToConfirm,
+                clientToTransferCash.value!!.phoneNumber
               )
             )
           }
@@ -314,7 +314,7 @@ fun ClientsListPage(
 
               // Send WhatsApp Message On Transfer Cash Test Completed
               LabelSwitch(
-                info = "Enviar mensaje por WhatsApp cuando la transferencia se complete satisfactoriamente?",
+                info = "Enviar mensaje por WhatsApp cuando la transferencia se complete satisfactoriamente?. El mensaje se enviará a través de la aplicación instrumentada, ignorando la entrada de configuración 'Siempre API WA Message'",
                 label = "Enviar mensaje",
                 checked = sendWhatsAppMessageOnTransferCashTestCompleted,
                 onCheckedChange = {
@@ -354,13 +354,12 @@ private fun PreviewClientsListPage() {
       onClientSendMessage = { _, _ -> },
 //      onAddClient = {},
       au = AndroidUtilsImpl(LocalContext.current),
-      onTransferCashToClient = { _, _ -> },
+      onTransferCashToClient = { _, _, _ -> },
       scrollPosition = remember { mutableIntStateOf(0) },
 //      lazyListState = rememberLazyListState(),
       onClientCardCounterReset = {},
       defaultMobileToSendCashTransferConfirmation = "55123456",
-      transferCashInstrumentedTestAdbCommandGetter = { _, _ -> "" },
-      onRunTransferCashInstrumentedTest = { _, _, _ -> },
+      transferCashInstrumentedTestAdbCommandGetter = { _, _, _ -> "" },
       recipientReceiveMyMobileNumberAfterCashTransfer = remember { mutableStateOf(false) },
       cashToTransferToClient = remember { mutableStateOf("452") },
       sendWhatsAppMessageOnTransferCashTestCompleted = remember { mutableStateOf(true) },

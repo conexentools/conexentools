@@ -23,8 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,7 +50,6 @@ import me.saket.swipe.SwipeableActionsBox
 fun ClientCard(
   client: Client,
   onEdit: (Client) -> Unit,
-  onTransferCash: (Client, (canExecuteTransferCashInstrumentedTest: Boolean) -> Unit) -> Unit,
   onSendMessage: (String, String?) -> Unit,
   onDelete: (Client) -> Unit,
   onClientCardCounterReset: (Client) -> Unit,
@@ -61,8 +58,6 @@ fun ClientCard(
   showTransferCashDialog: MutableState<Boolean>,
   au: AndroidUtils
 ) {
-
-  var counterToForceRecomposition by remember { mutableIntStateOf(0) }
 
   // Actions
   val edit = SwipeAction(icon = rememberVectorPainter(Icons.TwoTone.Edit),
@@ -75,18 +70,8 @@ fun ClientCard(
   val transferCash = SwipeAction(icon = rememberVectorPainter(Icons.TwoTone.AttachMoney),
     background = Color.Yellow,
     onSwipe = {
-      onTransferCash(
-        client
-      ) { canExecuteTransferCashInstrumentedTest ->
-        if (canExecuteTransferCashInstrumentedTest){
-          clientToTransferCash.value = client
-          showTransferCashDialog.value = true
-        }
-        else {
-          // Forcing to recompose Recharge Availability Remaining Time Indicator and Recharges Made counter since they may not get recomposed
-          counterToForceRecomposition++
-        }
-      }
+      clientToTransferCash.value = client
+      showTransferCashDialog.value = true
     }
   )
 
@@ -153,25 +138,23 @@ fun ClientCard(
 
       // Recharge Availability Remaining Time Indicator
       with(client.getRemainingTimeForNextRechargeToBeAvailable()) {
-        key(this, counterToForceRecomposition) {
-          if (this != null) {
-            Surface(modifier = Modifier.size(55.dp)) {
-              RadialProgressTimeIndicator(
-                value = this.seconds.toFloat(),
-                maxValue = 60 * 60 * 24f, //24h
-                timeNumericTextRepresentation = this.numericRepresentationPart,
-                timeUnit = this.unit,
-                strokeWidthRatio = 0.3f,
-                modifier = Modifier
-                  .clip(CircleShape)
-                  .combinedClickable(
-                    onClick = { },
-                    onLongClick = {
-                      showResetRechargeTimerDialog = true
-                    },
-                  )
-              )
-            }
+        if (this != null) {
+          Surface(modifier = Modifier.size(55.dp)) {
+            RadialProgressTimeIndicator(
+              value = this.seconds.toFloat(),
+              maxValue = 60 * 60 * 24f, //24h
+              timeNumericTextRepresentation = this.numericRepresentationPart,
+              timeUnit = this.unit,
+              strokeWidthRatio = 0.3f,
+              modifier = Modifier
+                .clip(CircleShape)
+                .combinedClickable(
+                  onClick = { },
+                  onLongClick = {
+                    showResetRechargeTimerDialog = true
+                  },
+                )
+            )
           }
         }
       }
@@ -194,16 +177,12 @@ fun ClientCard(
     }
 
     // Recharges made counter
-    with(client.rechargesMade) {
-      key(this, counterToForceRecomposition) {
-        Text(
-          text = (this ?: 0).toString(),
-          color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f),
-          style = MaterialTheme.typography.labelMedium,
-          modifier = Modifier.padding(Constants.Dimens.MegaSmall)
-        )
-      }
-    }
+    Text(
+      text = (client.rechargesMade ?: 0).toString(),
+      color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f),
+      style = MaterialTheme.typography.labelMedium,
+      modifier = Modifier.padding(Constants.Dimens.MegaSmall)
+    )
   }
 }
 
@@ -218,7 +197,6 @@ private fun PreviewClientCard() {
           client = it,
           onEdit = {},
           onSendMessage = { _, _ -> },
-          onTransferCash = { _, _ -> },
           onDelete = {},
           au = AndroidUtilsImpl(LocalContext.current),
           onClientCardCounterReset = {},

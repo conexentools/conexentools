@@ -1,6 +1,6 @@
 package com.conexentools.target_app_helpers.transfermovil
 
-sealed class BankOperation(val name: String) {
-  data object TransferCash : BankOperation("Transferir Efectivo")
-  data object RechargeMobile : BankOperation("Recarga Saldo Móvil")
+sealed class BankOperation(val description: String) {
+  data object TransferCash : BankOperation("Transferencia del saldo de la tarjeta")
+  data object RechargeMobile : BankOperation("Recargar saldo del móvil")
 }

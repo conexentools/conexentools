@@ -13,7 +13,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.conexentools.R
-import com.conexentools.core.util.log
 import com.conexentools.domain.repository.AndroidUtils
 import com.conexentools.presentation.components.common.ScrollableAlertDialog
 
@@ -35,6 +34,7 @@ fun RequestAppPermissions(
       false
     )
   }
+  var showAccessInterruptionsDialog by remember { mutableStateOf(false) }
   var showRestartAppDialog by remember { mutableStateOf(false) }
   var allPermissionDialogsShowed by remember { mutableStateOf(false) }
 
@@ -66,6 +66,11 @@ fun RequestAppPermissions(
     }
 
   val xiaomiOtherPermissionAppSettingsWindowLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+      showAccessInterruptionsDialog = true
+    }
+
+  val accessInterruptionsScreenLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
       allPermissionDialogsShowed = true
     }
@@ -136,7 +141,7 @@ fun RequestAppPermissions(
     }
   }
 
-  // Display pop-up while running in the background -> allPermissionDialogsShowed
+  // Xiaomi Display pop-up while running in the background -> Access Interruptions screen
   if (checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission) {
     if (appLaunchCount == 1 && au.isMiuiWithApi28OrMore()) {
       ScrollableAlertDialog("Para ejecutar las pruebas automatizadas desde una computadora usando ADB cuando lo aplicación no se esté ejecutando en un primer plano, es necesario otorgar el permiso 'Mostrar ventanas emergente mientras se ejecuta en segundo plano'. A continuación si lo desea concédalo manualmente") {
@@ -146,6 +151,24 @@ fun RequestAppPermissions(
       }
     } else {
       checkDisplayPopUpWindowsWhileRunningInTheBackgroundXiaomiPermission = false
+      showAccessInterruptionsDialog = true
+    }
+  }
+
+  if (showAccessInterruptionsDialog) {
+    if (!au.isNotificationPolicyAccessGranted()) {
+      ScrollableAlertDialog("Para ejecutar las pruebas automatizadas es necesario poder activar y desactivar|restaurar según sea necesario el modo 'No Molestar' pues algunas notificaciones flotantes podrían hacer fallar las pruebas, a continuación conceda el acceso a interrupciones para Conexen Tools") {
+        val intent = au.openSettings(
+          settingsMenuWindow = Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS,
+          flagActivityNewTask = false,
+          onlyReturnIntent = true,
+          includePackage = false
+        )
+        accessInterruptionsScreenLauncher.launch(intent)
+        showAccessInterruptionsDialog = false
+      }
+    } else {
+      showAccessInterruptionsDialog = false
       allPermissionDialogsShowed = true
     }
   }

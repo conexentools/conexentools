@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CardMembership
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.Info
@@ -35,8 +36,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -67,7 +66,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.text.isDigitsOnly
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.conexentools.BuildConfig
@@ -79,7 +77,6 @@ import com.conexentools.core.util.moveFocusOnTabPressed
 import com.conexentools.core.util.pickContact
 import com.conexentools.core.util.toFormattedDate
 import com.conexentools.domain.repository.AndroidUtils
-import com.conexentools.presentation.components.common.CreditCardTextField
 import com.conexentools.presentation.components.common.LabelSwitch
 import com.conexentools.presentation.components.common.PrimaryIconButton
 import com.conexentools.presentation.components.common.ScrollableAlertDialog
@@ -101,7 +98,7 @@ fun InstrumentedTestPage(
   fetchDataFromWA: MutableState<Boolean>,
   pin: MutableState<String>,
   bank: MutableState<String>,
-  cardToUseDropDownMenuPosition: MutableState<String>,
+  cardToUseAlias: MutableState<String>,
   waContactImageUri: MutableState<Uri?>,
   rechargesAvailabilityDateISOString: MutableState<String?>,
   waContact: MutableState<String>,
@@ -154,7 +151,8 @@ fun InstrumentedTestPage(
       val focusManager = LocalFocusManager.current
 
       // PIN
-      OutlinedTextField(value = pin.value,
+      OutlinedTextField(
+        value = pin.value,
         onValueChange = {
           if (it.length <= maxPinLength) pin.value = it
         },
@@ -183,68 +181,54 @@ fun InstrumentedTestPage(
       )
     }
 
-    var showCardToUseDropDownMenuPositionInfoDialog by remember { mutableStateOf(false) }
+    var showCardToUseAliasInfoDialog by remember { mutableStateOf(false) }
 
-    if (showCardToUseDropDownMenuPositionInfoDialog) {
+    if (showCardToUseAliasInfoDialog) {
       ScrollableAlertDialog(
-        text = "Posición en la que aparece el alias de la tarjeta que vaya a usar para hacer la recarga|transferencia en el menu desplegable de Transfermóvil en el campo 'Tipo de cuenta a operar'[-MIS CUENTAS-] -> 'Seleccione una cuenta'. Deje en blanco si tiene una sola tarjeta",
+        text = "Alias o texto parcial del alias de la tarjeta que vaya a usar para hacer la recarga|transferencia. Por ejemplo si su tarjeta se llama 'BANCO METROPOLITANO - 1234', puede poner el alias completo o solo 1234. Deje en blanco si tiene una sola tarjeta",
         isInfoDialog = true,
         title = null,
         yesNoDialog = false,
         onDismiss = null,
-        onDismissRequest = { showCardToUseDropDownMenuPositionInfoDialog = false },
-        onConfirm = { showCardToUseDropDownMenuPositionInfoDialog = false }
+        onDismissRequest = { showCardToUseAliasInfoDialog = false },
+        onConfirm = { showCardToUseAliasInfoDialog = false }
       )
     }
 
-    // Card to use DropDownMenu position
-    Row(
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceBetween,
-      modifier = Modifier.fillMaxWidth()
-    ) {
-      Row (
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Text(
-          text = "Posición de tarjeta a usar",
-          style = MaterialTheme.typography.titleMedium
+    // Alias of card to use
+    OutlinedTextField(
+      value = cardToUseAlias.value,
+      onValueChange = {
+        cardToUseAlias.value = it
+      },
+      label = {
+        Text("Alias de la tarjeta a usar")
+      },
+      leadingIcon = {
+        Icon(
+          imageVector = Icons.Rounded.CardMembership,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.primary
         )
+      },
+      trailingIcon = {
         PrimaryIconButton(
           imageVector = Icons.Rounded.Info,
           modifier = Modifier
             .padding(Constants.Dimens.Small)
             .alpha(0.5f),
-          onClick = { showCardToUseDropDownMenuPositionInfoDialog = true }
+          onClick = { showCardToUseAliasInfoDialog = true }
         )
-      }
-
-      TextField(
-        value = cardToUseDropDownMenuPosition.value,
-        onValueChange = {
-          if (it.isEmpty() || (it.length == 1 && it.isDigitsOnly() && it.toInt() > 0)) {
-            cardToUseDropDownMenuPosition.value = it
-          }
-        },
-        modifier = Modifier
-          .width(50.dp)
-          .padding(vertical = Constants.Dimens.Small),
-        keyboardOptions = KeyboardOptions.Default.copy(
-          keyboardType = KeyboardType.Number,
-          imeAction = ImeAction.Done
-        ),
-        maxLines = 1,
-        colors =TextFieldDefaults.colors(
-          focusedContainerColor = Color.Transparent.copy(0.05f),
-          unfocusedContainerColor = Color.Transparent.copy(0.05f),
-        )
-      )
-    }
+      },
+      modifier = Modifier.fillMaxWidth(),
+      keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+      maxLines = 1,
+    )
 
     // Fetch Data from WA Switch
     LabelSwitch(
       label = "Obtener datos desde WA",
-      info = "Active esta opción para buscar los datos de recarga en los últimos chats enviados por el contacto especificado, los cuales deben estar en el siguiente formato <numero_a_recargar>,<recarga>. Por ejemplo: \n\n55123456,1000\n55654321,500\n\nEl contacto debe ser el primer resultado en aparecer en la lista de contactos de WhatsApp cuando se introduzca en la barra de búsqueda el texto especificado como contacto, así que asegúrese de eso, de lo contrario la prueba automatizada fallará",
+      info = "Active esta opción para buscar los datos de recarga en los últimos chats enviados por el contacto especificado, los cuales deben estar en el siguiente formato <numero_a_recargar>,<recarga> y ser visibles en la pantalla de conversación. Por ejemplo: \n\n55123456,1000\n55654321,500\n\nEl contacto debe ser el primer resultado en aparecer en la lista de contactos de WhatsApp cuando se introduzca en la barra de búsqueda el texto especificado como contacto, así que asegúrese de eso, de lo contrario la prueba automatizada fallará",
       checked = fetchDataFromWA
     )
     AnimatedVisibility(visible = fetchDataFromWA.value) {

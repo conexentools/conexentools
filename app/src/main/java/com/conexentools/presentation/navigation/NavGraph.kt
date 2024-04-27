@@ -86,7 +86,7 @@ fun SetUpNavGraph(
         fetchDataFromWA = hvm.fetchDataFromWA,
         pin = hvm.pin,
         bank = hvm.bank,
-        cardToUseDropDownMenuPosition = hvm.cardToUseDropDownMenuPosition,
+        cardToUseAlias = hvm.cardToUseAlias,
         waContactImageUri = hvm.waContactImageUri,
         rechargesAvailabilityDateISOString = hvm.rechargesAvailabilityDateISOString,
         waContact = hvm.waContact,
@@ -149,10 +149,12 @@ fun SetUpNavGraph(
         clientsListScrollPosition = hvm.homeScreenClientListScrollPosition,
         onTransferCashToClient = hvm::transferCash,
         defaultMobileToSendCashTransferConfirmation = hvm.defaultMobileToSendCashTransferConfirmation.value,
-        transferCashInstrumentedTestAdbCommandGetter = { recipientCard: String, mobileToConfirm: String ->
-          "adb shell " + hvm.getShellCommandToRunTransferCashInstrumentedTest(recipientCard, mobileToConfirm)
+        transferCashInstrumentedTestAdbCommandGetter = {
+          recipientCard: String,
+          mobileToConfirm: String,
+          waContact: String? ->
+          "adb shell " + hvm.getShellCommandToRunTransferCashInstrumentedTest(recipientCard, mobileToConfirm, waContact)
         },
-        onRunTransferCashInstrumentedTest = hvm::runTransferCashInstrumentedTest,
         recipientReceiveMyMobileNumberAfterCashTransfer = hvm.recipientReceiveMyMobileNumberAfterCashTransfer,
         cashToTransferToClient = hvm.cashToTransfer,
         sendWhatsAppMessageOnTransferCashTestCompleted = hvm.sendWhatsAppMessageOnTransferCashTestCompleted,

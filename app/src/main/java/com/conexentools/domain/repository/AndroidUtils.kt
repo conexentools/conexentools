@@ -16,7 +16,7 @@ interface AndroidUtils {
   fun sendWaMessage(number: String, message: String?)
   fun executeCommand(command: String, su: Boolean): Int
   fun composeEmail(recipientAddress: String, subject: String = "")
-  fun openSettings(settingsMenuWindow: String, flagActivityNewTask: Boolean, onlyReturnIntent: Boolean = false): Intent
+//  fun openSettings(settingsMenuWindow: String, flagActivityNewTask: Boolean, onlyReturnIntent: Boolean = false): Intent
   fun hasExternalStorageReadWriteAccess(): Boolean
   fun getPackageVersion(packageName: String): Pair<Long, String>?
   fun restartApp()
@@ -24,6 +24,14 @@ interface AndroidUtils {
   fun openXiaomiOtherPermissionAppSettingsWindow(flagActivityNewTask: Boolean, onlyReturnIntent: Boolean = false): Intent
   fun isMiuiWithApi28OrMore(): Boolean
   fun getSystemProperty(propName: String): String?
+  fun isNotificationPolicyAccessGranted(): Boolean
+  fun openSettings(
+    settingsMenuWindow: String,
+    flagActivityNewTask: Boolean,
+    onlyReturnIntent: Boolean,
+    includePackage: Boolean = true
+  ): Intent
+
 
   companion object {
     fun create(): AndroidUtils {
@@ -71,7 +79,8 @@ interface AndroidUtils {
         override fun openSettings(
           settingsMenuWindow: String,
           flagActivityNewTask: Boolean,
-          onlyReturnIntent: Boolean
+          onlyReturnIntent: Boolean,
+          includePackage: Boolean,
         ): Intent {
           TODO("Not yet implemented")
         }
@@ -104,6 +113,10 @@ interface AndroidUtils {
         }
 
         override fun getSystemProperty(propName: String): String? {
+          TODO("Not yet implemented")
+        }
+
+        override fun isNotificationPolicyAccessGranted(): Boolean {
           TODO("Not yet implemented")
         }
 

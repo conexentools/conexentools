@@ -72,7 +72,7 @@ class HomeScreenViewModel @Inject constructor(
   var secondClientRecharge = mutableStateOf("")
 
   var fetchDataFromWA = mutableStateOf(false)
-  var cardToUseDropDownMenuPosition = mutableStateOf("")
+  var cardToUseAlias = mutableStateOf("")
   var defaultMobileToSendCashTransferConfirmation = mutableStateOf("")
 
   var rechargesAvailabilityDateISOString = mutableStateOf<String?>(null)
@@ -148,13 +148,19 @@ class HomeScreenViewModel @Inject constructor(
       waContactImageUri.value = up.waContactImageUriString.first()?.toUri()
       alwaysWaMessageByIntent.value = up.alwaysWaMessageByIntent.first() ?: false
       rechargesAvailabilityDateISOString.value = up.rechargeAvailabilityDate.first()
-      cardToUseDropDownMenuPosition.value = up.cardToUseDropDownMenuPosition.first() ?: ""
+      cardToUseAlias.value = up.cardToUseAlias.first() ?: ""
       clientListPageHelpDialogsShowed.value = up.clientListPageHelpDialogsShowed.first() ?: false
-      homeScreenClientListScrollPosition.intValue = up.homeScreenClientListScrollPosition.first() ?: 0
-      defaultMobileToSendCashTransferConfirmation.value = up.defaultMobileToSendCashTransferConfirmation.first() ?: ""
-      sendWhatsAppMessageOnTransferCashTestCompleted.value = up.sendWhatsAppMessageOnTransferCashTestCompleted.first() ?: false
-      recipientReceiveMyMobileNumberAfterCashTransfer.value = up.recipientReceiveMyMobileNumberAfterCashTransfer.first() ?: true
-      whatsAppMessageToSendOnTransferCashTestCompleted.value = up.whatsAppMessageToSendOnTransferCashTestCompleted.first() ?: Constants.Messages.CLIENT_MESSAGE_TO_SEND_ON_TRANSFER_CASH_TEST_COMPLETED
+      homeScreenClientListScrollPosition.intValue =
+        up.homeScreenClientListScrollPosition.first() ?: 0
+      defaultMobileToSendCashTransferConfirmation.value =
+        up.defaultMobileToSendCashTransferConfirmation.first() ?: ""
+      sendWhatsAppMessageOnTransferCashTestCompleted.value =
+        up.sendWhatsAppMessageOnTransferCashTestCompleted.first() ?: false
+      recipientReceiveMyMobileNumberAfterCashTransfer.value =
+        up.recipientReceiveMyMobileNumberAfterCashTransfer.first() ?: true
+      whatsAppMessageToSendOnTransferCashTestCompleted.value =
+        up.whatsAppMessageToSendOnTransferCashTestCompleted.first()
+          ?: Constants.Messages.CLIENT_MESSAGE_TO_SEND_ON_TRANSFER_CASH_TEST_COMPLETED
       savePin.value = up.savePin.first() ?: false
       if (savePin.value)
         pin.value = up.pin.first() ?: ""
@@ -185,14 +191,19 @@ class HomeScreenViewModel @Inject constructor(
     up.saveAlwaysWaMessageByIntent(alwaysWaMessageByIntent.value)
     up.saveInitialHomeScreenPage(initialHomeScreenPage.value?.ordinal)
     up.saveWaContactImageUriString(waContactImageUri.value?.toString())
-    up.saveCardToUseDropDownMenuPosition(cardToUseDropDownMenuPosition.value)
+    up.saveCardToUseAlias(cardToUseAlias.value)
     up.saveClientListPageHelpDialogsShowed(clientListPageHelpDialogsShowed.value)
     up.saveRechargeAvailabilityDateISOString(rechargesAvailabilityDateISOString.value)
     up.saveHomeScreenClientListScrollPosition(homeScreenClientListScrollPosition.intValue)
     up.saveDefaultMobileToSendCashTransferConfirmation(defaultMobileToSendCashTransferConfirmation.value)
-    up.saveSendWhatsAppMessageOnTransferCashTestCompleted(sendWhatsAppMessageOnTransferCashTestCompleted.value)
-    up.saveRecipientReceiveMyMobileNumberAfterCashTransfer(recipientReceiveMyMobileNumberAfterCashTransfer.value)
-    up.saveWhatsAppMessageToSendOnTransferCashTestCompleted(whatsAppMessageToSendOnTransferCashTestCompleted.value.ifEmpty { null }) // If empty save null to delete the preference key and load default value next time
+    up.saveSendWhatsAppMessageOnTransferCashTestCompleted(
+      sendWhatsAppMessageOnTransferCashTestCompleted.value
+    )
+    up.saveRecipientReceiveMyMobileNumberAfterCashTransfer(
+      recipientReceiveMyMobileNumberAfterCashTransfer.value
+    )
+    up.saveWhatsAppMessageToSendOnTransferCashTestCompleted(
+      whatsAppMessageToSendOnTransferCashTestCompleted.value.ifEmpty { null }) // If empty save null to delete the preference key and load default value next time
   }
 
   private suspend fun getClients() =
@@ -222,34 +233,33 @@ class HomeScreenViewModel @Inject constructor(
 
   fun transferCash(
     client: Client,
-    onClientUpdated: (canExecuteTransferCashInstrumentedTest: Boolean) -> Unit
+    mobileToConfirm: String,
+    numberToSendWhatsAppMessage: String?
   ) {
+
+    if (client.cardNumber == null)
+      throw Exception("Client card must not be null at this point")
+
     val areMainConditionsToRunInstrumentedTestMet = areMainConditionsToRunInstrumentedTestMet()
 
-    if (transfermovilInstalledVersion == null)
-      return
-
-    // TODO change this logic, update latestRechargeDateISOString user click Transferir button on TransferCash dialog
     if (areMainConditionsToRunInstrumentedTestMet) {
       client.latestRechargeDateISOString = Instant.now().plus(15, ChronoUnit.MINUTES).toString()
       client.rechargesMade = (client.rechargesMade ?: 0) + 1
-    }
+      updateClient(client)
 
-    updateClient(client).invokeOnCompletion {
-      if (it == null)
-        onClientUpdated(areMainConditionsToRunInstrumentedTestMet)
-    }
-
-    // Launching Transfermovil in case instrumented test couldn't be executed, to at least do something
-    if (instrumentationAppInstalledVersion == null) {
-      if (!au.launchPackage(transfermovilInstalledVersion.second))
-        au.toast("No se pudo abrir Transfermóvil:(", vibrate = true)
+      runTransferCashInstrumentedTest(
+        recipientCard = client.cardNumber!!,
+        mobileToConfirm = mobileToConfirm,
+        numberToSendWhatsAppMessage = numberToSendWhatsAppMessage
+      )
+    } else if (transfermovilInstalledVersion != null) {
+      // Launching Transfermovil in case instrumented test couldn't be executed, to at least do something
+      au.launchPackage(BuildConfig.TRANSFERMOVIL_PACKAGE_NAME)
     }
   }
 
   fun sendWhatsAppMessage(number: String, message: String?) {
-    log("Sending WhatsApp message to :$number, Message: $message")
-    log("alwaysWaMessageByIntent: ${alwaysWaMessageByIntent.value}")
+    log("Sending WhatsApp message, alwaysWaMessageByIntent: ${alwaysWaMessageByIntent.value}")
     if (whatsAppInstalledVersion == null) {
       au.toast(
         "WhatsApp (${BuildConfig.WHATSAPP_PACKAGE_NAME}) parece no estar instalado",
@@ -267,12 +277,8 @@ class HomeScreenViewModel @Inject constructor(
       au.toast("Conexen Tool - Instrumentation App, parece no estar instalada", vibrate = true)
       return
     } else {
-      var args = "-e waContact $number"
-      if (message != null)
-        args += " -e message ${message
-          .replace(" ", "\\ ")
-          .replace("$", "\$")}"
-      au.executeCommand(getInstrumentedTestShellCommand(InstrumentedTest.SendWhatsAppMessage, args), su = true)
+      val command = getShellCommandToRunSendWhatsAppMessageInstrumentedTest(number, message)
+      runInstrumentedTest(command)
     }
   }
 
@@ -305,28 +311,48 @@ class HomeScreenViewModel @Inject constructor(
   ): String {
     return StringBuilder().apply {
       append("am instrument -w -e class ${BuildConfig.APPLICATION_ID}.InstrumentedTest#$test")
-      append(" ${args.trim()} ${BuildConfig.TEST_NAMESPACE}/${BuildConfig.TEST_INSTRUMENTATION_RUNNER} --no-window-animation --no-hidden-api-checks")
+      append(" ${args.trim()} ${BuildConfig.TEST_NAMESPACE}/${BuildConfig.TEST_INSTRUMENTATION_RUNNER} --no-window-animation")
     }.toString()
+  }
+
+  private fun getShellCommandToRunSendWhatsAppMessageInstrumentedTest(
+    number: String,
+    message: String?
+  ): String {
+    val args = StringBuilder().apply {
+      // Contact
+      append("-e waContact \"\"\"$number\"\"\"")
+
+      // Message
+      if (message != null) {
+        append(" -e message \"\"\"$message\"\"\"")
+      }
+    }.toString()
+
+    return getInstrumentedTestShellCommand(
+      test = InstrumentedTest.SendWhatsAppMessage,
+      args = args
+    )
   }
 
   fun getShellCommandToRunRechargeMobileInstrumentedTest(): String {
 
-    val arguments = StringBuilder().apply {
+    val args = StringBuilder().apply {
       // Recharges
       if (!fetchDataFromWA.value) {
-        append("-e bank ${firstClientNumber.value},${firstClientRecharge.value}")
+        append("-e recharges ${firstClientNumber.value},${firstClientRecharge.value}")
         if (secondClientNumber.value != null)
           append("@${secondClientNumber.value},${secondClientRecharge.value}")
       } else
       // WA Contact
-        append(" -e waContact ${waContact.value.replace(" ", "\\ ")}")
+        append(" -e waContact \"\"\"${waContact.value}\"\"\"")
 
       if (!joinMessages.value)
         append(" -e joinMessages false")
 
       // Card to use DropDownMenu position
-      if (cardToUseDropDownMenuPosition.value.isNotEmpty())
-        append(" -e cardToUseDropDownMenuPosition ${cardToUseDropDownMenuPosition.value}")
+      if (cardToUseAlias.value.isNotEmpty())
+        append(" -e cardToUseAlias ${cardToUseAlias.value}")
 
       // Bank
       var bank_ = bank.value
@@ -337,29 +363,48 @@ class HomeScreenViewModel @Inject constructor(
 
     return getInstrumentedTestShellCommand(
       test = InstrumentedTest.RechargeMobile,
-      args = arguments
+      args = args
     )
   }
 
   fun getShellCommandToRunTransferCashInstrumentedTest(
     recipientCard: String,
-    mobileToConfirm: String
+    mobileToConfirm: String,
+    waContact: String?
   ): String {
     val args = StringBuilder().apply {
 
       // Card to use DropDownMenu position
-      if (cardToUseDropDownMenuPosition.value.isNotEmpty())
-        append(" -e cardToUseDropDownMenuPosition ${cardToUseDropDownMenuPosition.value}")
+      if (cardToUseAlias.value.isNotEmpty())
+        append(" -e cardToUseAlias ${cardToUseAlias.value}")
 
+      // Recipient receive my number
       if (recipientReceiveMyMobileNumberAfterCashTransfer.value)
         append(" -e recipientReceiveMyNumber ${recipientReceiveMyMobileNumberAfterCashTransfer.value}")
+
+      // WhatsApp contact
+      if (waContact != null) {
+        append(" -e waContact \"\"\"$waContact\"\"\"")
+
+        // Message
+        if (whatsAppMessageToSendOnTransferCashTestCompleted.value.isNotEmpty()) {
+          append(" -e message \"\"\"${whatsAppMessageToSendOnTransferCashTestCompleted.value}\"\"\"")
+        }
+      }
 
       // Bank
       var bank_ = bank.value
       if (bank_ == "Metropolitano")
         bank_ = "metro"
 
-      append(" -e pin ${pin.value} -e bank ${bank_.lowercase()} -e recipientCard $recipientCard -e cash ${cashToTransfer.value} -e mobileToConfirm ${mobileToConfirm.replace(" ", "\\ ")}")
+      append(
+        " -e pin ${pin.value} -e bank ${bank_.lowercase()} -e recipientCard $recipientCard -e cash ${cashToTransfer.value} -e mobileToConfirm ${
+          mobileToConfirm.replace(
+            " ",
+            "\\ "
+          )
+        }"
+      )
     }.toString()
 
     return getInstrumentedTestShellCommand(
@@ -377,22 +422,17 @@ class HomeScreenViewModel @Inject constructor(
     }
   }
 
-  fun runTransferCashInstrumentedTest(
+  private fun runTransferCashInstrumentedTest(
     recipientCard: String,
     mobileToConfirm: String,
-    numberToSendMessageIfAny: String?
+    numberToSendWhatsAppMessage: String?,
   ) {
-    // At this point should be already checked whether or not the conditions to execute the instrumented test are met
-    val exitCode = au.executeCommand(getShellCommandToRunTransferCashInstrumentedTest(recipientCard, mobileToConfirm), su = true)
-    if (exitCode == 0 && !numberToSendMessageIfAny.isNullOrEmpty() && whatsAppMessageToSendOnTransferCashTestCompleted.value.isNotEmpty()){
-      log("Sending WhatsApp message after TransferCash Instrumented Test has been successfully completed")
-      sendWhatsAppMessage(
-        number = numberToSendMessageIfAny,
-        message = whatsAppMessageToSendOnTransferCashTestCompleted.value
-      )
-    } else {
-      log("Not sending WhatsApp message after TransferCash Instrumented Test because it has completed with error")
-    }
+    val command = getShellCommandToRunTransferCashInstrumentedTest(
+      recipientCard,
+      mobileToConfirm,
+      numberToSendWhatsAppMessage
+    )
+    runInstrumentedTest(command)
   }
 
   fun runRechargeMobileInstrumentedTest() {
@@ -412,14 +452,15 @@ class HomeScreenViewModel @Inject constructor(
       else if ((firstClientRecharge.value.isEmpty() || firstClientRecharge.value.toInt() !in 25..1250) ||
         (secondClientNumber.value != null && (secondClientRecharge.value.isEmpty() || secondClientRecharge.value.toInt() !in 25..1250))
       )
-        "El monto de la recarga debe estar entre $25 y $1205"
+        "El monto de la recarga debe estar entre $25 y $1250"
       else ""
     }
 
     if (errorMessage.isEmpty()) {
       log("Running RechargeMobileInstrumentedTest instrumented test")
-      au.executeCommand(getShellCommandToRunRechargeMobileInstrumentedTest(), su = true)
       updateRechargeAvailability()
+      val command = getShellCommandToRunRechargeMobileInstrumentedTest()
+      runInstrumentedTest(command)
     } else
       au.toast(errorMessage, vibrate = true)
   }
@@ -428,7 +469,7 @@ class HomeScreenViewModel @Inject constructor(
     val maxPinLength = if (bank.value == "Metropolitano") 4 else 5
 
     val errorMessage = if (!RootUtil.isDeviceRooted)
-      "Es requerido acceso root requerido para ejecutar el test automatizado"
+      "Es requerido acceso root para ejecutar el test automatizado"
     else if (instrumentationAppInstalledVersion == null)
       "Conexen Tool - Instrumentation App, parece no estar instalada"
     else if (transfermovilInstalledVersion == null)
@@ -445,21 +486,27 @@ class HomeScreenViewModel @Inject constructor(
     }
   }
 
+  private fun runInstrumentedTest(command: String) {
+    saveUserPreferences().invokeOnCompletion {
+      if (it == null){
+        au.executeCommand(command, su = true)
+      } else {
+        au.toast("La prueba automatizada no pudo ser iniciada, ocurrió un error al guardar las preferencias de usuario")
+        au.toast(it.localizedMessage)
+      }
+    }
+  }
+
   override fun onPause(owner: LifecycleOwner) {
     super.onPause(owner)
-    log("onPause")
+//    log("onPause")
     if (state.value == HomeScreenState(HomeScreenLoadingState.Success))
       saveUserPreferences()
   }
 
-  override fun onStop(owner: LifecycleOwner) {
-    super.onStop(owner)
-    log("onStop")
-  }
-
   override fun onDestroy(owner: LifecycleOwner) {
     super.onDestroy(owner)
-    log("onDestroy")
+//    log("onDestroy")
     if (state.value == HomeScreenState(HomeScreenLoadingState.Success))
       saveUserPreferences()
   }

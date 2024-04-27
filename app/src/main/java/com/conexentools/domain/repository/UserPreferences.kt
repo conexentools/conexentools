@@ -11,7 +11,7 @@ interface UserPreferences {
   suspend fun saveWaContact(value: String?)
   suspend fun saveWaContactImageUriString(value: String?)
   suspend fun saveFetchDataFromWA(value: Boolean?)
-  suspend fun saveCardToUseDropDownMenuPosition(value: String?)
+  suspend fun saveCardToUseAlias(value: String?)
   suspend fun saveFirstClientRecharge(value: String?)
   suspend fun saveSecondClientRecharge(value: String?)
   suspend fun saveRechargeAvailabilityDateISOString(value: String?)
@@ -35,7 +35,7 @@ interface UserPreferences {
   val waContact: Flow<String?>
   val waContactImageUriString: Flow<String?>
   val fetchDataFromWA: Flow<Boolean?>
-  val cardToUseDropDownMenuPosition: Flow<String?>
+  val cardToUseAlias: Flow<String?>
   val firstClientRecharge: Flow<String?>
   val secondClientRecharge: Flow<String?>
   val rechargeAvailabilityDate: Flow<String?>

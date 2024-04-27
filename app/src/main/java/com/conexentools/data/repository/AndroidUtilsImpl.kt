@@ -1,7 +1,6 @@
 package com.conexentools.data.repository
 
-import android.app.Activity
-import android.app.Application
+import android.app.NotificationManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -19,19 +18,16 @@ import android.os.Vibrator
 import android.provider.ContactsContract
 import android.provider.Settings
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.net.toUri
 import com.conexentools.BuildConfig
-import com.conexentools.MainActivity
 import com.conexentools.core.util.log
 import com.conexentools.core.util.logError
 import com.conexentools.domain.repository.AndroidUtils
 import contacts.core.Contacts
 import contacts.core.entities.Contact
 import contacts.core.equalTo
-import dagger.hilt.android.qualifiers.ActivityContext
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.BufferedReader
 import java.io.IOException
@@ -65,7 +61,6 @@ class AndroidUtilsImpl @Inject constructor(
     }
   }
 
-  // TODO: Implement wait time when  SDK is lower than 11
   override fun toast(
     message: String?,
     shortToast: Boolean,
@@ -225,12 +220,14 @@ class AndroidUtilsImpl @Inject constructor(
   override fun openSettings(
     settingsMenuWindow: String,
     flagActivityNewTask: Boolean,
-    onlyReturnIntent: Boolean
+    onlyReturnIntent: Boolean,
+    includePackage: Boolean
   ): Intent {
     val intent = Intent(
-      settingsMenuWindow,
-      "package:${BuildConfig.APPLICATION_ID}".toUri()
+      settingsMenuWindow
     ).apply {
+      if (includePackage)
+        data = "package:${BuildConfig.APPLICATION_ID}".toUri()
       addFlags(FLAG_ACTIVITY_NO_HISTORY)
       addFlags(FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
       if (flagActivityNewTask)
@@ -317,6 +314,11 @@ class AndroidUtilsImpl @Inject constructor(
       }
     }
     return line
+  }
+
+  override fun isNotificationPolicyAccessGranted(): Boolean {
+    val notificationManager = getSystemService(context, NotificationManager::class.java) as NotificationManager
+    return notificationManager.isNotificationPolicyAccessGranted
   }
 }
 

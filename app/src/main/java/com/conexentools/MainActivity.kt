@@ -1,7 +1,9 @@
 package com.conexentools
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -48,7 +50,6 @@ class MainActivity : ComponentActivity() {
       val isSystemInDarkTheme = isSystemInDarkTheme()
       val darkTheme by remember {
         derivedStateOf {
-//          if(AppTheme.MODE_AUTO && )
           when (hvm.appTheme.value) {
             AppTheme.MODE_AUTO -> DarkTheme(isSystemInDarkTheme)
             AppTheme.MODE_DAY -> DarkTheme(false)
