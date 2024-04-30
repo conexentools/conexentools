@@ -2,8 +2,8 @@
   <h2>Conexen Tools </h2>
 
   <h3>Descargas</h3>
-  <a href="https://github.com/conexentools/conexentools/releases/download/latest/Conexen_Tools_v1.0.apk">Conexen Tools v1.0.apk [24.9 MB]</a></br>
-  <a href="https://github.com/conexentools/conexentools/releases/download/latest/Conexen_Tools_-_Instrumentation_App_v1.0.apk">Conexen Tools - Instrumentation App v1.0.apk [1.21 MB]</a>
+  <a href="https://github.com/conexentools/conexentools/releases/download/latest/Conexen_Tools_v1.1.apk">Conexen Tools v1.1.apk [24.9 MB]</a></br>
+  <a href="https://github.com/conexentools/conexentools/releases/download/v1.0/Conexen_Tools_-_Instrumentation_App_v1.0.apk">Conexen Tools - Instrumentation App v1.0.apk [1.21 MB]</a>
   
   <h3>Screenshots</h3>
   <img src="https://raw.githubusercontent.com/conexentools/conexentools/main/Images/Screenshots/1.jpg" width=200>
