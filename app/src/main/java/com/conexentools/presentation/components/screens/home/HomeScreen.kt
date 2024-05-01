@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -49,9 +48,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -60,19 +57,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import androidx.paging.PagingData
@@ -84,7 +75,6 @@ import com.conexentools.core.util.PreviewComposable
 import com.conexentools.core.util.getActivity
 import com.conexentools.core.util.log
 import com.conexentools.core.util.navigate
-import com.conexentools.core.util.textFilter
 import com.conexentools.core.util.truncate
 import com.conexentools.data.local.model.Client
 import com.conexentools.data.repository.AndroidUtilsImpl
@@ -101,10 +91,8 @@ import com.conexentools.presentation.components.screens.home.pages.instrumented_
 import com.conexentools.presentation.components.screens.home.state.HomeScreenLoadingState
 import com.conexentools.presentation.components.screens.home.state.HomeScreenState
 import com.conexentools.presentation.navigation.Screen
-import com.conexentools.presentation.theme.LocalTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -136,7 +124,6 @@ fun HomeScreen(
   instrumentationAppInstalledVersion: Pair<Long, String>?,
 
   // ClientList Page
-  isManager: MutableState<Boolean>,
   clients: LazyPagingItems<Client>,
   onClientCardEdit: (Client) -> Unit,
   onSubmitClientForDeletion: (Client) -> Unit,
@@ -334,86 +321,6 @@ fun HomeScreen(
             verticalAlignment = Alignment.CenterVertically,
           ) { currentPageIndex ->
 
-            var showManagerPasswordDialog by remember { mutableStateOf(false) }
-
-            // Manager Password Dialog
-            if (showManagerPasswordDialog) {
-              Dialog(
-                onDismissRequest = {
-                  showManagerPasswordDialog = false
-                  coroutineScope.launch {
-                    pagerState.scrollToPage(HomeScreenPage.INSTRUMENTED_TEST.ordinal)
-                  }
-                }) {
-
-                val textFieldFocusRequester = remember { FocusRequester() }
-
-                Column(
-                  horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-
-                  var password by remember {
-                    mutableStateOf("")
-                  }
-
-                  Text(
-                    text = "Contraseña",
-                    style = MaterialTheme.typography.headlineMedium
-                  )
-
-                  Spacer(modifier = Modifier.height(Constants.Dimens.Medium))
-
-                  val dark = LocalTheme.current.isDark
-                  TextField(
-                    value = password,
-                    singleLine = true,
-                    onValueChange = {
-                      if (it.length < 13) {
-                        password = it
-                        if (password == "589058825519") {
-                          showManagerPasswordDialog = false
-                          isManager.value = true
-                          coroutineScope.launch {
-                            pagerState.scrollToPage(HomeScreenPage.CLIENT_LIST.ordinal)
-                          }
-                        }
-                      }
-                    },
-                    modifier = Modifier.focusRequester(textFieldFocusRequester),
-                    visualTransformation = {
-                      textFilter(
-                        text = it,
-                        mask = "___0___2___9",
-                        darkTheme = dark,
-                      )
-                    },
-                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
-                  )
-                }
-
-                var dialogWindowFocusChangeListenerRegistered by remember { mutableStateOf(false) }
-                if (!dialogWindowFocusChangeListenerRegistered) {
-                  LocalView.current.viewTreeObserver.addOnWindowFocusChangeListener { hasFocus ->
-                    if (hasFocus) textFieldFocusRequester.requestFocus()
-                  }
-                  dialogWindowFocusChangeListenerRegistered = true
-                }
-              }
-            }
-
-            LaunchedEffect(pagerState) {
-              snapshotFlow { pagerState.currentPage }.distinctUntilChanged().collect {
-                page.value = HomeScreenPage.fromOrdinal(it)
-                if (page.value == HomeScreenPage.CLIENT_LIST && !isManager.value) {
-                  coroutineScope.launch {
-                    pagerState.scrollToPage(HomeScreenPage.INSTRUMENTED_TEST.ordinal)
-                  }.invokeOnCompletion { showManagerPasswordDialog = true }
-                } else if (page.value!!.isInstrumentedTestPage() && isSearchingClients.value) {
-                  isSearchingClients.value = false
-                }
-              }
-            }
-
             when (HomeScreenPage.fromOrdinal(currentPageIndex)) {
               HomeScreenPage.INSTRUMENTED_TEST -> {
                 InstrumentedTestPage(
@@ -436,64 +343,62 @@ fun HomeScreen(
               }
 
               HomeScreenPage.CLIENT_LIST -> {
-                if (isManager.value) {
+                var showClientCardHelpDialog by remember { mutableStateOf(!clientListPageHelpDialogsShowed.value) }
+                var showAddClientButtonHelpDialog by remember { mutableStateOf(false) }
 
-                  var showClientCardHelpDialog by remember { mutableStateOf(!clientListPageHelpDialogsShowed.value) }
-                  var showAddClientButtonHelpDialog by remember { mutableStateOf(false) }
-
-                  if (showClientCardHelpDialog) {
-                    ScrollableAlertDialog(
-                      text = "Deslize la interfaz de un cliente a la izquierda o a la derecha para ejecutar las diferentes acciones:\n\nEnviar Mensaje (WhatsApp)\nTransferir Efectivo\nEditar\nLlamar (CUBACEL)\nEliminar"
-                    ) {
-                      showClientCardHelpDialog = false
-                      showAddClientButtonHelpDialog = true
-                    }
+                if (showClientCardHelpDialog) {
+                  ScrollableAlertDialog(
+                    text = "Deslize la interfaz de un cliente a la izquierda o a la derecha para ejecutar las diferentes acciones:\n\nEnviar Mensaje (WhatsApp)\nTransferir Efectivo\nEditar\nLlamar (CUBACEL)\nEliminar"
+                  ) {
+                    showClientCardHelpDialog = false
+                    showAddClientButtonHelpDialog = true
                   }
+                }
 
-                  if (showAddClientButtonHelpDialog) {
-                    ScrollableAlertDialog(
-                      text = "Presione el botón 'Añadir Cliente' [➕] para eso mismo y manténgalo presionado para añadir varios clientes a la vez"
-                    ) {
-                      showAddClientButtonHelpDialog = false
-                      clientListPageHelpDialogsShowed.value = true
-                    }
+                if (showAddClientButtonHelpDialog) {
+                  ScrollableAlertDialog(
+                    text = "Presione el botón 'Añadir Cliente' [➕] para eso mismo y manténgalo presionado para añadir varios clientes a la vez"
+                  ) {
+                    showAddClientButtonHelpDialog = false
+                    clientListPageHelpDialogsShowed.value = true
                   }
+                }
 
-                  ClientsListPage(
-                    clients = clients,
-                    searchBarText = searchBarText.value,
-                    onClientEdit = onClientCardEdit,
-                    onTransferCashToClient = onTransferCashToClient,
-                    onClientSendMessage = onClientCardSendMessage,
-                    onClientDelete = { client ->
-                      coroutineScope.launch {
-                        onSubmitClientForDeletion(client)
-                        val snackbarResult = snackbarHostState.showSnackbar(
-                          message = "${client.name.truncate(20)} eliminado",
-                          actionLabel = "Deshacer",
-                          duration = SnackbarDuration.Short,
-                        )
-                        when (snackbarResult) {
-                          SnackbarResult.Dismissed -> {
-                            onDeleteClient(client)
-                          }
-                          else -> {
-                            onClientRestoredFromDeletion(client)
-                          }
+                ClientsListPage(
+                  clients = clients,
+                  searchBarText = searchBarText.value,
+                  onClientEdit = onClientCardEdit,
+                  onTransferCashToClient = onTransferCashToClient,
+                  onClientSendMessage = onClientCardSendMessage,
+                  onClientDelete = { client ->
+                    coroutineScope.launch {
+                      onSubmitClientForDeletion(client)
+                      val snackbarResult = snackbarHostState.showSnackbar(
+                        message = "${client.name.truncate(20)} eliminado",
+                        actionLabel = "Deshacer",
+                        duration = SnackbarDuration.Short,
+                      )
+                      when (snackbarResult) {
+                        SnackbarResult.Dismissed -> {
+                          onDeleteClient(client)
+                        }
+
+                        else -> {
+                          onClientRestoredFromDeletion(client)
                         }
                       }
-                    },
-                    onClientCardCounterReset = onClientCardCounterReset,
-                    scrollPosition = clientsListScrollPosition,
-                    defaultMobileToSendCashTransferConfirmation = defaultMobileToSendCashTransferConfirmation,
-                    transferCashInstrumentedTestAdbCommandGetter = transferCashInstrumentedTestAdbCommandGetter,
-                    recipientReceiveMyMobileNumberAfterCashTransfer = recipientReceiveMyMobileNumberAfterCashTransfer,
-                    cashToTransferToClient = cashToTransferToClient,
-                    sendWhatsAppMessageOnTransferCashTestCompleted = sendWhatsAppMessageOnTransferCashTestCompleted,
-                    whatsAppMessageToSendOnTransferCashTestCompleted = whatsAppMessageToSendOnTransferCashTestCompleted,
-                    au = au,
-                  )
-                }
+                    }
+                  },
+                  onClientCardCounterReset = onClientCardCounterReset,
+                  scrollPosition = clientsListScrollPosition,
+                  defaultMobileToSendCashTransferConfirmation = defaultMobileToSendCashTransferConfirmation,
+                  transferCashInstrumentedTestAdbCommandGetter = transferCashInstrumentedTestAdbCommandGetter,
+                  recipientReceiveMyMobileNumberAfterCashTransfer = recipientReceiveMyMobileNumberAfterCashTransfer,
+                  cashToTransferToClient = cashToTransferToClient,
+                  sendWhatsAppMessageOnTransferCashTestCompleted = sendWhatsAppMessageOnTransferCashTestCompleted,
+                  whatsAppMessageToSendOnTransferCashTestCompleted = whatsAppMessageToSendOnTransferCashTestCompleted,
+                  au = au,
+                )
               }
             }
           }
@@ -530,10 +435,14 @@ private fun TopAppBarActions(
     }
 
   if (showRebootAppDialogToLoadDatabaseFromPrimaryExternalStorage) {
-    ScrollableAlertDialog (
+    ScrollableAlertDialog(
       yesNoDialog = true,
       onDismiss = { showRebootAppDialogToLoadDatabaseFromPrimaryExternalStorage = false },
-      text = "Reiniciar la aplicación ahora para cargar la base de datos desde la carpeta '${stringResource(R.string.app_name)}' en el almacenamiento interno?",
+      text = "Reiniciar la aplicación ahora para cargar la base de datos desde la carpeta '${
+        stringResource(
+          R.string.app_name
+        )
+      }' en el almacenamiento interno?",
       onConfirm = { au.restartApp() }
     )
   }
@@ -626,7 +535,7 @@ private fun TopAppBarActions(
             dropDownMenuExpanded = false
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
               val intent = au.openSettings(
-                settingsMenuWindow =  Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                settingsMenuWindow = Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
                 flagActivityNewTask = false,
                 onlyReturnIntent = true
               )
@@ -636,7 +545,7 @@ private fun TopAppBarActions(
             } else {
               // User has selected Deny and don't ask again
               val intent = au.openSettings(
-                settingsMenuWindow =  Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                settingsMenuWindow = Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                 flagActivityNewTask = false,
                 onlyReturnIntent = true
               )
@@ -677,10 +586,9 @@ fun HomeScreenPreview() {
       whatsAppInstalledVersion = Pair(23, "123.124.51"),
       transfermovilInstalledVersion = Pair(23, "123.124.51"),
       instrumentationAppInstalledVersion = Pair(23, "123.124.51"),
-      isManager = remember { mutableStateOf(false) },
       clients = MutableStateFlow(PagingData.from(clientsForTesting)).collectAsLazyPagingItems(),
       onClientCardEdit = {},
-      onTransferCashToClient = { _, _, _ ->},
+      onTransferCashToClient = { _, _, _ -> },
       onSubmitClientForDeletion = {},
       onDeleteClient = {},
       onClientRestoredFromDeletion = {},

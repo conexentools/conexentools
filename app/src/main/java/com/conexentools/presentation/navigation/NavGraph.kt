@@ -96,7 +96,6 @@ fun SetUpNavGraph(
         instrumentationAppInstalledVersion = hvm.instrumentationAppInstalledVersion,
 
         // ClientList Page
-        isManager = hvm.isManager,
         clients = homeScreenClientsListLazyPagingItems,
         onClientCardEdit = {
           log("About to edit client: $it")

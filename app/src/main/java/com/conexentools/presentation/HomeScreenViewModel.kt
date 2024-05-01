@@ -64,7 +64,6 @@ class HomeScreenViewModel @Inject constructor(
   var bank = mutableStateOf("Metropolitano")
   var pin = mutableStateOf("")
   var waContact = mutableStateOf<String>("")
-  var isManager = mutableStateOf(false)
 
   var firstClientNumber = mutableStateOf("")
   var firstClientRecharge = mutableStateOf("")
@@ -137,7 +136,6 @@ class HomeScreenViewModel @Inject constructor(
     try {
       waContact.value = up.waContact.first() ?: ""
       bank.value = up.bank.first() ?: "Metropolitano"
-      isManager.value = up.isManager.first() ?: false
       joinMessages.value = up.joinMessages.first() ?: true
       cashToTransfer.value = up.cashToTransfer.first() ?: ""
       appTheme.value = AppTheme.fromOrdinal(up.appTheme.first())
@@ -179,7 +177,6 @@ class HomeScreenViewModel @Inject constructor(
     up.saveBank(bank.value)
     up.saveSavePin(savePin.value)
     up.saveWaContact(waContact.value)
-    up.saveIsManager(isManager.value)
     up.saveAppTheme(appTheme.value.ordinal)
     up.saveJoinMessages(joinMessages.value)
     up.saveCashToTransfer(cashToTransfer.value)
